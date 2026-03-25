@@ -44,6 +44,11 @@ class HomeScreen extends ConsumerWidget {
                     icon: const Icon(Icons.play_circle_outline_rounded),
                     label: const Text('开始复习'),
                   ),
+                  TextButton.icon(
+                    onPressed: () => context.go('/review/coaching/material_demo_1'),
+                    icon: const Icon(Icons.favorite_outline_rounded),
+                    label: const Text('亲子陪练'),
+                  ),
                 ],
               ),
             ],

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/coaching/presentation/parent_coaching_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/lessons/presentation/lesson_detail_screen.dart';
 import '../../features/materials/presentation/material_review_screen.dart';
@@ -9,6 +10,7 @@ import '../../features/materials/presentation/scan_upload_screen.dart';
 import '../../features/profiles/presentation/profile_screen.dart';
 import '../../features/review/presentation/review_runner_screen.dart';
 import '../../features/review/presentation/review_tasks_screen.dart';
+import '../../features/speaking/presentation/speaking_partner_screen.dart';
 import '../shell/app_shell.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -56,6 +58,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'session/:materialId',
                 builder: (context, state) => ReviewRunnerScreen(
+                  materialId: state.pathParameters['materialId'] ?? 'material_demo_1',
+                ),
+              ),
+              GoRoute(
+                path: 'speaking/:materialId',
+                builder: (context, state) => SpeakingPartnerScreen(
+                  materialId: state.pathParameters['materialId'] ?? 'material_demo_1',
+                ),
+              ),
+              GoRoute(
+                path: 'coaching/:materialId',
+                builder: (context, state) => ParentCoachingScreen(
                   materialId: state.pathParameters['materialId'] ?? 'material_demo_1',
                 ),
               ),

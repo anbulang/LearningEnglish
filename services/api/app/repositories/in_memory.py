@@ -11,10 +11,13 @@ from app.models.contracts import (
     KnowledgePack,
     MaterialParseJob,
     MaterialStatus,
+    ParentCoachingScript,
+    ParentCoachingStep,
     PracticeSession,
     ReviewTask,
     ReviewTaskStatus,
     SentencePattern,
+    SpeakingAttempt,
     TaskType,
     VocabularyItem,
     WeeklyReport,
@@ -29,6 +32,8 @@ class InMemoryStore:
         self.knowledge_packs: dict[str, KnowledgePack] = {}
         self.review_tasks: dict[str, ReviewTask] = {}
         self.practice_sessions: dict[str, PracticeSession] = {}
+        self.speaking_attempts: dict[str, SpeakingAttempt] = {}
+        self.parent_coaching_scripts: dict[str, ParentCoachingScript] = {}
         self.weekly_reports: dict[str, WeeklyReport] = {}
 
     def seed(self) -> None:
@@ -146,6 +151,28 @@ class InMemoryStore:
             ],
         )
         self.knowledge_packs[demo_material.id] = knowledge_pack
+        self.parent_coaching_scripts[demo_material.id] = ParentCoachingScript(
+            id="coach_seed_1",
+            material_id=demo_material.id,
+            title="动物课亲子陪练",
+            intro="先让孩子看图或看讲义，再由家长按步骤提问。",
+            steps=[
+                ParentCoachingStep(
+                    id="coach_step_1",
+                    title="先问孩子看到什么",
+                    parent_prompt="请先指着图片问：What is this?",
+                    stuck_hint="如果孩子卡住，就先说：It is a ...",
+                    expansion_prompt="孩子答对后，再问：Can you say the full sentence?",
+                ),
+                ParentCoachingStep(
+                    id="coach_step_2",
+                    title="引导完整表达",
+                    parent_prompt="请让孩子完整说：It is a cat.",
+                    stuck_hint="如果只说 cat，就补提示：It is a ...",
+                    expansion_prompt="最后换一个动物，让孩子自己替换说一遍。",
+                ),
+            ],
+        )
 
         for task_type, difficulty, content in (
             (

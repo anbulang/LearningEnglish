@@ -11,6 +11,8 @@ from app.models.contracts import (
     JobStatus,
     KnowledgePack,
     MaterialParseJob,
+    ParentCoachingScript,
+    ParentCoachingStep,
     ReviewTask,
     ReviewTaskStatus,
     SentencePattern,
@@ -204,7 +206,29 @@ class DemoPipelineService:
         self,
         material: CourseMaterial,
         job: MaterialParseJob,
-    ) -> tuple[KnowledgePack, list[ReviewTask]]:
+    ) -> tuple[KnowledgePack, list[ReviewTask], ParentCoachingScript]:
         knowledge_pack = self.parsing_provider.generate_knowledge_pack(material, job)
         review_tasks = self.parsing_provider.generate_review_tasks(material, knowledge_pack)
-        return knowledge_pack, review_tasks
+        coaching_script = ParentCoachingScript(
+            id=f"coach_{uuid4().hex[:8]}",
+            material_id=material.id,
+            title=f"{material.title} 亲子陪练",
+            intro="先听、再问、再让孩子完整输出，不需要一次说很长。",
+            steps=[
+                ParentCoachingStep(
+                    id=f"coach_step_{uuid4().hex[:8]}",
+                    title="先问孩子看到什么",
+                    parent_prompt=f"先问：What is this? 指向 {job.draft_vocabulary[:1] or ['the picture']}。",
+                    stuck_hint="如果不会，就先给半句提示：It is a ...",
+                    expansion_prompt="孩子说出单词后，再请他完整说一句。",
+                ),
+                ParentCoachingStep(
+                    id=f"coach_step_{uuid4().hex[:8]}",
+                    title="引导完整句子",
+                    parent_prompt="请孩子完整说：It is a ...",
+                    stuck_hint="必要时先由家长完整示范一遍。",
+                    expansion_prompt="最后换一个词，让孩子自己替换表达。",
+                ),
+            ],
+        )
+        return knowledge_pack, review_tasks, coaching_script

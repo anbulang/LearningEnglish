@@ -188,6 +188,29 @@ class SpeakingAttempt(BaseModel):
     status: SpeakingAttemptStatus
 
 
+class SpeakingAttemptCreate(BaseModel):
+    child_id: str
+    material_id: str
+    prompt_text: str
+    transcript: str = ""
+
+
+class ParentCoachingStep(BaseModel):
+    id: str
+    title: str
+    parent_prompt: str
+    stuck_hint: str
+    expansion_prompt: str
+
+
+class ParentCoachingScript(BaseModel):
+    id: str
+    material_id: str
+    title: str
+    intro: str
+    steps: list[ParentCoachingStep] = Field(default_factory=list)
+
+
 class WeeklyReport(BaseModel):
     id: str
     child_id: str

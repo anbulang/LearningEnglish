@@ -182,6 +182,33 @@ final knowledgePackProvider = Provider<KnowledgePack>((ref) {
   );
 });
 
+final parentCoachingScriptProvider = Provider<ParentCoachingScript>((ref) {
+  return const ParentCoachingScript(
+    id: 'coach_demo_1',
+    materialId: 'material_demo_1',
+    title: '动物课亲子陪练',
+    intro: '先看图，再问，再让孩子完整说一句，不用一次讲很多。',
+    steps: <ParentCoachingStep>[
+      ParentCoachingStep(
+        id: 'coach_step_1',
+        title: '先问孩子看到什么',
+        parentPrompt: '请先问：What is this?',
+        stuckHint: '如果孩子卡住，可以先提示：It is a ...',
+        expansionPrompt: '孩子答对后，请再让他完整说一句。',
+      ),
+      ParentCoachingStep(
+        id: 'coach_step_2',
+        title: '换一个词再说一遍',
+        parentPrompt: '请再换 dog 或 bird，让孩子自己说。',
+        stuckHint: '必要时家长先完整示范一遍。',
+        expansionPrompt: '最后加一句鼓励：Great job!',
+      ),
+    ],
+  );
+});
+
+final lastSpeakingAttemptProvider = StateProvider<SpeakingAttempt?>((ref) => null);
+
 final reviewTasksProvider =
     StateNotifierProvider<ReviewTasksController, List<ReviewTask>>((ref) {
   return ReviewTasksController();

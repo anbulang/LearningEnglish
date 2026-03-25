@@ -451,6 +451,78 @@ class SpeakingAttempt {
 }
 
 @immutable
+class ParentCoachingStep {
+  const ParentCoachingStep({
+    required this.id,
+    required this.title,
+    required this.parentPrompt,
+    required this.stuckHint,
+    required this.expansionPrompt,
+  });
+
+  final String expansionPrompt;
+  final String id;
+  final String parentPrompt;
+  final String stuckHint;
+  final String title;
+
+  factory ParentCoachingStep.fromJson(JsonMap json) {
+    return ParentCoachingStep(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      parentPrompt: json['parent_prompt'] as String,
+      stuckHint: json['stuck_hint'] as String,
+      expansionPrompt: json['expansion_prompt'] as String,
+    );
+  }
+
+  JsonMap toJson() => {
+        'id': id,
+        'title': title,
+        'parent_prompt': parentPrompt,
+        'stuck_hint': stuckHint,
+        'expansion_prompt': expansionPrompt,
+      };
+}
+
+@immutable
+class ParentCoachingScript {
+  const ParentCoachingScript({
+    required this.id,
+    required this.materialId,
+    required this.title,
+    required this.intro,
+    required this.steps,
+  });
+
+  final String id;
+  final String intro;
+  final String materialId;
+  final List<ParentCoachingStep> steps;
+  final String title;
+
+  factory ParentCoachingScript.fromJson(JsonMap json) {
+    return ParentCoachingScript(
+      id: json['id'] as String,
+      materialId: json['material_id'] as String,
+      title: json['title'] as String,
+      intro: json['intro'] as String,
+      steps: (json['steps'] as List<dynamic>? ?? const [])
+          .map((item) => ParentCoachingStep.fromJson(item as JsonMap))
+          .toList(),
+    );
+  }
+
+  JsonMap toJson() => {
+        'id': id,
+        'material_id': materialId,
+        'title': title,
+        'intro': intro,
+        'steps': steps.map((step) => step.toJson()).toList(),
+      };
+}
+
+@immutable
 class WeeklyReport {
   const WeeklyReport({
     required this.id,

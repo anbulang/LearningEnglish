@@ -74,6 +74,23 @@ class LessonDetailScreen extends ConsumerWidget {
                 icon: const Icon(Icons.play_arrow_rounded),
                 label: const Text('开始本课复习'),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: <Widget>[
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/review/speaking/$materialId'),
+                    icon: const Icon(Icons.mic_none_rounded),
+                    label: const Text('口语陪练'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/review/coaching/$materialId'),
+                    icon: const Icon(Icons.favorite_border_rounded),
+                    label: const Text('亲子陪练'),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

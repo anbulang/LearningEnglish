@@ -51,6 +51,10 @@ def test_vertical_slice_flow() -> None:
     knowledge = knowledge_response.json()
     assert knowledge["knowledge_pack"]["vocabulary_items"]
 
+    coaching_response = client.get(f"/v1/parent-coaching/{material_id}")
+    assert coaching_response.status_code == 200
+    assert coaching_response.json()["steps"]
+
     tasks_response = client.get(
         "/v1/review-tasks",
         params={"child_id": child_id, "material_id": material_id},
@@ -58,6 +62,18 @@ def test_vertical_slice_flow() -> None:
     assert tasks_response.status_code == 200
     tasks = tasks_response.json()["items"]
     assert len(tasks) == 3
+
+    speaking_response = client.post(
+        "/v1/speaking-attempts",
+        json={
+            "child_id": child_id,
+            "material_id": material_id,
+            "prompt_text": "What is this?",
+            "transcript": "It is a cat.",
+        },
+    )
+    assert speaking_response.status_code == 201
+    assert speaking_response.json()["status"] == "scored"
 
     session_response = client.post(
         "/v1/practice-sessions",
@@ -76,4 +92,5 @@ def test_vertical_slice_flow() -> None:
     assert report_response.status_code == 200
     report = report_response.json()["report"]
     assert report["completed_sessions"] >= 1
+    assert report["speaking_attempts"] >= 1
     assert "bird" in report["weak_items"]

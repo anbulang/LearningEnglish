@@ -201,8 +201,12 @@ class _ReviewFinishedState extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: <Widget>[
               FilledButton(
-                onPressed: () => context.go('/home'),
-                child: const Text('回到首页'),
+                onPressed: () => context.go('/review/speaking/$materialId'),
+                child: const Text('继续口语陪练'),
+              ),
+              OutlinedButton(
+                onPressed: () => context.go('/review/coaching/$materialId'),
+                child: const Text('进入亲子陪练'),
               ),
               TextButton(
                 onPressed: () => context.go('/reports'),
