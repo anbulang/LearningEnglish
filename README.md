@@ -41,10 +41,10 @@ The mobile scaffold covers the same flow in adaptive page structure:
 ## Tooling Status
 - `python3`: available locally
 - `uv`: available locally
-- `flutter`: not installed locally at the time of implementation
-- `dart`: not installed locally at the time of implementation
+- `flutter`: verified locally with Flutter `3.41.5`
+- `dart`: verified locally with Dart `3.11.3`
 
-The Flutter code is scaffolded but could not be compiled in this environment because the SDK is missing.
+The Flutter workspace has been bootstrapped locally and `flutter analyze` passes for `apps/mobile`.
 
 ## Local Development
 ### Backend
@@ -67,11 +67,23 @@ docker compose -f infra/docker-compose.yml up -d
 ```
 
 ### Mobile
-Once Flutter is installed:
 ```bash
-melos bootstrap
+make mobile-bootstrap
+make mobile-analyze
 cd apps/mobile
 flutter run
+```
+
+If Flutter is not on your `PATH`, provide it explicitly:
+```bash
+FLUTTER=/absolute/path/to/flutter make mobile-bootstrap
+FLUTTER=/absolute/path/to/flutter make mobile-analyze
+```
+
+If you are developing behind a mainland China network, set these mirror variables before running Flutter commands:
+```bash
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+export PUB_HOSTED_URL=https://pub.flutter-io.cn
 ```
 
 ## Verification Targets
