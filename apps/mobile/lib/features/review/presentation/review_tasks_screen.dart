@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/widgets/app_card.dart';
@@ -66,7 +67,7 @@ class ReviewTasksScreen extends ConsumerWidget {
                 Text('类型：${task.taskType.value} · 难度：${task.difficulty}'),
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
-                  onPressed: () {},
+                  onPressed: () => context.go('/review/session/${task.materialId}'),
                   child: const Text('开始任务'),
                 ),
               ],

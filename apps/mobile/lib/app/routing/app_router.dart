@@ -7,6 +7,7 @@ import '../../features/materials/presentation/material_review_screen.dart';
 import '../../features/materials/presentation/materials_library_screen.dart';
 import '../../features/materials/presentation/scan_upload_screen.dart';
 import '../../features/profiles/presentation/profile_screen.dart';
+import '../../features/review/presentation/review_runner_screen.dart';
 import '../../features/review/presentation/review_tasks_screen.dart';
 import '../shell/app_shell.dart';
 
@@ -51,6 +52,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/review',
             builder: (context, state) => const ReviewTasksScreen(),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'session/:materialId',
+                builder: (context, state) => ReviewRunnerScreen(
+                  materialId: state.pathParameters['materialId'] ?? 'material_demo_1',
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: '/reports',

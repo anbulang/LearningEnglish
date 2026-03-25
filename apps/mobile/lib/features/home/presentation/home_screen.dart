@@ -40,7 +40,7 @@ class HomeScreen extends ConsumerWidget {
                     label: const Text('上传讲义'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: () => context.go('/review'),
+                    onPressed: () => context.go('/review/session/material_demo_1'),
                     icon: const Icon(Icons.play_circle_outline_rounded),
                     label: const Text('开始复习'),
                   ),
@@ -62,6 +62,7 @@ class HomeScreen extends ConsumerWidget {
                   title: Text(task.contentJson['prompt'] as String? ?? '复习任务'),
                   subtitle: Text(task.taskType.value),
                   trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.go('/review/session/${task.materialId}'),
                 ),
               ),
             ],

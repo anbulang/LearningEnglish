@@ -1,6 +1,66 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_contracts/contracts.dart';
 
+final _initialReviewTasks = <ReviewTask>[
+  ReviewTask(
+    id: 'task_1',
+    childId: 'child_demo_1',
+    materialId: 'material_demo_1',
+    taskType: TaskType.flashcard,
+    difficulty: 'recognition',
+    contentJson: const <String, dynamic>{
+      'prompt': '看词卡并跟读',
+      'word': 'cat',
+      'hint': '点击听标准发音',
+    },
+    dueDate: DateTime(2026, 3, 25),
+    status: ReviewTaskStatus.pending,
+  ),
+  ReviewTask(
+    id: 'task_2',
+    childId: 'child_demo_1',
+    materialId: 'material_demo_1',
+    taskType: TaskType.listenChoice,
+    difficulty: 'repeat',
+    contentJson: const <String, dynamic>{
+      'prompt': '听音选图',
+      'choices': <String>['cat', 'dog', 'bird'],
+      'correct_answer': 'cat',
+    },
+    dueDate: DateTime(2026, 3, 25),
+    status: ReviewTaskStatus.pending,
+  ),
+  ReviewTask(
+    id: 'task_3',
+    childId: 'child_demo_1',
+    materialId: 'material_demo_1',
+    taskType: TaskType.matchChoice,
+    difficulty: 'comprehension',
+    contentJson: const <String, dynamic>{
+      'prompt': '问句和答句配对',
+      'left': <String>['What is this?'],
+      'right': <String>['It is a cat.'],
+    },
+    dueDate: DateTime(2026, 3, 25),
+    status: ReviewTaskStatus.pending,
+  ),
+];
+
+final _initialWeeklyReport = WeeklyReport(
+  id: 'report_demo_1',
+  childId: 'child_demo_1',
+  weekStart: DateTime(2026, 3, 23),
+  weekEnd: DateTime(2026, 3, 29),
+  completedSessions: 4,
+  reviewedWords: 18,
+  speakingAttempts: 3,
+  weakItems: const <String>['bird', 'What is this?'],
+  recommendedActions: const <String>[
+    '今晚先复习 3 张动物词卡',
+    '再用 What is this? 做 2 轮问答',
+  ],
+);
+
 final activeChildProvider = Provider<ChildProfile>((ref) {
   return ChildProfile(
     id: 'child_demo_1',
@@ -122,66 +182,80 @@ final knowledgePackProvider = Provider<KnowledgePack>((ref) {
   );
 });
 
-final reviewTasksProvider = Provider<List<ReviewTask>>((ref) {
-  return <ReviewTask>[
-    ReviewTask(
-      id: 'task_1',
-      childId: 'child_demo_1',
-      materialId: 'material_demo_1',
-      taskType: TaskType.flashcard,
-      difficulty: 'recognition',
-      contentJson: const <String, dynamic>{
-        'prompt': '看词卡并跟读',
-        'word': 'cat',
-        'hint': '点击听标准发音',
-      },
-      dueDate: DateTime(2026, 3, 25),
-      status: ReviewTaskStatus.pending,
-    ),
-    ReviewTask(
-      id: 'task_2',
-      childId: 'child_demo_1',
-      materialId: 'material_demo_1',
-      taskType: TaskType.listenChoice,
-      difficulty: 'repeat',
-      contentJson: const <String, dynamic>{
-        'prompt': '听音选图',
-        'choices': <String>['cat', 'dog', 'bird'],
-        'correct_answer': 'cat',
-      },
-      dueDate: DateTime(2026, 3, 25),
-      status: ReviewTaskStatus.pending,
-    ),
-    ReviewTask(
-      id: 'task_3',
-      childId: 'child_demo_1',
-      materialId: 'material_demo_1',
-      taskType: TaskType.matchChoice,
-      difficulty: 'comprehension',
-      contentJson: const <String, dynamic>{
-        'prompt': '问句和答句配对',
-        'left': <String>['What is this?'],
-        'right': <String>['It is a cat.'],
-      },
-      dueDate: DateTime(2026, 3, 25),
-      status: ReviewTaskStatus.pending,
-    ),
-  ];
+final reviewTasksProvider =
+    StateNotifierProvider<ReviewTasksController, List<ReviewTask>>((ref) {
+  return ReviewTasksController();
 });
 
-final weeklyReportProvider = Provider<WeeklyReport>((ref) {
-  return WeeklyReport(
-    id: 'report_demo_1',
-    childId: 'child_demo_1',
-    weekStart: DateTime(2026, 3, 23),
-    weekEnd: DateTime(2026, 3, 29),
-    completedSessions: 4,
-    reviewedWords: 18,
-    speakingAttempts: 3,
-    weakItems: const <String>['bird', 'What is this?'],
-    recommendedActions: const <String>[
-      '今晚先复习 3 张动物词卡',
-      '再用 What is this? 做 2 轮问答',
-    ],
-  );
+final weeklyReportProvider =
+    StateNotifierProvider<WeeklyReportController, WeeklyReport>((ref) {
+  return WeeklyReportController();
 });
+
+class ReviewTasksController extends StateNotifier<List<ReviewTask>> {
+  ReviewTasksController() : super(List<ReviewTask>.from(_initialReviewTasks));
+
+  void completeTasks(Iterable<String> taskIds) {
+    final ids = taskIds.toSet();
+    state = state
+        .map(
+          (task) => ids.contains(task.id)
+              ? ReviewTask(
+                  id: task.id,
+                  childId: task.childId,
+                  materialId: task.materialId,
+                  taskType: task.taskType,
+                  difficulty: task.difficulty,
+                  contentJson: task.contentJson,
+                  dueDate: task.dueDate,
+                  status: ReviewTaskStatus.completed,
+                )
+              : task,
+        )
+        .toList();
+  }
+
+  void reset() {
+    state = List<ReviewTask>.from(_initialReviewTasks);
+  }
+}
+
+class WeeklyReportController extends StateNotifier<WeeklyReport> {
+  WeeklyReportController() : super(_initialWeeklyReport);
+
+  void registerCompletedSession({
+    required int taskCount,
+    List<String> weakItems = const <String>[],
+  }) {
+    final mergedWeakItems = <String>{
+      ...state.weakItems,
+      ...weakItems,
+    }.toList();
+
+    state = WeeklyReport(
+      id: state.id,
+      childId: state.childId,
+      weekStart: state.weekStart,
+      weekEnd: state.weekEnd,
+      completedSessions: state.completedSessions + 1,
+      reviewedWords: state.reviewedWords + taskCount,
+      speakingAttempts: state.speakingAttempts,
+      weakItems: mergedWeakItems,
+      recommendedActions: state.recommendedActions,
+    );
+  }
+
+  void registerSpeakingAttempt() {
+    state = WeeklyReport(
+      id: state.id,
+      childId: state.childId,
+      weekStart: state.weekStart,
+      weekEnd: state.weekEnd,
+      completedSessions: state.completedSessions,
+      reviewedWords: state.reviewedWords,
+      speakingAttempts: state.speakingAttempts + 1,
+      weakItems: state.weakItems,
+      recommendedActions: state.recommendedActions,
+    );
+  }
+}

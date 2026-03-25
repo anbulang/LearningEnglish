@@ -70,7 +70,7 @@ class LessonDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               FilledButton.icon(
-                onPressed: () => context.go('/review'),
+                onPressed: () => context.go('/review/session/$materialId'),
                 icon: const Icon(Icons.play_arrow_rounded),
                 label: const Text('开始本课复习'),
               ),
