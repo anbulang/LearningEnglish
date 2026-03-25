@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>上传讲义 - LearningEnglish</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error": "#ba1a1a",
+              "surface-bright": "#fff8f5",
+              "surface-container-low": "#fff1e9",
+              "on-tertiary-fixed": "#0f1d24",
+              "primary-fixed": "#ffdbd0",
+              "on-primary-container": "#6c250c",
+              "on-error-container": "#93000a",
+              "outline": "#88726c",
+              "tertiary-fixed": "#d5e5ee",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed": "#9df3df",
+              "on-surface-variant": "#55433d",
+              "on-secondary": "#ffffff",
+              "tertiary": "#526168",
+              "secondary-fixed-dim": "#81d6c3",
+              "on-error": "#ffffff",
+              "tertiary-container": "#9aaab2",
+              "on-primary": "#ffffff",
+              "error-container": "#ffdad6",
+              "surface-container-high": "#fbe4d5",
+              "on-surface": "#251910",
+              "on-secondary-fixed-variant": "#005045",
+              "tertiary-fixed-dim": "#b9c9d2",
+              "secondary-container": "#9df3df",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed-dim": "#ffb59e",
+              "on-tertiary-fixed-variant": "#3a4950",
+              "on-primary-fixed": "#3a0b00",
+              "inverse-on-surface": "#ffede3",
+              "background": "#fff8f5",
+              "surface-tint": "#98462a",
+              "inverse-primary": "#ffb59e",
+              "surface-variant": "#f5decf",
+              "surface-container-highest": "#f5decf",
+              "on-primary-fixed-variant": "#7a2f16",
+              "surface-dim": "#ecd6c7",
+              "on-secondary-container": "#097162",
+              "primary-container": "#f28c6b",
+              "outline-variant": "#dbc1b9",
+              "on-tertiary-container": "#303f46",
+              "on-background": "#251910",
+              "surface-container": "#ffeadc",
+              "surface": "#fff8f5",
+              "on-secondary-fixed": "#00201b",
+              "secondary": "#006b5c",
+              "primary": "#98462a",
+              "inverse-surface": "#3b2e24"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .camera-overlay-corner {
+        width: 40px;
+        height: 40px;
+        border-color: #f28c6b;
+        border-width: 4px;
+        position: absolute;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body antialiased min-h-screen flex flex-col">
+<!-- Shared Component: TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-[#fff8f5] flex items-center justify-between px-6 py-4 max-w-none">
+<div class="flex items-center gap-4">
+<button class="text-[#98462a] hover:bg-[#f28c6b]/10 p-2 rounded-full transition-colors duration-300 Active: scale-95 transition-transform duration-200 ease-out">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-semibold text-lg tracking-tight text-[#251910]">上传讲义</h1>
+</div>
+<button class="text-[#98462a] hover:bg-[#f28c6b]/10 p-2 rounded-full transition-colors duration-300 Active: scale-95 transition-transform duration-200 ease-out">
+<span class="material-symbols-outlined">help</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col px-6 pb-8 gap-6 max-w-3xl mx-auto w-full">
+<!-- Editorial Intro -->
+<section class="mt-4">
+<h2 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface leading-tight">扫描孩子的讲义</h2>
+<p class="text-on-surface-variant mt-2 text-lg">将讲义置于取景框内，我们将为您自动识别学习重点。</p>
+</section>
+<!-- Camera Preview Area (The "Curated" Viewfinder) -->
+<div class="relative flex-1 min-h-[400px] bg-surface-container-low rounded-xl overflow-hidden shadow-sm group">
+<img alt="Educational worksheet preview" class="w-full h-full object-cover" data-alt="Close-up of a handwritten child's English worksheet with colorful illustrations on warm cream paper under soft morning light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnE624JHS1qs11S5vYxeP4VzCJsTlNOHcXr3bGz3pGHZLyH76_xH1MypQlREKx0gVvepDz0qJ7CRNOHs0RzIMGrCWTeSD9NuBpSuAmcare3lW47pkjKfGUji5IY90rPAlW-5DIPExTMko2vW0H-P38SeUf7d9hRtD_r4M6RRghmzKVrKMCAhWCZsjphb4hu-W_3lw1B-jK74WjhN3_vtGEZGh6nCCZmnAa0_0Q-Hr4NpfUIDcjSeJ9xmyUVKxq8GTM-FYyDxxnBLr4"/>
+<!-- Scanning Overlay Corners -->
+<div class="absolute inset-8 pointer-events-none">
+<div class="camera-overlay-corner top-0 left-0 border-t-4 border-l-4 rounded-tl-lg opacity-60"></div>
+<div class="camera-overlay-corner top-0 right-0 border-t-4 border-r-4 rounded-tr-lg opacity-60"></div>
+<div class="camera-overlay-corner bottom-0 left-0 border-b-4 border-l-4 rounded-bl-lg opacity-60"></div>
+<div class="camera-overlay-corner bottom-0 right-0 border-b-4 border-r-4 rounded-br-lg opacity-60"></div>
+</div>
+<!-- Auto-enhance Toggle Overlay -->
+<div class="absolute top-6 right-6">
+<button class="bg-surface/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-outline-variant/15 text-on-surface font-label text-sm shadow-sm">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">magic_button</span>
+<span>自动优化已开启</span>
+</button>
+</div>
+</div>
+<!-- Captured Pages Strip -->
+<section class="flex flex-col gap-3">
+<div class="flex justify-between items-center px-1">
+<span class="font-label font-semibold text-on-surface">已捕获页面 (2)</span>
+<button class="text-primary font-label text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">add_circle</span>
+                    添加更多
+                </button>
+</div>
+<div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+<div class="relative flex-shrink-0 w-20 h-28 bg-surface-container-highest rounded-lg overflow-hidden border-2 border-primary ring-4 ring-primary/10">
+<img alt="First page thumbnail" class="w-full h-full object-cover opacity-80" data-alt="A small thumbnail of a scanned textbook page with green and white graphics" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_a5eygnDajswJhrx83DL-sCxvdF1T32wkSQE7nblaSnht7Pculk-33uZ777cBSX9Y-JR9ZlS5uxDDW1y0W4WCUm-IjdQNMDOftPmb1_SVSPP30I_6yDaYKvJ8B1gNXR9gpdnbLskEj_ViIioX6vwTmGoNgQ83i7fTcVJxgPud2gw6jb8eUSQmvPMB5i_rauJYC9MT4OjGeep7MdceMbDUt7rsny84bazPC3qIuh-AsoQheFZlBC7c97Tmqht2fl8x1pcotwrvSBLf"/>
+<div class="absolute inset-0 flex items-center justify-center bg-primary/20">
+<span class="text-white font-bold text-xs bg-primary px-2 py-0.5 rounded-full shadow-md">1</span>
+</div>
+</div>
+<div class="relative flex-shrink-0 w-20 h-28 bg-surface-container-highest rounded-lg overflow-hidden border border-outline-variant/15">
+<img alt="Second page thumbnail" class="w-full h-full object-cover opacity-80" data-alt="A small thumbnail of a scanned page with text and diagrams" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEy1I5nw6h0GGx-k0nFDMwEl6mkgSnL2b5yxw7bgUeGj2QJLY0R5sXFM8i1HKSehGtp0hLy05Z43hZgwj2nUk6la5RPfefMaxNFKzOMfIEJVqLfWwCrw-EbFrusnBbQPYy-neVBrtJM0VPZkNO4cFJAN4PdSzUrjwBRi4bniWEt3FG0iVKwtjzNxE-r1IbX--ynxyn_tfmDk0vbRmiqxrPz4ymfftBBfepK1t5vm8Rq1cENrRwinsLGPJDgy--0XgwTgw3atGfYfZt"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-on-surface font-bold text-xs bg-surface-bright/80 px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm">2</span>
+</div>
+</div>
+<div class="flex-shrink-0 w-20 h-28 border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center gap-2 bg-surface-container-low/50">
+<span class="material-symbols-outlined text-outline">add_a_photo</span>
+<span class="text-[10px] font-label text-outline uppercase tracking-wider">继续拍摄</span>
+</div>
+</div>
+</section>
+<!-- Controls Toolbar -->
+<section class="flex items-center justify-between px-4 py-6 bg-surface-container-low/30 rounded-lg">
+<button class="flex flex-col items-center gap-1 group">
+<div class="w-12 h-12 rounded-full bg-surface flex items-center justify-center shadow-sm group-active:scale-95 transition-all text-on-surface-variant">
+<span class="material-symbols-outlined">restart_alt</span>
+</div>
+<span class="text-xs font-label text-on-surface-variant font-medium">重拍</span>
+</button>
+<!-- Main Capture Button -->
+<button class="relative w-20 h-20 rounded-full bg-primary-container p-1 shadow-lg active:scale-90 transition-transform">
+<div class="w-full h-full rounded-full border-4 border-white flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
+</div>
+</button>
+<button class="flex flex-col items-center gap-1 group">
+<div class="w-12 h-12 rounded-full bg-surface flex items-center justify-center shadow-sm group-active:scale-95 transition-all text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<span class="text-xs font-label text-on-surface-variant font-medium">多页模式</span>
+</button>
+</section>
+<!-- Final CTA -->
+<footer class="mt-auto">
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-white py-5 rounded-full font-headline font-bold text-lg shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all">
+<span>完成上传并开始识别</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="text-center text-dust-brown text-sm mt-4 opacity-60">AI 正在为您待命 · 学习即将开始</p>
+</footer>
+</main>
+<!-- Aesthetic Floating Element: Grainy Texture Overlay (Subtle) -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/p6-polka.png')]"></div>
+</body></html>

@@ -1,0 +1,13 @@
+name: learning_english_workspace
+
+packages:
+  - apps/**
+  - packages/**
+
+scripts:
+  analyze:
+    description: Run static analysis across the Flutter workspace.
+    run: melos exec -- "flutter analyze"
+  test:
+    description: Run tests across Dart packages that define them.
+    run: melos exec --fail-fast -- "flutter test"

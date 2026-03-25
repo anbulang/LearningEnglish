@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#ffeadc",
+              "tertiary-fixed-dim": "#b9c9d2",
+              "on-secondary-container": "#097162",
+              "surface-container-lowest": "#ffffff",
+              "inverse-primary": "#ffb59e",
+              "surface": "#fff8f5",
+              "on-secondary-fixed-variant": "#005045",
+              "tertiary": "#526168",
+              "secondary-fixed": "#9df3df",
+              "primary-fixed": "#ffdbd0",
+              "on-error-container": "#93000a",
+              "surface-variant": "#f5decf",
+              "on-surface": "#251910",
+              "on-primary-container": "#6c250c",
+              "secondary": "#006b5c",
+              "tertiary-container": "#9aaab2",
+              "surface-container-low": "#fff1e9",
+              "primary-container": "#f28c6b",
+              "primary": "#98462a",
+              "error": "#ba1a1a",
+              "on-secondary": "#ffffff",
+              "background": "#fff8f5",
+              "tertiary-fixed": "#d5e5ee",
+              "on-background": "#251910",
+              "surface-container-high": "#fbe4d5",
+              "inverse-surface": "#3b2e24",
+              "primary-fixed-dim": "#ffb59e",
+              "on-tertiary": "#ffffff",
+              "outline-variant": "#dbc1b9",
+              "on-primary-fixed-variant": "#7a2f16",
+              "secondary-container": "#9df3df",
+              "on-surface-variant": "#55433d",
+              "on-tertiary-fixed-variant": "#3a4950",
+              "on-error": "#ffffff",
+              "error-container": "#ffdad6",
+              "outline": "#88726c",
+              "secondary-fixed-dim": "#81d6c3",
+              "on-primary": "#ffffff",
+              "on-tertiary-container": "#303f46",
+              "on-primary-fixed": "#3a0b00",
+              "surface-dim": "#ecd6c7",
+              "inverse-on-surface": "#ffede3",
+              "on-secondary-fixed": "#00201b",
+              "on-tertiary-fixed": "#0f1d24",
+              "surface-container-highest": "#f5decf",
+              "surface-bright": "#fff8f5",
+              "surface-tint": "#98462a"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: #fff8f5; color: #251910; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .editorial-shadow { box-shadow: 0 32px 64px -12px rgba(37, 25, 16, 0.04); }
+    </style>
+</head>
+<body class="bg-background text-on-surface flex min-h-screen overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full z-40 flex flex-col py-8 bg-[#f2efe9] dark:bg-[#2c231d] h-full w-24 md:w-64 rounded-r-3xl border-r-0 shadow-xl shadow-[#251910]/5">
+<div class="px-6 mb-10 flex flex-col items-center md:items-start">
+<div class="w-12 h-12 rounded-2xl bg-primary-container flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-white text-3xl">child_care</span>
+</div>
+<div class="hidden md:block">
+<h2 class="font-headline font-bold text-lg text-on-surface">English Adventure</h2>
+<p class="font-headline text-xs text-on-surface-variant font-medium opacity-70">Level 2 Curator</p>
+</div>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Home -->
+<a class="flex items-center gap-4 text-[#55433d] dark:text-[#fff8f5]/70 mx-4 p-4 hover:bg-[#f28c6b]/20 transition-all duration-300 ease-in-out transform hover:translate-x-1 font-headline text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="hidden md:inline">Home</span>
+</a>
+<!-- Speak (Active) -->
+<a class="flex items-center gap-4 bg-[#f28c6b] text-white rounded-2xl mx-4 p-4 shadow-sm font-headline text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="record_voice_over" style="font-variation-settings: 'FILL' 1;">record_voice_over</span>
+<span class="hidden md:inline">Speak</span>
+</a>
+<!-- Library -->
+<a class="flex items-center gap-4 text-[#55433d] dark:text-[#fff8f5]/70 mx-4 p-4 hover:bg-[#f28c6b]/20 transition-all duration-300 ease-in-out transform hover:translate-x-1 font-headline text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="book_5">book_5</span>
+<span class="hidden md:inline">Library</span>
+</a>
+<!-- Progress -->
+<a class="flex items-center gap-4 text-[#55433d] dark:text-[#fff8f5]/70 mx-4 p-4 hover:bg-[#f28c6b]/20 transition-all duration-300 ease-in-out transform hover:translate-x-1 font-headline text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="hidden md:inline">Progress</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-primary text-white font-headline font-bold py-4 rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+<span class="hidden md:inline">Start Lesson</span>
+<span class="md:hidden material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-24 md:ml-64 p-8 overflow-y-auto">
+<!-- Header Shell -->
+<header class="flex justify-between items-center mb-10">
+<div>
+<h1 class="font-headline font-extrabold text-3xl text-on-surface tracking-tight">The Gentle Curator</h1>
+<p class="text-on-surface-variant font-medium">Practicing: Animal Vocabulary</p>
+</div>
+<div class="flex gap-4">
+<button class="p-3 rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">help_outline</span>
+</button>
+<button class="p-3 rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+<div class="w-12 h-12 rounded-full border-2 border-primary-container p-0.5">
+<img alt="Profile" class="w-full h-full rounded-full object-cover" data-alt="close up portrait of a friendly cartoon parent avatar with warm smile and soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBl-AeeGzV4e6Zt18x4widcSxqBET78Hr8oOOyenhdD8umcTqmCvxZObOUVuHGxdJFPSOdmI2uKX-cKf1WpAUR7-dTiuRszpYR2kBLafE1HTtxvcJbalE0CtvfeQ5SfFOPmrUG5VPCtKI0oTVAiNmOCp3W06puZUD2S06pBExdZ4P2rixoFyw0HBoBZHf7f_uqLuJ--kiC8dU4WDnow197PES2DBik5I25pDECxOBKDMw10juzBqQ3vw_1x5v9Bwf9SqzXM6MgfvrJc"/>
+</div>
+</div>
+</header>
+<!-- Two-Column Split View -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Speaking Stage -->
+<section class="lg:col-span-7 flex flex-col gap-6">
+<!-- AI Buddy Stage -->
+<div class="relative bg-surface-container-low rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center p-8 editorial-shadow">
+<!-- Background Decor -->
+<div class="absolute inset-0 opacity-10 pointer-events-none">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-container rounded-full blur-3xl -mr-32 -mt-32"></div>
+<div class="absolute bottom-0 left-0 w-48 h-48 bg-secondary-container rounded-full blur-3xl -ml-24 -mb-24"></div>
+</div>
+<div class="relative z-10 flex flex-col items-center text-center">
+<img alt="Buddy" class="w-64 h-64 object-contain mb-8 drop-shadow-xl" data-alt="a cute friendly 3d animated giraffe character with large expressive eyes standing in a soft watercolor style savannah" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdLPt7lfV1XV-MLYGBnugKnmjFXNJMMXl9oTPOcHD0pz-ZH3gKh7FT9FrU6mHvXqH2k1_w1Ia1EKupMinw84Nj2lJwFh5wOfv2VAugUEmQFRYmMVSA6G2PnfRd1VDO95JHLSVrLLDAHsOYDLByYjvulVA7OCqFArJXrEn0DU0z6O0l-VO2g4ibnIvmvsQP6XIxq99iHzXtJNzALVx-Mc64d3uDcHhU4YZ5gtKDEHQzFNnkbdaprVANpa5D9um6-bH26l7vBJSm0yZn"/>
+<div class="bg-surface-container-lowest/90 backdrop-blur-md px-8 py-6 rounded-lg editorial-shadow max-w-md">
+<h2 class="font-headline font-bold text-2xl text-on-primary-container mb-2">What do you see at the zoo?</h2>
+<p class="text-on-surface-variant italic">Listen carefully and repeat after me!</p>
+</div>
+</div>
+</div>
+<!-- Target Sentence Card -->
+<div class="bg-surface-container-lowest p-8 rounded-lg editorial-shadow border border-outline-variant/10">
+<div class="flex items-center gap-4 mb-4">
+<span class="material-symbols-outlined text-primary">campaign</span>
+<span class="font-headline font-bold text-on-surface-variant uppercase tracking-widest text-xs">Target Sentence</span>
+</div>
+<p class="font-headline text-4xl font-extrabold text-on-surface leading-tight">
+                        I see a big, <span class="text-primary underline decoration-primary-container/30">tall giraffe</span>.
+                    </p>
+</div>
+<!-- Recording Area -->
+<div class="bg-surface-container-high rounded-lg p-8 flex flex-col items-center gap-6">
+<div class="flex items-end justify-center gap-1.5 h-12 w-full max-w-xs">
+<!-- Mock Waveform -->
+<div class="w-1.5 bg-primary rounded-full h-4 opacity-40"></div>
+<div class="w-1.5 bg-primary rounded-full h-8 opacity-60"></div>
+<div class="w-1.5 bg-primary rounded-full h-12"></div>
+<div class="w-1.5 bg-primary rounded-full h-6 opacity-80"></div>
+<div class="w-1.5 bg-primary rounded-full h-10 opacity-50"></div>
+<div class="w-1.5 bg-primary rounded-full h-3 opacity-30"></div>
+<div class="w-1.5 bg-primary rounded-full h-9"></div>
+<div class="w-1.5 bg-primary rounded-full h-5 opacity-40"></div>
+<div class="w-1.5 bg-primary rounded-full h-12 opacity-90"></div>
+<div class="w-1.5 bg-primary rounded-full h-7"></div>
+</div>
+<button class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-white text-5xl" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+<p class="font-headline font-semibold text-primary">Tap to Stop Recording</p>
+</div>
+</section>
+<!-- Right Column: Feedback & Progress -->
+<section class="lg:col-span-5 flex flex-col gap-6">
+<!-- Encouragement Module -->
+<div class="bg-secondary-container/30 backdrop-blur-sm p-8 rounded-lg border border-secondary/10 flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xl text-on-secondary-container">Great job!</h3>
+<p class="text-on-secondary-container/80">You sound like a pro! Keep it up!</p>
+</div>
+</div>
+<!-- Live Transcript & Performance -->
+<div class="flex-1 bg-surface-container-lowest rounded-lg editorial-shadow p-8 flex flex-col">
+<h3 class="font-headline font-bold text-lg mb-6">Live Feedback</h3>
+<!-- Performance Metric -->
+<div class="flex items-center justify-between mb-8 p-6 bg-surface-container-low rounded-lg">
+<div>
+<p class="text-sm text-on-surface-variant font-medium">Pronunciation Accuracy</p>
+<span class="font-headline font-extrabold text-4xl text-secondary">92%</span>
+</div>
+<div class="w-20 h-20 relative">
+<!-- Circular Progress Mockup -->
+<svg class="w-20 h-20 -rotate-90" viewbox="0 0 36 36">
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#f5decf" stroke-width="3"></path>
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#006b5c" stroke-dasharray="92, 100" stroke-width="3"></path>
+</svg>
+<span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-secondary">EXCELLENT</span>
+</div>
+</div>
+<!-- Transcript -->
+<div class="space-y-4 mb-8">
+<p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold opacity-50">Transcript</p>
+<div class="p-4 rounded-lg bg-surface-dim/20 italic text-lg leading-relaxed text-on-surface">
+                            "I see a <span class="text-secondary font-bold">big</span>, <span class="bg-primary/10 text-primary px-1 rounded">tall</span> giraffe."
+                        </div>
+<p class="text-sm text-on-surface-variant">The word <span class="font-bold">"tall"</span> was a bit soft. Try emphasizing the 'T' sound!</p>
+</div>
+<!-- Improved Answer Tip -->
+<div class="mt-auto bg-surface-container-high/50 p-6 rounded-lg border-l-4 border-primary">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-sm">lightbulb</span>
+<span class="font-headline font-bold text-sm text-primary">Improved Answer Tip</span>
+</div>
+<p class="text-on-surface-variant text-sm leading-relaxed">
+                            Instead of "big", you could also say <span class="font-bold text-on-surface">"enormous"</span> to sound even more like a native speaker!
+                        </p>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full py-5 bg-on-surface text-white font-headline font-bold rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3">
+                    Next Challenge
+                    <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</section>
+</div>
+</main>
+</body></html>

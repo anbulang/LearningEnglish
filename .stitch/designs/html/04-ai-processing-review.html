@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface": "#fff8f5",
+              "primary-fixed": "#ffdbd0",
+              "on-tertiary": "#ffffff",
+              "inverse-surface": "#3b2e24",
+              "secondary": "#006b5c",
+              "on-tertiary-container": "#303f46",
+              "background": "#fff8f5",
+              "on-secondary-fixed": "#00201b",
+              "on-secondary": "#ffffff",
+              "surface-container-low": "#fff1e9",
+              "surface-container-high": "#fbe4d5",
+              "on-surface": "#251910",
+              "error": "#ba1a1a",
+              "secondary-fixed": "#9df3df",
+              "surface-container": "#ffeadc",
+              "surface-bright": "#fff8f5",
+              "on-error-container": "#93000a",
+              "tertiary-container": "#9aaab2",
+              "surface-container-highest": "#f5decf",
+              "secondary-fixed-dim": "#81d6c3",
+              "on-background": "#251910",
+              "on-primary-container": "#6c250c",
+              "inverse-primary": "#ffb59e",
+              "inverse-on-surface": "#ffede3",
+              "surface-dim": "#ecd6c7",
+              "on-primary": "#ffffff",
+              "outline-variant": "#dbc1b9",
+              "on-surface-variant": "#55433d",
+              "on-error": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-primary-fixed": "#3a0b00",
+              "tertiary": "#526168",
+              "outline": "#88726c",
+              "on-tertiary-fixed": "#0f1d24",
+              "on-primary-fixed-variant": "#7a2f16",
+              "surface-variant": "#f5decf",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed-dim": "#b9c9d2",
+              "secondary-container": "#9df3df",
+              "primary-fixed-dim": "#ffb59e",
+              "primary": "#98462a",
+              "on-secondary-container": "#097162",
+              "on-secondary-fixed-variant": "#005045",
+              "primary-container": "#f28c6b",
+              "on-tertiary-fixed-variant": "#3a4950",
+              "tertiary-fixed": "#d5e5ee",
+              "surface-tint": "#98462a"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Be Vietnam Pro', sans-serif;
+        background-color: #fff8f5;
+        color: #251910;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-[#fff8f5] dark:bg-[#1a120b] flex items-center justify-between px-6 py-4 max-w-screen-xl mx-auto">
+<button class="p-2 hover:bg-[#f28c6b]/10 dark:hover:bg-[#f28c6b]/20 transition-colors active:scale-95 duration-200 ease-in-out rounded-full text-[#98462a] dark:text-[#f28c6b]">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#251910] dark:text-[#fff8f5]">审核并确认</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+<main class="max-w-screen-xl mx-auto px-6 pt-4 space-y-10">
+<!-- AI Status Processing Timeline -->
+<section class="relative">
+<div class="flex items-center justify-between max-w-md mx-auto relative px-4">
+<!-- Progress Line Background -->
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-variant -translate-y-1/2 z-0"></div>
+<!-- Active Progress Line -->
+<div class="absolute top-1/2 left-0 w-2/3 h-0.5 bg-secondary -translate-y-1/2 z-0"></div>
+<!-- Steps -->
+<div class="relative z-10 flex flex-col items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white text-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-label text-[10px] font-semibold text-on-surface-variant uppercase tracking-tighter">Scan Complete</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white text-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-label text-[10px] font-semibold text-on-surface-variant uppercase tracking-tighter">AI Analyzing</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-2">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20 scale-110">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">rate_review</span>
+</div>
+<span class="font-label text-[10px] font-bold text-primary uppercase tracking-tighter">Ready for Review</span>
+</div>
+</div>
+</section>
+<!-- Lesson Info Header (Editorial Style) -->
+<section class="flex flex-col md:flex-row justify-between items-end gap-6 border-l-4 border-primary pl-6 py-2">
+<div>
+<span class="font-label text-sm font-semibold text-primary/80 tracking-widest uppercase">Lesson Focus</span>
+<h2 class="font-headline text-4xl font-extrabold text-on-surface leading-tight mt-1">今日课题：动物园</h2>
+<p class="font-headline text-lg text-on-surface-variant/80 italic mt-2">At the Zoo</p>
+</div>
+<div class="text-right space-y-1">
+<p class="font-body text-sm font-medium text-on-surface-variant">老师：张老师</p>
+<p class="font-body text-sm text-outline">日期：2024-03-25</p>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+<!-- Left Side: Vocabulary -->
+<div class="lg:col-span-7 space-y-8">
+<div class="flex items-center justify-between">
+<h3 class="font-headline text-2xl font-bold">核心词汇 <span class="text-outline font-normal text-lg ml-2">(3)</span></h3>
+<button class="text-primary font-label text-sm font-bold flex items-center gap-1 hover:opacity-70 transition-opacity">
+<span class="material-symbols-outlined text-lg">add_circle</span> 添加词汇
+                    </button>
+</div>
+<div class="space-y-4">
+<!-- Word Card: Lion -->
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border-l-4 border-secondary flex items-center justify-between group">
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<input class="bg-transparent border-none p-0 font-headline text-xl font-bold text-on-surface focus:ring-0 w-32" type="text" value="Lion"/>
+<span class="bg-secondary-container text-on-secondary-container font-label text-[10px] px-2 py-0.5 rounded-full font-bold">98% High Confidence</span>
+</div>
+<input class="bg-transparent border-none p-0 font-body text-on-surface-variant focus:ring-0 mt-1 w-full" type="text" value="狮子"/>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-2 text-outline hover:text-error transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<!-- Word Card: Elephant -->
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border-l-4 border-secondary flex items-center justify-between group">
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<input class="bg-transparent border-none p-0 font-headline text-xl font-bold text-on-surface focus:ring-0 w-32" type="text" value="Elephant"/>
+<span class="bg-secondary-container text-on-secondary-container font-label text-[10px] px-2 py-0.5 rounded-full font-bold">92% High Confidence</span>
+</div>
+<input class="bg-transparent border-none p-0 font-body text-on-surface-variant focus:ring-0 mt-1 w-full" type="text" value="大象"/>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-2 text-outline hover:text-error transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<!-- Word Card: Giraffe (Low Confidence) -->
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border-l-4 border-primary flex flex-col gap-4 group">
+<div class="flex items-center justify-between">
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<input class="bg-transparent border-none p-0 font-headline text-xl font-bold text-on-surface focus:ring-0 w-32 ring-2 ring-primary/20 rounded-sm" type="text" value="Giraffe"/>
+<span class="bg-primary-fixed text-on-primary-fixed-variant font-label text-[10px] px-2 py-0.5 rounded-full font-bold">75% Review Needed</span>
+</div>
+<input class="bg-transparent border-none p-0 font-body text-on-surface-variant focus:ring-0 mt-1 w-full" type="text" value="长颈鹿"/>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-2 text-outline hover:text-error transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<!-- Low Confidence Warning -->
+<div class="bg-primary-container/10 p-3 rounded-DEFAULT flex items-start gap-3 border border-primary/10">
+<span class="material-symbols-outlined text-primary text-xl">error</span>
+<p class="text-xs font-body text-on-primary-fixed-variant leading-relaxed">
+<span class="font-bold block mb-0.5">识别精度较低 (OCR Suggestion)</span>
+                                AI 扫描结果较为模糊，建议检查拼写是否正确。
+                            </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Side: Sentences & Context -->
+<div class="lg:col-span-5 space-y-8">
+<div class="flex items-center justify-between">
+<h3 class="font-headline text-2xl font-bold">练习句子</h3>
+</div>
+<div class="space-y-4">
+<!-- Sentence Card 1 -->
+<div class="bg-surface-container-low p-6 rounded-lg space-y-2 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline text-sm">edit</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-[10px] font-bold shrink-0 mt-1">1</span>
+<div>
+<p class="font-headline text-lg font-semibold text-on-surface">The lion is big.</p>
+<p class="font-body text-sm text-on-surface-variant mt-1">狮子很大。</p>
+</div>
+</div>
+</div>
+<!-- Sentence Card 2 -->
+<div class="bg-surface-container-low p-6 rounded-lg space-y-2 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline text-sm">edit</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-[10px] font-bold shrink-0 mt-1">2</span>
+<div>
+<p class="font-headline text-lg font-semibold text-on-surface">I see a zebra.</p>
+<p class="font-body text-sm text-on-surface-variant mt-1">我看到一只斑马。</p>
+</div>
+</div>
+</div>
+<!-- Card Image Bleed Effect (Editorial) -->
+<div class="bg-surface-container-high rounded-lg overflow-hidden flex items-center p-6 gap-6">
+<div class="flex-1">
+<h4 class="font-headline font-bold text-on-surface">原件对比</h4>
+<p class="font-body text-xs text-on-surface-variant mt-1">点击查看原始扫描件以核对信息准确性。</p>
+<button class="mt-4 bg-surface-container-lowest px-4 py-2 rounded-full font-label text-xs font-bold text-primary border border-primary/10 shadow-sm">
+                                查看扫描件
+                            </button>
+</div>
+<div class="w-24 h-32 bg-white rounded-md rotate-3 shadow-md border border-outline-variant/30 overflow-hidden shrink-0">
+<img class="w-full h-full object-cover grayscale opacity-60" data-alt="Close-up of a handwritten child notebook page with simple drawings of animals and scribbled English words" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOZB7r3WCAVsO-joIMY3KxUWWhNWlDA8iZSfzpzDg8mrW9JoSaJtyKnmveq_oyFLcbOHzafLon6fMXnd9zFTCRDAsPpkPTsbuO5GcYEVW6J_cefMwDeU9Y1Z2NqqXcGVy38wpIYpmRu6_gnB5LRGYtVUmYrE7ok4OW1-9XCyXfFR8HfN6aCVV6E53pO8WBHa96-5Ev-1Q8IQdD-qsIV8hP6WltN9g1W1lUkvVKLFUCbS8x_kmb4ODKdVHB16tYgfQBgrwDfr5bNp7m"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Fixed Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 w-full bg-[#fff8f5]/80 dark:bg-[#1a120b]/80 backdrop-blur-xl px-6 py-6 border-t-[0.5px] border-[#55433d]/10 z-50">
+<div class="max-w-screen-md mx-auto">
+<button class="w-full py-5 bg-gradient-to-r from-primary to-primary-container text-white font-headline font-bold text-lg rounded-full shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all">
+                确认并生成复习包
+                <span class="material-symbols-outlined" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</button>
+<p class="text-center font-body text-[10px] text-outline mt-3">完成后，AI将自动为您生成专属的单词卡与语音练习材料</p>
+</div>
+</div>
+<!-- Bottom Navigation Bar (Hidden on this focused task page as per shell suppression rule) -->
+<!-- The BottomNavBar is suppressed here because this is a Task-Focused/Linear sub-page ("Review & Confirm") which implies a temporary departure from the main navigation flow. -->
+</body></html>

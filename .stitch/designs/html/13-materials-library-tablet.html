@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Materials Library - The Curator</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-container": "#097162",
+              "secondary": "#006b5c",
+              "on-error": "#ffffff",
+              "surface": "#fff8f5",
+              "surface-container": "#ffeadc",
+              "tertiary-fixed": "#d5e5ee",
+              "on-primary-fixed": "#3a0b00",
+              "on-background": "#251910",
+              "surface-container-lowest": "#ffffff",
+              "outline": "#88726c",
+              "surface-container-low": "#fff1e9",
+              "secondary-container": "#9df3df",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed": "#9df3df",
+              "inverse-on-surface": "#ffede3",
+              "error": "#ba1a1a",
+              "primary-fixed": "#ffdbd0",
+              "surface-container-high": "#fbe4d5",
+              "on-secondary-fixed-variant": "#005045",
+              "secondary-fixed-dim": "#81d6c3",
+              "primary": "#98462a",
+              "primary-fixed-dim": "#ffb59e",
+              "on-surface": "#251910",
+              "on-secondary": "#ffffff",
+              "surface-tint": "#98462a",
+              "primary-container": "#f28c6b",
+              "on-tertiary-fixed-variant": "#3a4950",
+              "surface-dim": "#ecd6c7",
+              "inverse-primary": "#ffb59e",
+              "on-surface-variant": "#55433d",
+              "on-tertiary-fixed": "#0f1d24",
+              "outline-variant": "#dbc1b9",
+              "surface-bright": "#fff8f5",
+              "on-primary-container": "#6c250c",
+              "on-primary": "#ffffff",
+              "on-tertiary-container": "#303f46",
+              "tertiary-container": "#9aaab2",
+              "surface-variant": "#f5decf",
+              "on-primary-fixed-variant": "#7a2f16",
+              "on-error-container": "#93000a",
+              "tertiary-fixed-dim": "#b9c9d2",
+              "surface-container-highest": "#f5decf",
+              "on-secondary-fixed": "#00201b",
+              "inverse-surface": "#3b2e24",
+              "background": "#fff8f5",
+              "error-container": "#ffdad6",
+              "tertiary": "#526168"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        vertical-align: middle;
+      }
+      body {
+        background-color: #fff8f5;
+        color: #251910;
+        overflow: hidden;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #dbc1b9;
+        border-radius: 10px;
+      }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- SideNavBar (Rail) -->
+<nav class="fixed left-0 top-0 h-full flex flex-col py-6 bg-[#fff8f5] dark:bg-[#251910] h-full w-20 border-r-0 z-50">
+<div class="flex flex-col items-center mb-10">
+<div class="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white mb-2 shadow-sm">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+</div>
+<span class="text-lg font-bold text-[#251910] dark:text-[#fff8f5] font-headline">Library</span>
+</div>
+<div class="flex flex-col gap-6 flex-1">
+<!-- Active Tab: Library -->
+<a class="flex flex-col items-center justify-center bg-[#f28c6b] text-white rounded-2xl p-3 mx-2 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">book_2</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium tracking-tight">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 p-3 hover:bg-[#f28c6b]/10 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined mb-1">library_books</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium tracking-tight">Collections</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 p-3 hover:bg-[#f28c6b]/10 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined mb-1">history</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium tracking-tight">Recent</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 p-3 hover:bg-[#f28c6b]/10 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined mb-1">bookmark</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium tracking-tight">Bookmarks</span>
+</a>
+</div>
+<div class="mt-auto">
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 p-3 hover:bg-[#f28c6b]/10 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium tracking-tight">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Wrapper -->
+<div class="ml-20 flex flex-col h-screen">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-8 py-4 bg-[#fff8f5]/80 backdrop-blur-xl dark:bg-[#251910]/80 sticky top-0 z-40">
+<div class="flex items-center gap-8 flex-1">
+<h1 class="text-xl font-black text-[#251910] dark:text-[#fff8f5] font-headline">Materials Library</h1>
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-3 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/60 focus:ring-2 focus:ring-primary/20 font-body text-sm" placeholder="Search lessons..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-8">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-[#55433d] hover:bg-[#f28c6b]/5 transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant/30">
+<div class="text-right">
+<p class="text-sm font-bold text-on-surface leading-none">Curator Profile</p>
+<p class="text-[10px] text-on-surface-variant tracking-wider">Linen &amp; Coral</p>
+</div>
+<img alt="User Profile" class="w-10 h-10 rounded-full bg-surface-container-high object-cover" data-alt="close up professional headshot of a smiling friendly person with warm lighting and soft background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRNxVxIXXeBPA4PRpbMOCWXTR-qHr4STniDW0-rxXXuMqx8F_2lIctiQJt4VLC643wErbPPQRkn1kmJbD7t3HlDdNZkc5ghXrH52rCiyPJjLvGep_tga3mRVvO3ke6pPgT9GwuxSmWZ2vNiuX35pzXUbH2_ioJGiAvHDouQxEGvJlut6QUfrwCZbBfw0RR2ZU_t_pPnlkvFd7bmRotwbb1Ct_eM162aDtRvgtL52UbbujnYJwei1CrpdFS6hkWWdoTRzUmKu169dfD"/>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Master Column (Left) -->
+<section class="w-[380px] flex flex-col border-r border-outline-variant/10 bg-surface">
+<!-- Filter Chips -->
+<div class="px-6 py-4 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
+<button class="px-5 py-1.5 rounded-full bg-primary text-white text-xs font-bold whitespace-nowrap">All Lessons</button>
+<button class="px-5 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium whitespace-nowrap hover:bg-surface-container-highest transition-colors">Chinese</button>
+<button class="px-5 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium whitespace-nowrap hover:bg-surface-container-highest transition-colors">English</button>
+<button class="px-5 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium whitespace-nowrap hover:bg-surface-container-highest transition-colors">Culture</button>
+</div>
+<!-- Scrollable List -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-8 space-y-4">
+<!-- Lesson Card: Selected -->
+<div class="group cursor-pointer p-4 rounded-lg bg-surface-container-lowest border-2 border-primary/20 transition-all">
+<div class="flex gap-4">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="watercolor illustration of a friendly fox in a lush green forest with sunbeams filtering through leaves" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6_lYUr5n5oSEcBAw5r4mS2xSMDiOje21-3TILba5dHj4s2r0YBbC5_0BQQMP-Wn_rNTbUJs9NwHbl6_jYxgRXrkINCG0fbPK8NDHK4HlMk0fs3TJBwANVWrm6QayK0cbbOC2XkPzooEPHrMuqE_5uVux-RMTS-0230vNIOMI71jHRvSwQzUEq2xNFBihzMbvPUMGU3Flkkfdx5f7snHh5R9nE8A8GC71rzsjw5OeX3rp5oBymc0aCmfTyyOVwqy6waNKMmAH-GCIR"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface">Forest Animals</h3>
+<span class="text-[10px] px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-bold">待复习</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1 mb-2">Explore the wildlife of the deep woods...</p>
+<div class="flex items-center gap-2 text-[10px] text-on-surface-variant/70">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span>2024-03-20</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Lesson Card: Item 2 -->
+<div class="group cursor-pointer p-4 rounded-lg bg-surface hover:bg-surface-container-low transition-all">
+<div class="flex gap-4">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="gentle illustration of a daily morning routine with a window showing sunrise and a breakfast table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtRube7jy_cUHWU0PoUQLT2MfLwmCpgcY_aZFGImB2oBU0bTmHcE579i2nci23SaXH1X22SDIWm8t2Yi-DmIv3kR_K_K5WzJ5xENRUIoyVIqx7UBUO2u5WNdRTPFn6dogLtgLi77g7e2XtOgk-WsWFc4eRpmsMJVO6xcYyUShClk59dPnr9NgcsGZsLzSkYA9gqD3taK_U4RbbcqjM1peuc8rLu-meJ_1oN6nfjxQtTUobaBO8hligEYqsG4ihAOgc06gniXejThnN"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface">My Daily Routine</h3>
+<span class="text-[10px] px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-bold">已完成</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1 mb-2">Learning time and activity words...</p>
+<div class="flex items-center gap-2 text-[10px] text-on-surface-variant/70">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span>2024-03-18</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Lesson Card: Item 3 -->
+<div class="group cursor-pointer p-4 rounded-lg bg-surface hover:bg-surface-container-low transition-all">
+<div class="flex gap-4">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="magical underwater scene with colorful coral reefs exotic fish and soft blue light rays" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1-p-6guFOKw8p74KNawRoF2cbk0kQREJ0um1WcCjKGYFxirAvmKWKoD0qv8lzT5KvQRu_BIUeXFBviBvOQWM3XcG5WMzcLBxa8teLdVmEyuu4eIsJQjyxFyobOZg8Ge_R9xLZPDI8iRkRbiLTcTKEbmGGo9B-ufzPvNmhmDSOm_TtyLHXPzXeywFXO6SCLCEKVNJuVS7fTqBFrKJPfQvrGUqEaZvAzkYglotg-_9ZmkQ5V2Pa3ddC1eNovY6Xn67Df-BIcsLynXOw"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface">Under Sea</h3>
+<span class="text-[10px] px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-bold">已完成</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1 mb-2">Discovering creatures below the ocean...</p>
+<div class="flex items-center gap-2 text-[10px] text-on-surface-variant/70">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span>2024-03-15</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Lesson Card: Item 4 -->
+<div class="group cursor-pointer p-4 rounded-lg bg-surface hover:bg-surface-container-low transition-all">
+<div class="flex gap-4">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="vibrant oil painting style illustration of various fresh fruits on a rustic wooden table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeNvD32miCquUqzlcrRo7ypwW_lBp6Yhl8fZmJL1iINJ0fSkzLwkwXCBDkcgQLelDW3nVSIv0d2HwS9xQVN7w3XuqcNQUxx5FNnCsJTSsc_5fAs16t4rBT7fMMYlmgRlQ1-UUkdWQtR4cquc5gnjxouGZF6r3ijD7UGbmmFcf61gWtOPHaTSQDVQj9e_bOx_PdzxraOuKFGKbaTnevX8zGGSDA2q1ksr4VHuJFtJSsqTvWgs2nuJV1E0RwfEfbPbEylyDtf_4vSyyX"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline font-bold text-on-surface">Fruit Garden</h3>
+<span class="text-[10px] px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-bold">待复习</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1 mb-2">Vocabulary for healthy eating and colors...</p>
+<div class="flex items-center gap-2 text-[10px] text-on-surface-variant/70">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span>2024-03-12</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Detail Column (Right) -->
+<section class="flex-1 bg-surface-container-low overflow-y-auto custom-scrollbar p-10">
+<div class="max-w-4xl mx-auto">
+<!-- Preview Card -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<!-- Hero Image -->
+<div class="h-80 w-full relative">
+<img class="w-full h-full object-cover" data-alt="widescreen high-end editorial illustration of a peaceful forest clearing at sunset with stylized animals and soft warm lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiU02TPQOXrWQLKRg05oaM1jhiGX_8qHgwjovkHwLNKjObEDbW0R_iGYCt41-fY_0EJgDyuuJ-cnm5GoQgsjDM8ZAtonvjGYXvGXzxTx1lkvzYbUuBrMS3aucMyIl8f4LsQA7QGrtuYNTPzJJaAxiq_yjpTy05gRToCsD1WoM3dKlN-DQn2-YBADhopoO1FHRfQijWtNPZhh-67tG-WVsTerHbViaek3YVnjnplbhwxYBcma8lW0wgdXmnEIAhzC466cMc2hTtD9nR"/>
+<div class="absolute top-6 left-6">
+<span class="bg-white/90 backdrop-blur text-primary text-xs font-bold px-4 py-2 rounded-full shadow-sm">Featured Lesson</span>
+</div>
+</div>
+<!-- Info Area -->
+<div class="p-10">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h2 class="text-4xl font-headline font-extrabold text-on-surface mb-3 tracking-tight">Forest Animals</h2>
+<div class="flex items-center gap-6 text-sm text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">person</span>
+<span class="font-medium">Teacher: 张老师</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">event</span>
+<span class="font-medium">Date: 2024-03-20</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<span class="font-medium">Duration: 45 min</span>
+</div>
+</div>
+</div>
+<button class="bg-primary hover:bg-primary-container text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+                                    View Details
+                                    <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<!-- Bento Grid Summary -->
+<div class="grid grid-cols-2 gap-6">
+<div class="p-6 rounded-lg bg-secondary-container/30 border border-secondary/10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">list_alt</span>
+<h4 class="font-headline font-bold text-on-surface">Learning Goals</h4>
+</div>
+<ul class="space-y-3 text-sm text-on-surface-variant">
+<li class="flex items-start gap-2">
+<span class="text-secondary font-bold">•</span>
+                                            Identify 10 common forest animals in both English and Chinese.
+                                        </li>
+<li class="flex items-start gap-2">
+<span class="text-secondary font-bold">•</span>
+                                            Understand basic animal habitats and diet descriptors.
+                                        </li>
+<li class="flex items-start gap-2">
+<span class="text-secondary font-bold">•</span>
+                                            Practice pronunciation of animal sound onomatopoeias.
+                                        </li>
+</ul>
+</div>
+<div class="p-6 rounded-lg bg-surface-container-high border border-outline-variant/20">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">translate</span>
+<h4 class="font-headline font-bold text-on-surface">Key Vocabulary</h4>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-white rounded-lg text-xs font-medium border border-outline-variant/30">Fox (狐狸)</span>
+<span class="px-3 py-1 bg-white rounded-lg text-xs font-medium border border-outline-variant/30">Bear (熊)</span>
+<span class="px-3 py-1 bg-white rounded-lg text-xs font-medium border border-outline-variant/30">Squirrel (松鼠)</span>
+<span class="px-3 py-1 bg-white rounded-lg text-xs font-medium border border-outline-variant/30">Habitat (栖息地)</span>
+<span class="px-3 py-1 bg-white rounded-lg text-xs font-medium border border-outline-variant/30">Woods (森林)</span>
+<span class="px-3 py-1 bg-white rounded-lg text-xs font-medium border border-outline-variant/30">Acorn (橡子)</span>
+</div>
+</div>
+</div>
+<!-- Progress Track -->
+<div class="mt-8 pt-8 border-t border-outline-variant/20">
+<div class="flex justify-between items-end mb-3">
+<h4 class="font-headline font-bold text-on-surface">Learning Progress</h4>
+<span class="text-sm font-bold text-secondary">65% Completed</span>
+</div>
+<div class="w-full h-3 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[65%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Insight Module (Glassmorphism) -->
+<div class="mt-10 p-8 rounded-lg bg-white/40 backdrop-blur-md border border-white/20 shadow-sm relative overflow-hidden">
+<div class="relative z-10 flex items-center justify-between">
+<div>
+<h4 class="text-xl font-headline font-bold text-on-surface mb-1">Parental Insights</h4>
+<p class="text-sm text-on-surface-variant">Your child shows a strong interest in "Animal Recognition".</p>
+</div>
+<button class="text-primary font-bold text-sm flex items-center gap-1">
+                                View Full Report
+                                <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+<!-- Background decoration -->
+<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl"></div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

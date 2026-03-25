@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: learning-english-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-learning_english}
+      POSTGRES_USER: ${POSTGRES_USER:-learning_english}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-learning_english}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: learning-english-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  minio:
+    image: minio/minio:latest
+    container_name: learning-english-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+
+  api:
+    build:
+      context: ../services/api
+    container_name: learning-english-api
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://learning_english:learning_english@postgres:5432/learning_english
+      OBJECT_STORAGE_ENDPOINT: http://minio:9000
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  worker:
+    build:
+      context: ../services/workers
+    container_name: learning-english-worker
+    depends_on:
+      - redis
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+
+volumes:
+  postgres_data:
+  minio_data:

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary-fixed-dim": "#ffb59e",
+            "on-secondary-fixed-variant": "#005045",
+            "surface": "#fff8f5",
+            "on-tertiary-fixed": "#0f1d24",
+            "tertiary-fixed": "#d5e5ee",
+            "secondary": "#006b5c",
+            "primary-fixed": "#ffdbd0",
+            "surface-variant": "#f5decf",
+            "on-secondary-fixed": "#00201b",
+            "on-surface-variant": "#55433d",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#ffb59e",
+            "surface-container-low": "#fff1e9",
+            "primary-container": "#f28c6b",
+            "outline-variant": "#dbc1b9",
+            "surface-container-high": "#fbe4d5",
+            "on-primary-container": "#6c250c",
+            "surface-tint": "#98462a",
+            "on-primary": "#ffffff",
+            "secondary-fixed": "#9df3df",
+            "tertiary-container": "#9aaab2",
+            "on-surface": "#251910",
+            "surface-container-highest": "#f5decf",
+            "surface-bright": "#fff8f5",
+            "surface-container": "#ffeadc",
+            "on-background": "#251910",
+            "on-primary-fixed-variant": "#7a2f16",
+            "tertiary": "#526168",
+            "error-container": "#ffdad6",
+            "on-secondary-container": "#097162",
+            "on-error": "#ffffff",
+            "surface-dim": "#ecd6c7",
+            "on-primary-fixed": "#3a0b00",
+            "surface-container-lowest": "#ffffff",
+            "secondary-container": "#9df3df",
+            "inverse-surface": "#3b2e24",
+            "inverse-on-surface": "#ffede3",
+            "on-tertiary": "#ffffff",
+            "primary": "#98462a",
+            "background": "#fff8f5",
+            "tertiary-fixed-dim": "#b9c9d2",
+            "on-tertiary-fixed-variant": "#3a4950",
+            "secondary-fixed-dim": "#81d6c3",
+            "outline": "#88726c",
+            "on-tertiary-container": "#303f46",
+            "on-secondary": "#ffffff",
+            "error": "#ba1a1a"
+          },
+          fontFamily: {
+            "headline": ["Plus Jakarta Sans"],
+            "body": ["Be Vietnam Pro"],
+            "label": ["Plus Jakarta Sans"]
+          },
+          borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #fff8f5;
+      color: #251910;
+      font-family: 'Be Vietnam Pro', sans-serif;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<nav class="w-full top-0 sticky bg-[#fff8f5] dark:bg-[#1a1410] z-50">
+<div class="flex items-center justify-between px-6 py-4 w-full max-w-2xl mx-auto">
+<div class="w-10 flex justify-start">
+<button class="text-[#98462a] dark:text-[#f28c6b] hover:opacity-80 transition-opacity scale-95 active:duration-150">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#251910] dark:text-[#fff8f5]">Practice Time</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</div>
+</nav>
+<main class="flex-1 w-full max-w-2xl mx-auto px-6 py-8 flex flex-col gap-10">
+<!-- Editorial Header -->
+<header class="space-y-2">
+<span class="font-label text-primary font-bold tracking-wider text-xs uppercase">VOCABULARY ADVENTURE</span>
+<h2 class="font-headline text-4xl md:text-5xl font-extrabold text-on-surface leading-tight tracking-tight">
+        Can you find the <span class="text-primary italic">Lion</span>?
+      </h2>
+</header>
+<!-- Game Area (Bento-style Grid) -->
+<section class="grid grid-cols-2 gap-4 md:gap-6 flex-1">
+<!-- Option 1: Elephant -->
+<button class="group relative aspect-square bg-surface-container-lowest rounded-xl p-4 shadow-[0_4px_32px_rgba(37,25,16,0.04)] hover:shadow-[0_8px_48px_rgba(37,25,16,0.08)] transition-all flex flex-col items-center justify-center border-2 border-transparent hover:border-outline-variant/20">
+<div class="w-full h-full mb-2 bg-surface-container rounded-lg overflow-hidden flex items-center justify-center">
+<img alt="Elephant illustration" class="w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-500" data-alt="Minimalist soft 3D illustration of a friendly grey elephant with big ears, warm clay style, neutral beige background, studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTHnrmEa1oYI12DaAAeTKW1TTLGkJGScnlLu3J-P-B5QKqbTierOKKBOksnynHbtEzR2cwKANvF7NWCBCM_aWP1Pdv4kHiLIGqgxLjhvnUZNmswJ1uuo0-PsA0yz0sSDN-a_z2JNL1LDaj1UDW7ACfcmLRqXlDJC8jwnDEDzR5GpA9iTNyGYZ2Wl3_vRUtToeFEDdC0Ex76xCXmNjiQjUtzWUm4-EUNm3NM5Phjn-JqfY4XtceGJHV6TuYLqX5wWJVRD-lCtrJ0Uwq"/>
+</div>
+<span class="font-label font-bold text-on-surface-variant group-hover:text-primary transition-colors">Elephant</span>
+</button>
+<!-- Option 2: Lion (Correct) -->
+<button class="group relative aspect-square bg-surface-container-lowest rounded-xl p-4 shadow-[0_4px_32px_rgba(37,25,16,0.04)] border-2 border-secondary/40 flex flex-col items-center justify-center">
+<div class="absolute top-3 right-3 text-secondary">
+<span class="material-symbols-outlined" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="w-full h-full mb-2 bg-secondary-container/30 rounded-lg overflow-hidden flex items-center justify-center">
+<img alt="Lion illustration" class="w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-500" data-alt="Cute friendly lion illustration with a large orange mane, soft editorial style, warm linen background, child-friendly 3D aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJ0uU7cxq42xD_DODMRWnaQn_6JLaR-IVfvdjNf4pJtlDYr8hjpXPHTOV4J0py3NFOTGWAkOdB3nVOgju8Z6GB0miPnuLIvPZmp9K4Gac6fYdvZfCfMHdq5vBvCBCeqEyz-UT5duykApCanRMJcPXtw5qhBvUPX59L2LQaoNN22PaePII47irprwK68TLCgTqaXf_AGHmEWIiwbhD_ublz4sfyl0c1ANxxicCcr-j06K4KhqRCPRmm2_GPYGfyM13FfVdACG0mwkv2"/>
+</div>
+<span class="font-label font-bold text-primary">Lion</span>
+</button>
+<!-- Option 3: Zebra -->
+<button class="group relative aspect-square bg-surface-container-lowest rounded-xl p-4 shadow-[0_4px_32px_rgba(37,25,16,0.04)] hover:shadow-[0_8px_48px_rgba(37,25,16,0.08)] transition-all flex flex-col items-center justify-center border-2 border-transparent hover:border-outline-variant/20">
+<div class="w-full h-full mb-2 bg-surface-container rounded-lg overflow-hidden flex items-center justify-center">
+<img alt="Zebra illustration" class="w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-500" data-alt="Stylized zebra illustration with clean black and white stripes, soft rounded shapes, pastel cream background, high-end editorial children's book style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_HojYQ6joYkdLpRJYFVtoBYemNiRjCy59lMn1jXrZqZpImAyIQhtbvTVUe3Qtnc8OThz4qLan1GxfoGveg0aYWVc3_nUQyDAimJ3fXvqBBfEs_oKnDdQj7Z8_2EpOCqX69Gfgoi6C--YAetjO-h3VjAMGf420gSzsnClkktUON3l2o-sLLe_uBIHhl39hQDseL_EXvLb-5pHe_xqLPgJatQZG6TBDJ0EhKDTTVR4DuBZAylgcesb6V9GFIQbxpV65OHvyLmlemGyy"/>
+</div>
+<span class="font-label font-bold text-on-surface-variant">Zebra</span>
+</button>
+<!-- Option 4: Giraffe -->
+<button class="group relative aspect-square bg-surface-container-lowest rounded-xl p-4 shadow-[0_4px_32px_rgba(37,25,16,0.04)] hover:shadow-[0_8px_48px_rgba(37,25,16,0.08)] transition-all flex flex-col items-center justify-center border-2 border-transparent hover:border-outline-variant/20">
+<div class="w-full h-full mb-2 bg-surface-container rounded-lg overflow-hidden flex items-center justify-center">
+<img alt="Giraffe illustration" class="w-3/4 h-3/4 object-contain group-hover:scale-110 transition-transform duration-500" data-alt="Long-necked giraffe illustration with golden spots, gentle expression, soft lighting, minimalistic clay aesthetic, warm studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgyhxp7C-DviGdzhsl32cLZgareVQ3KZ7g3LoXmCoM8OlGFKOr2QbZQZIASLEzt_emhbYXIuqA7DFdDv0laAINVmnOOSKutDBDxLpaB784kLKPQqnBynzv4iWhV8rbAyNFZfKJk_ZyeFCsPwaGBQkAWOFyu1a3m2QRRxFo_WfMduRM8b8K4jU4WQw1ES2KYuaTBt2woz-wQ959B8d451Ikf6JoDJ5FOoGMhKBbZ8Mh28IOCaBhWdnQexCoiFj6Q6vAyen1ku_WAl0f"/>
+</div>
+<span class="font-label font-bold text-on-surface-variant">Giraffe</span>
+</button>
+</section>
+<!-- Feedback Strip -->
+<div class="bg-secondary-container/40 rounded-lg p-5 flex items-center gap-4 border border-secondary/10">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-3xl" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<p class="font-headline font-bold text-on-secondary-container text-lg">Great job!</p>
+<p class="font-body text-on-secondary-container/80 text-sm">That's exactly right, it's a Lion!</p>
+</div>
+</div>
+</main>
+<!-- Progress Footer & Action -->
+<footer class="mt-auto w-full bg-surface-container-low px-6 pb-10 pt-6 rounded-t-lg">
+<div class="max-w-2xl mx-auto space-y-6">
+<!-- Progress Bar -->
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<span class="font-label text-sm font-semibold text-dust-brown">Step 2 of 5</span>
+<span class="font-label text-sm font-bold text-secondary">40% Complete</span>
+</div>
+<div class="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full w-[40%]"></div>
+</div>
+</div>
+<!-- Main Action Button -->
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-white font-headline font-extrabold py-5 rounded-full shadow-lg shadow-primary/10 active:scale-95 transition-all flex items-center justify-center gap-2 group">
+<span>Next</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</footer>
+<!-- BottomNavBar (Hint/Check Anchors) -->
+<div class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-8 pb-8 pt-4 bg-[#fff8f5]/80 dark:bg-[#1a1410]/80 backdrop-blur-xl shadow-[0_-4px_32px_rgba(37,25,16,0.04)] rounded-t-[2rem]">
+<button class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-6 py-2 hover:bg-[#f28c6b]/10 rounded-full transition-all">
+<span class="material-symbols-outlined" data-icon="lightbulb">lightbulb</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Hint</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-[#f28c6b] text-white rounded-full px-6 py-2 scale-95 active:duration-150">
+<span class="material-symbols-outlined" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Check</span>
+</button>
+</div>
+</body></html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-highest": "#f5decf",
+              "on-tertiary-fixed": "#0f1d24",
+              "surface-container-high": "#fbe4d5",
+              "tertiary-fixed-dim": "#b9c9d2",
+              "error-container": "#ffdad6",
+              "inverse-surface": "#3b2e24",
+              "secondary": "#006b5c",
+              "on-tertiary-fixed-variant": "#3a4950",
+              "surface-container-low": "#fff1e9",
+              "surface-variant": "#f5decf",
+              "secondary-fixed-dim": "#81d6c3",
+              "on-error": "#ffffff",
+              "surface": "#fff8f5",
+              "surface-dim": "#ecd6c7",
+              "on-error-container": "#93000a",
+              "on-secondary-fixed": "#00201b",
+              "on-secondary-container": "#097162",
+              "on-secondary": "#ffffff",
+              "tertiary-container": "#9aaab2",
+              "on-primary": "#ffffff",
+              "surface-container": "#ffeadc",
+              "inverse-primary": "#ffb59e",
+              "on-surface": "#251910",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed": "#3a0b00",
+              "on-primary-fixed-variant": "#7a2f16",
+              "outline": "#88726c",
+              "on-secondary-fixed-variant": "#005045",
+              "secondary-container": "#9df3df",
+              "background": "#fff8f5",
+              "on-tertiary": "#ffffff",
+              "primary-container": "#f28c6b",
+              "outline-variant": "#dbc1b9",
+              "on-surface-variant": "#55433d",
+              "tertiary": "#526168",
+              "tertiary-fixed": "#d5e5ee",
+              "primary": "#98462a",
+              "surface-bright": "#fff8f5",
+              "error": "#ba1a1a",
+              "primary-fixed": "#ffdbd0",
+              "primary-fixed-dim": "#ffb59e",
+              "secondary-fixed": "#9df3df",
+              "on-primary-container": "#6c250c",
+              "surface-tint": "#98462a",
+              "inverse-on-surface": "#ffede3",
+              "on-tertiary-container": "#303f46",
+              "on-background": "#251910"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1.25rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Be Vietnam Pro', sans-serif;
+        background-color: #fff8f5;
+      }
+      .editorial-shadow {
+        box-shadow: 0 32px 64px -12px rgba(37, 25, 16, 0.04);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface selection:bg-secondary-container">
+<!-- TopAppBar -->
+<nav class="flex justify-between items-center px-6 py-4 w-full sticky top-0 z-50 bg-[#fff8f5] dark:bg-stone-900">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden border-2 border-primary/10">
+<img alt="Child profile switcher" data-alt="a cute cartoon illustration of a happy child with short hair and a bright yellow shirt on a soft beige background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcBEK4_eAQUg7uHA53CW4cFammgEqz3AcW_1AjJNzGKpmvPhv3zJVolDA-loalX9Qde07FDr4JY2ClxH1wxaiBErZ4R7Saji37-8ONdCniOQtHWNor-4v_IVPWSKqmEcA0u8e5hMnWhcA23hkKTOzKpS5QFgIK4t7y0HmqsTDtPFQQ2KiKcmyb56c79f4OfRUSoN9oFHMgZ1BjiV_tZJabOGY_57B-05nJRAiCXG0bzOlp0IkiBnz8knvePxrKLboGnoOaOqcllyRX"/>
+</div>
+<div class="flex flex-col">
+<span class="font-headline font-bold text-on-surface text-lg leading-tight">早安, 梓涵妈妈</span>
+<span class="text-[11px] text-on-surface-variant font-medium tracking-wide">学习第 128 天</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 ease-in-out active:scale-95 hover:bg-stone-100">
+<span class="material-symbols-outlined text-primary" data-icon="notifications">notifications</span>
+</button>
+</div>
+</nav>
+<main class="px-6 pb-32 pt-2 space-y-8">
+<!-- Today Review Hero -->
+<section class="relative overflow-hidden bg-surface-container rounded-lg p-8 flex flex-col items-start gap-6 editorial-shadow">
+<div class="absolute -right-12 -top-12 w-48 h-48 bg-primary-container/20 rounded-full blur-3xl"></div>
+<div class="z-10 space-y-2">
+<div class="inline-flex items-center px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-xs font-bold tracking-wider uppercase">
+                    今日重点
+                </div>
+<h2 class="font-headline text-3xl font-extrabold text-on-surface">今日复习</h2>
+<p class="text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+                    预计耗时：约10分钟
+                </p>
+</div>
+<button class="z-10 group flex items-center gap-3 bg-primary text-on-primary px-8 py-4 rounded-full font-headline font-bold text-lg transition-all duration-300 ease-in-out active:scale-95 hover:shadow-lg hover:shadow-primary/20">
+<span>开始今日任务</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<div class="absolute bottom-0 right-0 w-1/3 aspect-square opacity-20 pointer-events-none">
+<img alt="decoration" class="w-full h-full object-contain" data-alt="abstract organic flowing shapes in warm coral and cream colors with a soft paper texture finish" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAupp87wXrgd7uUJd7RZfMpsxAte_YWRhSH9X-bjng1lpXuZNLhDZkdMXzybiZHmMssoBDUc18BmPW254l2FKz3ssQe4fK9vXwroiAOKLg_itm2-SXDBWojJrim7N5VGZf2_LpHXo4aOIhiy48oZ15MWTe3fIcFI8FUSMZGx2NKgtmc0cfUGezZMdiZJDhjiY-V1lOAIaOFC4p2ypN3UZyjP_DrndYbqOVkTUjdbBFLwmH1P0wdsSZEi2NQjI0uWFgUH0sM4oCa186o"/>
+</div>
+</section>
+<!-- Quick Actions -->
+<section class="grid grid-cols-3 gap-4">
+<button class="flex flex-col items-center gap-3 p-4 rounded-lg bg-surface-container-low transition-all hover:bg-surface-container-high">
+<div class="w-12 h-12 rounded-2xl bg-primary-container/15 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="upload_file">upload_file</span>
+</div>
+<span class="text-xs font-bold text-on-surface-variant">上传练习册</span>
+</button>
+<button class="flex flex-col items-center gap-3 p-4 rounded-lg bg-surface-container-low transition-all hover:bg-surface-container-high">
+<div class="w-12 h-12 rounded-2xl bg-secondary-container/30 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+</div>
+<span class="text-xs font-bold text-on-surface-variant">家长指导</span>
+</button>
+<button class="flex flex-col items-center gap-3 p-4 rounded-lg bg-surface-container-low transition-all hover:bg-surface-container-high">
+<div class="w-12 h-12 rounded-2xl bg-tertiary-fixed flex items-center justify-center text-on-tertiary-container">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+</div>
+<span class="text-xs font-bold text-on-surface-variant">即刻复习</span>
+</button>
+</section>
+<!-- Recent Lessons (Editorial Grid) -->
+<section class="space-y-5">
+<div class="flex justify-between items-end">
+<h3 class="font-headline text-2xl font-bold text-on-surface tracking-tight">最近课程</h3>
+<a class="text-primary font-bold text-sm" href="#">查看全部</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Lesson Card 1 -->
+<div class="group relative bg-surface-container-lowest rounded-lg p-3 editorial-shadow transition-transform hover:-translate-y-1">
+<div class="aspect-[16/9] w-full rounded-md overflow-hidden bg-surface-variant relative">
+<img alt="At the Zoo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="close up of a friendly lion illustration in a vibrant jungle setting with soft textures and warm light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvpuQynS7qSgHS7LppBi_A-D0Z1JqHq3A0ca155Khj1vX6dB9MIRKLsGVNN_015VEGmjDnuAeTgnnsR5xedG1nIkImP8UAYnT39boRVUJWC_AcvTup8fZFd4rTRRYDouSpCo14XkidGpXQ0Ucohk7DKtlAABVlMmlECPrr-xJUJA-DX9YnqHUSZnR4lJ_P69hsc4O9_bnjuMUnDASL0qmsD0AC950yELYxg1ndsM3J6fBuU8BgjzMYfOdzqxecOVyKVGc1KJH9HvzS"/>
+<div class="absolute top-3 left-3 bg-on-surface/80 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">
+                            Animal
+                        </div>
+</div>
+<div class="mt-4 px-1 pb-2 flex justify-between items-start">
+<div>
+<h4 class="font-headline font-bold text-on-surface">At the Zoo</h4>
+<p class="text-xs text-on-surface-variant">在动物园</p>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold">待复习</span>
+</div>
+</div>
+</div>
+<!-- Lesson Card 2 -->
+<div class="group relative bg-surface-container-lowest rounded-lg p-3 editorial-shadow transition-transform hover:-translate-y-1">
+<div class="aspect-[16/9] w-full rounded-md overflow-hidden bg-surface-variant relative">
+<img alt="Numbers" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="stylized colorful numerical blocks 1 2 3 floating on a soft cream background with a playful aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBf_jx-1TY8EBMhIY-IRNbR0CNJH38LiXtFzCVBJJ1g--sdQzCbuqs8EcHGoOLeRWp0VZEDKIMrjbnLrnbD2ygUUa6CdMh6c9kIyOIoCa2n9TVE0mmDgw6MPhpT6FGiFmeOeSdp43f_BmoCBpwsUrMhDPaENFN-2Vw2ZjrpUnZAAkOaTRJ8euz6AAJZcatne7ebn_BC_i8wBe_stQhraSFvXru3yXOLI4428p4NpG8LNTmTl_lJlb-eMLYXmZTDvyhWifcgIJk_evq6"/>
+<div class="absolute top-3 left-3 bg-on-surface/80 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">
+                            Math
+                        </div>
+</div>
+<div class="mt-4 px-1 pb-2 flex justify-between items-start">
+<div>
+<h4 class="font-headline font-bold text-on-surface">Counting 1-10</h4>
+<p class="text-xs text-on-surface-variant">数字 1-10</p>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1 bg-secondary/10 text-secondary rounded-full">
+<span class="material-symbols-outlined text-[12px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-[10px] font-bold">已完成</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Weekly Progress (Bento Style) -->
+<section class="space-y-5">
+<h3 class="font-headline text-2xl font-bold text-on-surface tracking-tight">本周进展</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col gap-2">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">识词量</span>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-headline font-extrabold text-primary">42</span>
+<span class="text-xs font-bold text-on-surface-variant">个</span>
+</div>
+<div class="mt-2 w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%] rounded-full"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col gap-2">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">完成课时</span>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-headline font-extrabold text-secondary">8</span>
+<span class="text-xs font-bold text-on-surface-variant">节</span>
+</div>
+<div class="mt-2 w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[80%] rounded-full"></div>
+</div>
+</div>
+<div class="col-span-2 bg-secondary-fixed/20 p-6 rounded-lg border border-secondary/10 flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined" data-icon="tips_and_updates">tips_and_updates</span>
+</div>
+<div>
+<h5 class="text-sm font-bold text-on-secondary-fixed">薄弱环节提醒</h5>
+<p class="text-xs mt-1 text-on-secondary-fixed-variant leading-relaxed">孩子在 <span class="text-primary font-bold">动物词汇发音</span> 方面仍有提升空间，建议今晚进行 5 分钟专项巩固。</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#fff8f5]/80 dark:bg-stone-900/80 backdrop-blur-xl border-t border-stone-200/20 shadow-[0_-4px_24px_rgba(37,25,16,0.04)] rounded-t-[20px]">
+<a class="flex flex-col items-center justify-center text-[#98462a] bg-[#f28c6b]/10 rounded-[20px] px-3 py-1 transition-transform duration-300 ease-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium">首页</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] hover:opacity-80 transition-transform duration-300 ease-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="library_books">library_books</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium">资料库</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] hover:opacity-80 transition-transform duration-300 ease-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium">复习</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] hover:opacity-80 transition-transform duration-300 ease-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium">报告</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] hover:opacity-80 transition-transform duration-300 ease-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-medium">我的</span>
+</a>
+</nav>
+</body></html>

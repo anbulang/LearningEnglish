@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Gentle Curator - Parent Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-fixed": "#3a0b00",
+              "on-secondary-fixed-variant": "#005045",
+              "on-tertiary-fixed-variant": "#3a4950",
+              "background": "#fff8f5",
+              "secondary-container": "#9df3df",
+              "inverse-surface": "#3b2e24",
+              "surface-dim": "#ecd6c7",
+              "surface-container-highest": "#f5decf",
+              "on-tertiary": "#ffffff",
+              "on-primary": "#ffffff",
+              "surface-container-low": "#fff1e9",
+              "on-error": "#ffffff",
+              "tertiary-fixed": "#d5e5ee",
+              "inverse-primary": "#ffb59e",
+              "primary": "#98462a",
+              "surface": "#fff8f5",
+              "on-secondary": "#ffffff",
+              "surface-container-high": "#fbe4d5",
+              "primary-fixed-dim": "#ffb59e",
+              "tertiary-fixed-dim": "#b9c9d2",
+              "outline-variant": "#dbc1b9",
+              "inverse-on-surface": "#ffede3",
+              "on-surface-variant": "#55433d",
+              "secondary": "#006b5c",
+              "on-tertiary-fixed": "#0f1d24",
+              "surface-container-lowest": "#ffffff",
+              "outline": "#88726c",
+              "error-container": "#ffdad6",
+              "secondary-fixed": "#9df3df",
+              "tertiary": "#526168",
+              "surface-variant": "#f5decf",
+              "on-surface": "#251910",
+              "on-error-container": "#93000a",
+              "on-background": "#251910",
+              "on-secondary-fixed": "#00201b",
+              "secondary-fixed-dim": "#81d6c3",
+              "tertiary-container": "#9aaab2",
+              "surface-tint": "#98462a",
+              "primary-fixed": "#ffdbd0",
+              "on-primary-container": "#6c250c",
+              "error": "#ba1a1a",
+              "primary-container": "#f28c6b",
+              "on-secondary-container": "#097162",
+              "surface-bright": "#fff8f5",
+              "on-tertiary-container": "#303f46",
+              "on-primary-fixed-variant": "#7a2f16",
+              "surface-container": "#ffeadc"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased">
+<!-- SideNavBar Component -->
+<nav class="fixed left-0 top-0 h-full z-40 py-8 flex flex-col gap-8 h-full w-24 flex flex-col items-center border-r-0 bg-[#fff8f5] dark:bg-[#1c1b1a] font-['Plus_Jakarta_Sans'] antialiased tracking-tight">
+<div class="mb-4">
+<span class="text-xl font-bold text-[#251910] dark:text-[#fff8f5]">GC</span>
+</div>
+<div class="flex flex-col gap-6 items-center flex-1">
+<!-- Home (Active) -->
+<button class="flex flex-col items-center gap-1 group transition-all duration-200 ease-in-out scale-95">
+<div class="text-[#98462a] dark:text-[#f28c6b] bg-[#f28c6b]/10 dark:bg-[#f28c6b]/20 rounded-full p-3">
+<span class="material-symbols-outlined" data-icon="home_app_logo">home_app_logo</span>
+</div>
+<span class="text-[10px] font-bold text-[#98462a]">Home</span>
+</button>
+<!-- Library -->
+<button class="flex flex-col items-center gap-1 group transition-all duration-300 hover:bg-[#f28c6b]/5 dark:hover:bg-[#f28c6b]/10 p-3 rounded-xl">
+<div class="text-[#55433d] dark:text-[#d0c4bf]">
+<span class="material-symbols-outlined" data-icon="library_books">library_books</span>
+</div>
+<span class="text-[10px] font-medium text-[#55433d]">Library</span>
+</button>
+<!-- Review -->
+<button class="flex flex-col items-center gap-1 group transition-all duration-300 hover:bg-[#f28c6b]/5 dark:hover:bg-[#f28c6b]/10 p-3 rounded-xl">
+<div class="text-[#55433d] dark:text-[#d0c4bf]">
+<span class="material-symbols-outlined" data-icon="quiz">quiz</span>
+</div>
+<span class="text-[10px] font-medium text-[#55433d]">Review</span>
+</button>
+<!-- Reports -->
+<button class="flex flex-col items-center gap-1 group transition-all duration-300 hover:bg-[#f28c6b]/5 dark:hover:bg-[#f28c6b]/10 p-3 rounded-xl">
+<div class="text-[#55433d] dark:text-[#d0c4bf]">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+</div>
+<span class="text-[10px] font-medium text-[#55433d]">Reports</span>
+</button>
+</div>
+<button class="flex flex-col items-center gap-1 group transition-all duration-300 hover:bg-[#f28c6b]/5 dark:hover:bg-[#f28c6b]/10 p-3 rounded-xl mt-auto">
+<div class="text-[#55433d] dark:text-[#d0c4bf]">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+</div>
+<span class="text-[10px] font-medium text-[#55433d]">Profile</span>
+</button>
+</nav>
+<!-- TopAppBar Component -->
+<header class="sticky top-0 right-0 w-[calc(100%-6rem)] ml-24 px-8 h-16 flex justify-between items-center z-30 bg-[#fff8f5]/80 dark:bg-[#1c1b1a]/80 backdrop-blur-xl">
+<h1 class="font-headline font-bold text-xl text-on-surface">Dashboard</h1>
+<div class="flex items-center gap-6">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" data-icon="search">search</span>
+<input class="bg-surface-container-low border-none rounded-full py-2 pl-10 pr-4 w-64 text-sm focus:ring-2 focus:ring-primary/20 placeholder:text-on-surface-variant/50" placeholder="Search lessons..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:opacity-80 transition-opacity"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
+<button class="hover:opacity-80 transition-opacity"><span class="material-symbols-outlined" data-icon="settings">settings</span></button>
+</div>
+</div>
+</header>
+<main class="ml-24 w-[calc(100%-6rem)] min-h-screen flex gap-8 px-8 pb-12">
+<!-- Center (Main Feed) -->
+<section class="flex-1 flex flex-col gap-10">
+<!-- Today's Review Hero -->
+<div class="relative overflow-hidden rounded-lg bg-primary-container p-10 flex flex-col justify-between min-h-[340px] group shadow-sm">
+<div class="absolute right-[-10%] top-[-10%] w-2/3 h-[120%] opacity-20 pointer-events-none">
+<img alt="" class="w-full h-full object-contain" data-alt="abstract illustration of open books and flying paper leaves in soft coral and cream tones with gentle textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACz6cynAezeETejoRYfGO9mKxENa53EfohupE1affYXcL4hF3VHR-sNmTTnuUITbqTlMy2h_Kijq2ONWaon87wLMd78P1M2CjZlWYF3Z4ZtwrhhaUyJus43zSTDEgsAddZsMUyp343hCHQru0Ur8m2OwvzRxU_Dk7oB8lrAyuWS7ysSPoXLPR2PWqOYCM-IjKW0QTToNboVmqLpPvnejYpzmEcL8R5QRw2PdCqCtntqKN-FvJ6ui0vb59iglcjGI5OwIS09O7clNyf"/>
+</div>
+<div class="relative z-10 max-w-md">
+<span class="inline-block px-4 py-1 rounded-full bg-white/30 text-on-primary-container text-xs font-bold uppercase tracking-wider mb-6">Today's Focus</span>
+<h2 class="font-headline text-4xl font-extrabold text-on-primary-container leading-tight mb-4">Mastering the Alphabet with Xinhuan</h2>
+<p class="text-on-primary-container/80 text-lg mb-8 font-medium">15 minutes of curated review based on yesterday's progress in phonetic sounds.</p>
+</div>
+<button class="relative z-10 w-fit px-8 py-4 rounded-full bg-on-primary-container text-white font-bold text-lg hover:scale-105 transition-transform flex items-center gap-3">
+                    Start Today's Task
+                    <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Recent Lessons Section -->
+<div>
+<div class="flex justify-between items-end mb-6">
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface">Recent Lessons</h3>
+<p class="text-on-surface-variant">Pick up where you left off</p>
+</div>
+<button class="text-primary font-bold text-sm hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<!-- Lesson 1 -->
+<div class="bg-surface-container-low p-2 rounded-lg group cursor-pointer hover:bg-surface-container transition-colors">
+<div class="aspect-video rounded-md overflow-hidden mb-4 relative">
+<img alt="At the Zoo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="vibrant children's illustration of a friendly lion and giraffe at a zoo with bright soft colors and textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDq_AF5gS4MiC5WuVoK5Yhp4gA3Is_aM6is93uUCmj1bb8kNedFT_BERX2SaFC3g32z-UCxzUAPM2VQ-iVNEnjGCH8SMLEB3KhH6RqkGjo57wsQ9jbEPUx0aJzU7a8MEqp0KOKX9dSMMheD93je6Hjg8vwVVWv_HVW0WshpMImh-tn5eZU_PlUkmUN3dHNBnSEkcilnPSLaqisDPkvePIFwNeJFJfYhjKg0Ga-ufbDj1Zzmkw1KLioR6BmXf6tmA8OgF3yLr9F30Mfz"/>
+<div class="absolute bottom-3 left-3 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[10px] font-bold text-secondary">
+                                English • Animals
+                            </div>
+</div>
+<div class="px-3 pb-3">
+<h4 class="font-headline font-bold text-lg text-on-surface">At the Zoo</h4>
+<div class="flex items-center gap-2 mt-2">
+<div class="flex-1 h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-3/4 rounded-full"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">75%</span>
+</div>
+</div>
+</div>
+<!-- Lesson 2 -->
+<div class="bg-surface-container-low p-2 rounded-lg group cursor-pointer hover:bg-surface-container transition-colors">
+<div class="aspect-video rounded-md overflow-hidden mb-4 relative">
+<img alt="Counting 1-10" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="whimsical counting lesson illustration featuring colorful balloons with numbers on a clear blue sky background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMhdKymWQgGAuYFryUvpF8BFpPH_t4R7tZiBTpoK9nfJ2OTEKj39dxfouJKhl-1wD4KQoTwJz9fme-ol_hQbHCStFe_wKRIwaeUn2nw5DQEE-AFl1oe60-snF_Jp-T3p0B8PDrpjFdeFQ8YHth8dIr3K-eTUJQ4Ch53eeIdS3PISDr7IYepYqsSvF3nRHO6E5bbh5-ErFrT53VejneKfMCJ8cxUiSj2afIChHTmTrtjKA590exdXfeA4hX5epoKzNlbh639W4A5Ffp"/>
+<div class="absolute bottom-3 left-3 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[10px] font-bold text-secondary">
+                                Math • Basics
+                            </div>
+</div>
+<div class="px-3 pb-3">
+<h4 class="font-headline font-bold text-lg text-on-surface">Counting 1-10</h4>
+<div class="flex items-center gap-2 mt-2">
+<div class="flex-1 h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-1/4 rounded-full"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">25%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Weekly Progress Bento -->
+<div class="grid grid-cols-3 gap-6">
+<div class="col-span-2 bg-surface-container-lowest border border-outline-variant/15 p-8 rounded-lg">
+<h4 class="font-headline font-bold text-xl mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="monitoring">monitoring</span>
+                        Vocabulary Growth
+                    </h4>
+<div class="flex items-end gap-3 h-32">
+<div class="flex-1 bg-secondary-container rounded-t-lg h-2/3"></div>
+<div class="flex-1 bg-secondary-container rounded-t-lg h-1/2"></div>
+<div class="flex-1 bg-secondary-container rounded-t-lg h-3/4"></div>
+<div class="flex-1 bg-secondary-container rounded-t-lg h-full"></div>
+<div class="flex-1 bg-secondary-container rounded-t-lg h-4/5"></div>
+<div class="flex-1 bg-secondary rounded-t-lg h-[95%]"></div>
+<div class="flex-1 bg-surface-variant rounded-t-lg h-1/4"></div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+<div class="bg-secondary-container/30 p-8 rounded-lg flex flex-col justify-center items-center text-center">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 text-secondary">
+<span class="material-symbols-outlined text-3xl" data-icon="task_alt" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+</div>
+<span class="text-4xl font-headline font-extrabold text-on-secondary-container">12</span>
+<span class="text-sm font-bold text-on-secondary-container/70 mt-1">Lessons Completed</span>
+<div class="mt-4 px-3 py-1 bg-white/50 rounded-full text-[10px] font-bold text-secondary uppercase tracking-tight">
+                        +3 vs Last Week
+                    </div>
+</div>
+</div>
+</section>
+<!-- Right Side (Summary Panel) -->
+<aside class="w-80 flex flex-col gap-6">
+<!-- Active Child Profile -->
+<div class="bg-surface-container-low p-6 rounded-lg">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-14 h-14 rounded-full border-2 border-primary-container p-1">
+<img alt="Xinhuan" class="w-full h-full rounded-full object-cover" data-alt="sweet close-up portrait of a happy young child with a bright smile in soft warm morning light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDatNPwkzGg2hDstb85STrUE89ctN1vbaiqSrtVufVBJ6QZjOKSEogLBq01J6F4b8YDNimCc-eOEdH7Dh_y4qPVRPpYCQSIoHrNU3i1kacFdL-OTqky_a0lTtqJKbznZtnzgsmg1slQnP31Amzhb2m4_TWZHqpcBwC5dlLhEuoeGjYyl6ES7HrqQJUuuN7F3OOw0xLm5hEWdMHhCJEmOyEJjLt_XVa841kzAh_CE7d1L9dv6ZIlDI0MpaEr2YpANEs_NX43S9Jxp7Ji"/>
+</div>
+<div>
+<h4 class="font-headline font-bold text-lg text-on-surface">Xinhuan</h4>
+<p class="text-xs text-on-surface-variant font-medium">Kindergarten • Level 2</p>
+</div>
+<button class="ml-auto p-2 hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="swap_horiz">swap_horiz</span>
+</button>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Daily Goal</span>
+<span class="font-bold text-primary">80%</span>
+</div>
+<div class="h-2 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-4/5 rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="flex flex-col gap-3">
+<h5 class="font-headline font-bold text-sm text-on-surface-variant uppercase tracking-widest px-1">Quick Tools</h5>
+<button class="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/10 hover:border-primary/30 transition-all text-left group">
+<div class="p-2 bg-primary-fixed rounded-md text-on-primary-fixed-variant group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="upload_file">upload_file</span>
+</div>
+<div>
+<span class="block font-bold text-on-surface">Upload Handout</span>
+<span class="block text-[10px] text-on-surface-variant">Convert PDF to lesson</span>
+</div>
+</button>
+<button class="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/10 hover:border-primary/30 transition-all text-left group">
+<div class="p-2 bg-secondary-container rounded-md text-on-secondary-container group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+</div>
+<div>
+<span class="block font-bold text-on-surface">Parent Guide</span>
+<span class="block text-[10px] text-on-surface-variant">Teaching strategies</span>
+</div>
+</button>
+</div>
+<!-- Upcoming Reminders -->
+<div class="bg-surface-container-high/40 p-6 rounded-lg">
+<h5 class="font-headline font-bold text-sm text-on-surface mb-4">Upcoming Reviews</h5>
+<div class="space-y-4">
+<div class="flex gap-4 items-start">
+<div class="mt-1 w-2 h-2 rounded-full bg-primary shrink-0"></div>
+<div>
+<p class="text-sm font-bold text-on-surface">Alphabet Quiz</p>
+<p class="text-xs text-on-surface-variant">Tomorrow at 4:30 PM</p>
+</div>
+</div>
+<div class="flex gap-4 items-start opacity-60">
+<div class="mt-1 w-2 h-2 rounded-full bg-outline shrink-0"></div>
+<div>
+<p class="text-sm font-bold text-on-surface">Math Readiness</p>
+<p class="text-xs text-on-surface-variant">Wed, 14 Oct</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-3 text-xs font-bold text-primary border border-primary/20 rounded-full hover:bg-primary/5 transition-colors">
+                    Manage Schedule
+                </button>
+</div>
+<!-- Insight Card (Editorial Touch) -->
+<div class="mt-auto p-6 bg-tertiary-fixed/30 rounded-lg relative overflow-hidden">
+<div class="relative z-10">
+<span class="material-symbols-outlined text-tertiary mb-3" data-icon="lightbulb">lightbulb</span>
+<p class="text-xs italic text-on-tertiary-fixed-variant leading-relaxed">
+                        "Children who read 15 minutes a day develop vocabulary 2x faster."
+                    </p>
+<p class="text-[10px] mt-2 font-bold text-tertiary uppercase tracking-tighter">— Curator's Note</p>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-7xl" data-icon="auto_stories">auto_stories</span>
+</div>
+</div>
+</aside>
+</main>
+</body></html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline-variant": "#dbc1b9",
+                        "on-surface": "#251910",
+                        "on-primary-fixed-variant": "#7a2f16",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed": "#00201b",
+                        "secondary-fixed-dim": "#81d6c3",
+                        "primary": "#98462a",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#3b2e24",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#3a4950",
+                        "surface-container": "#ffeadc",
+                        "on-secondary-fixed-variant": "#005045",
+                        "secondary": "#006b5c",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#98462a",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#fbe4d5",
+                        "on-primary-container": "#6c250c",
+                        "on-tertiary-container": "#303f46",
+                        "tertiary-fixed": "#d5e5ee",
+                        "on-tertiary-fixed": "#0f1d24",
+                        "background": "#fff8f5",
+                        "surface-bright": "#fff8f5",
+                        "tertiary-container": "#9aaab2",
+                        "error": "#ba1a1a",
+                        "on-surface-variant": "#55433d",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#ffede3",
+                        "tertiary": "#526168",
+                        "surface-container-low": "#fff1e9",
+                        "surface": "#fff8f5",
+                        "surface-dim": "#ecd6c7",
+                        "primary-fixed": "#ffdbd0",
+                        "on-primary-fixed": "#3a0b00",
+                        "primary-container": "#f28c6b",
+                        "inverse-primary": "#ffb59e",
+                        "secondary-fixed": "#9df3df",
+                        "on-secondary-container": "#097162",
+                        "on-background": "#251910",
+                        "surface-container-highest": "#f5decf",
+                        "outline": "#88726c",
+                        "tertiary-fixed-dim": "#b9c9d2",
+                        "primary-fixed-dim": "#ffb59e",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#f5decf",
+                        "secondary-container": "#9df3df"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        h1, h2, h3, .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- SideNavBar (The Anchor) -->
+<aside class="fixed left-0 top-0 h-full z-40 flex flex-col py-6 h-full w-20 flex flex-col items-center border-r-0 bg-[#fff8f5] dark:bg-[#1a1410] font-['Plus_Jakarta_Sans'] text-sm font-medium">
+<div class="mb-8">
+<div class="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img alt="Parent Profile" class="w-full h-full object-cover" data-alt="A small artistic portrait of a elegant, minimalist curator icon with warm earth tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxmQ6cvoHkJmIn-GKlZeAMLRnnrolczoB6IJNLR54oiJm8ljlNguY6HsVTNLC_Wh2A5cAodwfZRg_rk8mFk0MwKCYjUqsxtKrJCnjE_SHbmfHh7EKtOMCuxUulOddrJEfxXfnu0HCGqueMcyOkqLW5DY-BdG5fydRX-E_L0_GVLQhynYvsUVpVBEzH42xkj1Jh6ku72GmtHnnaDRwNw0JdEB9cU2Gw2f0sjjccmkufpbWw24DLx97MCZXbKV6Bi7Uo6oSnWxMQtRm9"/>
+</div>
+</div>
+<nav class="flex flex-col gap-6 items-center flex-1 w-full">
+<div class="flex flex-col items-center gap-1 group cursor-pointer text-[#55433d] dark:text-[#a08d87] p-3 hover:bg-[#f28c6b]/5 transition-colors scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px]">Home</span>
+</div>
+<!-- Active State: Library -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer bg-[#f28c6b]/10 text-[#98462a] dark:text-[#f28c6b] rounded-2xl p-3 scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="text-[10px]">Library</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer text-[#55433d] dark:text-[#a08d87] p-3 hover:bg-[#f28c6b]/5 transition-colors scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined">leaderboard</span>
+<span class="text-[10px]">Progress</span>
+</div>
+<div class="flex flex-col items-center gap-1 group cursor-pointer text-[#55433d] dark:text-[#a08d87] p-3 hover:bg-[#f28c6b]/5 transition-colors scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined">group</span>
+<span class="text-[10px]">Community</span>
+</div>
+<div class="mt-auto flex flex-col items-center gap-1 group cursor-pointer text-[#55433d] dark:text-[#a08d87] p-3 hover:bg-[#f28c6b]/5 transition-colors scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px]">Settings</span>
+</div>
+</nav>
+</aside>
+<!-- TopAppBar -->
+<header class="sticky top-0 right-0 z-30 flex items-center justify-between px-8 w-[calc(100%-5rem)] ml-20 w-full h-16 bg-[#fff8f5]/80 dark:bg-[#1a1410]/80 backdrop-blur-md border-b-0">
+<div class="flex items-center gap-6">
+<span class="text-[#251910] dark:text-[#fff8f5] font-extrabold font-['Plus_Jakarta_Sans'] text-lg tracking-tight">Lesson Detail</span>
+<div class="hidden md:flex gap-4">
+<span class="text-[#55433d] dark:text-[#a08d87] hover:text-[#98462a] transition-all cursor-pointer">Curriculum</span>
+<span class="text-[#55433d] dark:text-[#a08d87] hover:text-[#98462a] transition-all cursor-pointer">Unit 4</span>
+<span class="text-[#98462a] dark:text-[#f28c6b] font-bold">Vocabulary</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-[#98462a] dark:text-[#f28c6b]">
+<span class="material-symbols-outlined cursor-pointer active:opacity-70 transition-opacity">share</span>
+<span class="material-symbols-outlined cursor-pointer active:opacity-70 transition-opacity">bookmark</span>
+<span class="material-symbols-outlined cursor-pointer active:opacity-70 transition-opacity">more_vert</span>
+</div>
+</header>
+<main class="ml-20 p-8 pt-4 max-w-[1600px] mx-auto">
+<!-- Editorial Header Section -->
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="text-5xl font-extrabold text-on-surface mb-2 tracking-tight">At the Zoo</h1>
+<div class="flex items-center gap-4 text-on-surface-variant font-medium">
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-sm">Teacher: Sarah Jenkins</span>
+<span class="bg-surface-container-high px-4 py-1.5 rounded-full text-sm">Date: Oct 24, 2023</span>
+<span class="flex items-center gap-1 text-secondary font-bold">
+<span class="material-symbols-outlined text-sm">verified</span>
+                        Verified Content
+                    </span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-3 rounded-full bg-surface-container-high text-primary font-bold hover:bg-surface-container-highest transition-colors">
+                    Download All
+                </button>
+<button class="px-8 py-3 rounded-full bg-gradient-to-r from-primary to-primary-container text-white font-bold shadow-lg shadow-primary/10 hover:opacity-90 transition-opacity">
+                    Start Review Session
+                </button>
+</div>
+</div>
+<!-- Main Layout: Side-by-Side Asymmetric Bento -->
+<div class="grid grid-cols-12 gap-8 items-start">
+<!-- Left Side: Worksheet Preview (Editorial focus) -->
+<section class="col-span-12 lg:col-span-7 xl:col-span-8">
+<div class="bg-surface-container-low rounded-lg p-1 overflow-hidden">
+<div class="relative aspect-[3/4] bg-surface-container-lowest rounded-DEFAULT overflow-hidden shadow-2xl shadow-on-surface/5">
+<div class="absolute inset-0 flex flex-col">
+<!-- Header of Worksheet -->
+<div class="p-12 border-b border-outline-variant/10">
+<div class="flex justify-between items-start mb-8">
+<div class="space-y-1">
+<p class="text-xs font-bold tracking-[0.2em] uppercase text-primary/60">English Lab Primary</p>
+<h2 class="text-3xl font-headline font-bold text-on-surface">At the Zoo - Handout.pdf</h2>
+</div>
+<div class="text-right">
+<p class="text-xs text-on-surface-variant">Sheet No.</p>
+<p class="text-xl font-headline font-bold">04-A</p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-12">
+<div class="h-24 rounded-lg bg-surface-container-high flex items-center justify-center">
+<img alt="Lion illustration" class="w-16 h-16 object-contain" data-alt="A charming, hand-drawn charcoal and watercolor illustration of a friendly lion face with a soft orange mane" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxyc-mh0HeqaoFZ2nbhOHxDcRxtBkJMsHNem5QK-YK3mX3njjTfdicrkh4lTdwKwlnzX96lvLkL0ymIT-g0LobJJ3eYAwtDCxkkiSgEcupw5TJxYnpMie81MnAQp_oWzhuRpPUx5A8iemhYWxRjgS7wvadL22ik3aiJbrjITdGAdX0r_Hq4jvO3KloLxAPzBBni8hWzNTjRKgl2jlYMcpVYlHUC-qjDd3G7Nl-00_8VEE924EO_Wn50uZRhBNf_JC7U5y57jfq_KJB"/>
+</div>
+<div class="h-24 rounded-lg bg-surface-container-high flex items-center justify-center">
+<img alt="Elephant illustration" class="w-16 h-16 object-contain" data-alt="Minimalist watercolor painting of a baby elephant playing with water, soft grey and blue tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDe6soAfRJ7qGAHP_cMIWYWPXeVXpTbG5vcjyU4fBL3wV0wJoXjkQzzBd1OjxJ50U5xiknOtdIl_W-ELKWqb8ZxnqimANkVSvT3hfgBET-zEynbLLufOjbJ6xFyyhNcD1Js8gKL5qa8z5ws4gxbED-lH4Oyt8MTeYUJ8fJ9I0z1Jx6mQKTTKj9wkYtAvyolbegst3BJBsjhCY1s5c20E_8bRnPyAfxtvV-UR6TVZo8Co_gFNgIYcc2nd0AqJXNb9Ucml0jWW90VTTHG"/>
+</div>
+<div class="h-24 rounded-lg bg-surface-container-high flex items-center justify-center">
+<img alt="Giraffe illustration" class="w-16 h-16 object-contain" data-alt="Elegant long-necked giraffe illustration in a warm storybook style with golden yellow patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCr-SMKRACAlP62CXQR-Zny-MAxT6ph3A2uhTfF1DCq1MklwRwFISbRgGLwlZa2RKEJWSUSApETsBzIU4lIhw5naTYit2fTvVN5c2XhzE5Yd6O9vYYniLTHOfavysT37neu1Gsnnh3aY914u0GhyOoJxb2GVFvgTpxI6tgTAg1z99qxiakn1Qd5d3YPqLstWXuAvoYKltb8zc9mbE29IpcLdZJKKNX70-MCqt8Nx-NpfEbUKz0ojVRg_vIVcZQW9NZGsTGHbOGhBJO7"/>
+</div>
+</div>
+<div class="space-y-6">
+<div class="h-4 bg-surface-container rounded-full w-3/4"></div>
+<div class="h-4 bg-surface-container rounded-full w-full"></div>
+<div class="h-4 bg-surface-container rounded-full w-5/6"></div>
+</div>
+</div>
+<!-- Page Content Mockup -->
+<div class="flex-1 p-12 relative">
+<div class="grid grid-cols-2 gap-8 h-full">
+<div class="space-y-8">
+<div class="p-6 rounded-lg bg-secondary-container/20 border border-secondary/10">
+<h3 class="font-headline font-bold text-secondary mb-2">Exercise 1: Match</h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center"><span class="w-20 h-3 bg-surface-container rounded"></span> <span class="w-4 h-4 rounded-full border-2 border-secondary"></span></div>
+<div class="flex justify-between items-center"><span class="w-24 h-3 bg-surface-container rounded"></span> <span class="w-4 h-4 rounded-full border-2 border-secondary"></span></div>
+<div class="flex justify-between items-center"><span class="w-16 h-3 bg-surface-container rounded"></span> <span class="w-4 h-4 rounded-full border-2 border-secondary"></span></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-6 flex flex-col justify-center items-center">
+<span class="material-symbols-outlined text-6xl text-on-surface-variant/20 mb-4">image</span>
+<p class="text-sm text-on-surface-variant italic">Drawing Area: Your favorite animal</p>
+</div>
+</div>
+</div>
+</div>
+<!-- PDF Controls Overlay -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-on-surface/90 text-white px-6 py-3 rounded-full flex items-center gap-6 backdrop-blur-md">
+<button class="material-symbols-outlined hover:text-primary-container">zoom_out</button>
+<span class="text-sm font-medium">Page 1 of 4</span>
+<button class="material-symbols-outlined hover:text-primary-container">zoom_in</button>
+<div class="w-[1px] h-4 bg-white/20"></div>
+<button class="material-symbols-outlined hover:text-primary-container">fullscreen</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Side: Interaction Panels -->
+<section class="col-span-12 lg:col-span-5 xl:col-span-4 space-y-8">
+<!-- Vocabulary Bento Card -->
+<div class="bg-surface-container-lowest rounded-lg p-8 shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-2xl font-headline font-bold text-on-surface">Vocabulary</h2>
+<span class="text-xs font-bold text-secondary bg-secondary-container px-3 py-1 rounded-full">3 WORDS</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-4 p-4 rounded-DEFAULT bg-surface-container-low hover:bg-surface-container-high transition-colors group cursor-pointer">
+<div class="w-14 h-14 bg-surface-container-lowest rounded-full flex items-center justify-center text-2xl">🦁</div>
+<div class="flex-1">
+<p class="text-lg font-headline font-bold text-on-surface">Lion</p>
+<p class="text-sm text-on-surface-variant">狮子 / shīzi</p>
+</div>
+<span class="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity">volume_up</span>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-DEFAULT bg-surface-container-low hover:bg-surface-container-high transition-colors group cursor-pointer">
+<div class="w-14 h-14 bg-surface-container-lowest rounded-full flex items-center justify-center text-2xl">🐘</div>
+<div class="flex-1">
+<p class="text-lg font-headline font-bold text-on-surface">Elephant</p>
+<p class="text-sm text-on-surface-variant">大象 / dàxiàng</p>
+</div>
+<span class="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity">volume_up</span>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-DEFAULT bg-surface-container-low hover:bg-surface-container-high transition-colors group cursor-pointer">
+<div class="w-14 h-14 bg-surface-container-lowest rounded-full flex items-center justify-center text-2xl">🦒</div>
+<div class="flex-1">
+<p class="text-lg font-headline font-bold text-on-surface">Giraffe</p>
+<p class="text-sm text-on-surface-variant">长颈鹿 / chángjǐnglù</p>
+</div>
+<span class="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity">volume_up</span>
+</div>
+</div>
+</div>
+<!-- Sentence Patterns -->
+<div class="bg-surface-container-high rounded-lg p-8">
+<h2 class="text-2xl font-headline font-bold text-on-surface mb-6">Core Patterns</h2>
+<div class="space-y-6">
+<div class="relative pl-6 border-l-4 border-primary">
+<p class="text-xl font-body font-medium text-on-primary-container leading-tight mb-2">"The lion is big"</p>
+<p class="text-sm text-on-surface-variant">Used to describe physical traits.</p>
+</div>
+<div class="relative pl-6 border-l-4 border-secondary">
+<p class="text-xl font-body font-medium text-on-secondary-container leading-tight mb-2">"I see a zebra"</p>
+<p class="text-sm text-on-surface-variant">Used for visual identification.</p>
+</div>
+</div>
+</div>
+<!-- Review Packs: Action Grid -->
+<div>
+<h2 class="text-xl font-headline font-bold text-on-surface mb-4 px-2">After-Lesson Packs</h2>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex flex-col items-center gap-3 p-6 rounded-lg bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/40 transition-all group">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">style</span>
+</div>
+<span class="font-bold text-sm text-on-surface">Word Cards</span>
+</button>
+<button class="flex flex-col items-center gap-3 p-6 rounded-lg bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/40 transition-all">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">hearing</span>
+</div>
+<span class="font-bold text-sm text-on-surface">Listening</span>
+</button>
+<button class="flex flex-col items-center gap-3 p-6 rounded-lg bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/40 transition-all">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">edit_note</span>
+</div>
+<span class="font-bold text-sm text-on-surface">Writing Lab</span>
+</button>
+<button class="flex flex-col items-center gap-3 p-6 rounded-lg bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/40 transition-all">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">quiz</span>
+</div>
+<span class="font-bold text-sm text-on-surface">Quick Quiz</span>
+</button>
+</div>
+</div>
+<!-- Teacher's Note (Glassmorphism Effect) -->
+<div class="relative p-6 rounded-lg bg-surface/60 backdrop-blur-xl border border-white/40 shadow-sm overflow-hidden">
+<div class="absolute -right-4 -top-4 text-8xl text-primary/5 select-none pointer-events-none">"</div>
+<h3 class="text-sm font-bold text-primary mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">lightbulb</span>
+                        Teacher's Tip
+                    </h3>
+<p class="text-sm text-on-surface-variant leading-relaxed">
+                        Encourage your child to mimic the sound of each animal while practicing the vocabulary words. This helps with memory retention and phonics!
+                    </p>
+</div>
+</section>
+</div>
+</main>
+<!-- Contextual FAB (Suppressed on detail pages as per instructions, but placeholder logic check) -->
+<!-- Suppression logic applied: FAB is not rendered here to focus on content analysis -->
+</body></html>

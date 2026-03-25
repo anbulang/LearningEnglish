@@ -1,0 +1,108 @@
+# LearningEnglish Stitch Manifest
+
+## Project
+- Title: `LearningEnglish`
+- Project ID: `16275227875844452464`
+- Theme: `Linen & Coral`
+- Primary device baseline: `MOBILE`
+- Local asset roots:
+  - `screenshots/`
+  - `html/`
+
+## Screen Inventory
+- `01-parent-home-screen`
+  - title: `Parent Home Screen`
+  - screen_id: `96986f77cb5a40149df70a5a2330fb94`
+  - device: `MOBILE`
+  - screenshot: `screenshots/01-parent-home-screen.png`
+  - html: `html/01-parent-home-screen.html`
+- `02-materials-library`
+  - title: `Materials Library (资料库)`
+  - screen_id: `322eeac7f54941aebf1143cd12f4f9c0`
+  - device: `MOBILE`
+  - screenshot: `screenshots/02-materials-library.png`
+  - html: `html/02-materials-library.html`
+- `03-scan-and-upload`
+  - title: `Scan and Upload (上传讲义)`
+  - screen_id: `bdd8f3092d5c4031bc1774debfbf03f4`
+  - device: `MOBILE`
+  - screenshot: `screenshots/03-scan-and-upload.png`
+  - html: `html/03-scan-and-upload.html`
+- `04-ai-processing-review`
+  - title: `AI Processing & Review (审核确认)`
+  - screen_id: `ec83c7ae33d24e80b2b708a0ad1afaab`
+  - device: `MOBILE`
+  - screenshot: `screenshots/04-ai-processing-review.png`
+  - html: `html/04-ai-processing-review.html`
+- `05-lesson-detail`
+  - title: `Lesson Detail (课程详情)`
+  - screen_id: `b045bc063c974b0ab2ff4e25846bb1df`
+  - device: `MOBILE`
+  - screenshot: `screenshots/05-lesson-detail.png`
+  - html: `html/05-lesson-detail.html`
+- `06-vocabulary-cards-listening`
+  - title: `Vocabulary Cards & Listening`
+  - screen_id: `479bf8d1293947bd9820ba02a23a6d3a`
+  - device: `MOBILE`
+  - screenshot: `screenshots/06-vocabulary-cards-listening.png`
+  - html: `html/06-vocabulary-cards-listening.html`
+- `07-practice-game-flow`
+  - title: `Practice Game Flow`
+  - screen_id: `2885c1849f984dbf8be01bf81f118bb6`
+  - device: `MOBILE`
+  - screenshot: `screenshots/07-practice-game-flow.png`
+  - html: `html/07-practice-game-flow.html`
+- `08-ai-speaking-partner`
+  - title: `AI Speaking Partner`
+  - screen_id: `a4478041ea3340168938eea87ae23518`
+  - device: `MOBILE`
+  - screenshot: `screenshots/08-ai-speaking-partner.png`
+  - html: `html/08-ai-speaking-partner.html`
+- `09-parent-coaching-mode`
+  - title: `Parent Coaching Mode`
+  - screen_id: `b324797aac0f4b198100084878009ce0`
+  - device: `MOBILE`
+  - screenshot: `screenshots/09-parent-coaching-mode.png`
+  - html: `html/09-parent-coaching-mode.html`
+- `10-weekly-review-report`
+  - title: `Weekly Review & Report`
+  - screen_id: `ab3978f618b74a97ad6095a24042347b`
+  - device: `MOBILE`
+  - screenshot: `screenshots/10-weekly-review-report.png`
+  - html: `html/10-weekly-review-report.html`
+- `11-family-profile-settings`
+  - title: `Family Profile & Settings`
+  - screen_id: `46da5d28ddae4597b3981c6fd93b9359`
+  - device: `MOBILE`
+  - screenshot: `screenshots/11-family-profile-settings.png`
+  - html: `html/11-family-profile-settings.html`
+- `12-parent-home-tablet`
+  - title: `Parent Home (Tablet)`
+  - screen_id: `967409d6550941bc88df12a2a1f559c2`
+  - device: `DESKTOP`
+  - screenshot: `screenshots/12-parent-home-tablet.png`
+  - html: `html/12-parent-home-tablet.html`
+- `13-materials-library-tablet`
+  - title: `Materials Library (Tablet)`
+  - screen_id: `a11e9905bf7844d0ac9d609d57f69d4e`
+  - device: `DESKTOP`
+  - screenshot: `screenshots/13-materials-library-tablet.png`
+  - html: `html/13-materials-library-tablet.html`
+- `14-lesson-detail-tablet`
+  - title: `Lesson Detail (Tablet)`
+  - screen_id: `5eeb095117a74712a0a9e2f73b6a5507`
+  - device: `DESKTOP`
+  - screenshot: `screenshots/14-lesson-detail-tablet.png`
+  - html: `html/14-lesson-detail-tablet.html`
+- `15-ai-speaking-partner-tablet`
+  - title: `AI Speaking Partner (Tablet)`
+  - screen_id: `8a5239f3e971471e959205db7ff780d9`
+  - device: `DESKTOP`
+  - screenshot: `screenshots/15-ai-speaking-partner-tablet.png`
+  - html: `html/15-ai-speaking-partner-tablet.html`
+- `16-weekly-review-tablet`
+  - title: `Weekly Review (Tablet)`
+  - screen_id: `53e180ac022043af9f672f2cc2efb1f1`
+  - device: `DESKTOP`
+  - screenshot: `screenshots/16-weekly-review-tablet.png`
+  - html: `html/16-weekly-review-tablet.html`

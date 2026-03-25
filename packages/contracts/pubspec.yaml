@@ -1,0 +1,10 @@
+name: learning_english_contracts
+description: Shared domain and API contracts for LearningEnglish.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  meta: ^1.12.0

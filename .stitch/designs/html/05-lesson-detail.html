@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .headline-font {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#7a2f16",
+                        "tertiary-container": "#9aaab2",
+                        "surface": "#fff8f5",
+                        "secondary-fixed": "#9df3df",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#9df3df",
+                        "surface-container-high": "#fbe4d5",
+                        "on-tertiary-container": "#303f46",
+                        "on-secondary": "#ffffff",
+                        "primary": "#98462a",
+                        "secondary-fixed-dim": "#81d6c3",
+                        "on-primary-container": "#6c250c",
+                        "surface-container": "#ffeadc",
+                        "on-surface": "#251910",
+                        "surface-container-low": "#fff1e9",
+                        "on-secondary-fixed-variant": "#005045",
+                        "primary-fixed": "#ffdbd0",
+                        "outline": "#88726c",
+                        "inverse-primary": "#ffb59e",
+                        "tertiary-fixed-dim": "#b9c9d2",
+                        "inverse-surface": "#3b2e24",
+                        "primary-container": "#f28c6b",
+                        "secondary": "#006b5c",
+                        "tertiary-fixed": "#d5e5ee",
+                        "surface-variant": "#f5decf",
+                        "on-tertiary-fixed": "#0f1d24",
+                        "outline-variant": "#dbc1b9",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#f5decf",
+                        "tertiary": "#526168",
+                        "surface-tint": "#98462a",
+                        "surface-bright": "#fff8f5",
+                        "primary-fixed-dim": "#ffb59e",
+                        "inverse-on-surface": "#ffede3",
+                        "background": "#fff8f5",
+                        "on-primary-fixed": "#3a0b00",
+                        "on-surface-variant": "#55433d",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#097162",
+                        "on-background": "#251910",
+                        "on-secondary-fixed": "#00201b",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#3a4950",
+                        "surface-dim": "#ecd6c7"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-32">
+<!-- TopAppBar Shell -->
+<header class="docked full-width top-0 sticky z-50 bg-[#fff8f5] dark:bg-stone-950">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="text-[#98462a] dark:text-[#f28c6b] hover:bg-[#f28c6b]/10 p-2 rounded-full transition-colors active:scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#251910] dark:text-stone-100">课程详情</h1>
+</div>
+<button class="text-[#98462a] dark:text-[#f28c6b] hover:bg-[#f28c6b]/10 p-2 rounded-full transition-colors active:scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</header>
+<main class="px-6 space-y-8 max-w-md mx-auto">
+<!-- Hero Section: Editorial Header -->
+<section class="mt-4 space-y-4">
+<div class="flex justify-between items-start">
+<div class="space-y-1">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-label font-semibold tracking-wide">Animal</span>
+<h2 class="text-4xl font-headline font-extrabold tracking-tight text-on-surface pt-2">At the Zoo</h2>
+</div>
+<div class="bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/10">待复习</div>
+</div>
+<div class="flex items-center gap-6 pt-2">
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="close up portrait of a friendly female teacher with warm smile in a brightly lit modern classroom" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB03pqiDoR-GArjEXIe22mHIw5kceJOCcl-yhRyyti9XiaT8V7wYuystYWGkszI6S3AEDJTK7pdq7ZoMbrlG06SG3cNmynQ8G5SxIwGqZU1ss_3zzg6qC3RxTklC5lB43krjeOLlRRFujC3sLe3v4COvccpjr_XO86hkrOQ4Q3jFbbxsqBGYsCamy-nSqYlbeDNEA5Nu6K2rPmyuZ6FShEHyuFWAWlMEOKZ7mni9F1kwp71vor5yvOGrvXToGVsRc7KyqQxWs0JMCq-"/>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Teacher</p>
+<p class="text-sm font-bold text-on-surface">张老师</p>
+</div>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/30"></div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Date</p>
+<p class="text-sm font-bold text-on-surface">2024-03-25</p>
+</div>
+</div>
+</section>
+<!-- Worksheet Preview Module -->
+<section class="space-y-4">
+<div class="flex justify-between items-end">
+<h3 class="text-xl font-headline font-bold text-on-surface">讲义预览</h3>
+</div>
+<div class="relative overflow-hidden rounded-lg bg-surface-container-low group">
+<div class="aspect-[3/4] w-full bg-white shadow-sm overflow-hidden flex flex-col p-8">
+<div class="w-full h-full border-[0.5px] border-outline-variant/20 flex flex-col items-center justify-center space-y-4 text-center">
+<span class="material-symbols-outlined text-4xl text-primary/40" data-icon="description">description</span>
+<div class="space-y-1">
+<p class="font-bold text-on-surface">At the Zoo - Handout.pdf</p>
+<p class="text-xs text-on-surface-variant">Classroom Worksheet • 2.4 MB</p>
+</div>
+</div>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex items-end p-6">
+<button class="w-full bg-surface-container-lowest/90 backdrop-blur-md text-on-surface py-3 rounded-full font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="fullscreen">fullscreen</span>
+                        全屏查看
+                    </button>
+</div>
+</div>
+</section>
+<!-- Vocabulary Bento -->
+<section class="space-y-4">
+<h3 class="text-xl font-headline font-bold text-on-surface">重点词汇</h3>
+<div class="grid grid-cols-1 gap-3">
+<!-- Word 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg flex items-center justify-between shadow-[0_4px_24px_rgba(37,25,16,0.02)]">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 bg-surface-container rounded-lg flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="majestic male lion with a thick golden mane sitting in tall grass under warm savanna sun" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCldaEuBn1SrjaQtEO_0qP_0udiEPNmu_V8yjbOQoHjxBmEf6eBBofT-4gaUGaSHkp9IhaufimXILO9sJsSaByy9EQg3lqxIhr-ZuqiEnO3TmJlW9V8VwB4QNDJmOJsOh-PTS_er8pxXKsxY87COzLy9GqJdSBkKfrJMcXZn773JjFzugzRTwee-M4pyDw9TP00tzeHUElrVVTA6KTz6UNswSb1bklr7RsKVImckFTNU1ovB4YWm3-pgtg9fNh-fBvpTxyn-1DnURR7"/>
+</div>
+<div>
+<p class="text-lg font-headline font-bold text-on-surface">Lion</p>
+<p class="text-sm text-on-surface-variant font-medium">狮子</p>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full bg-primary/5 text-primary flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="volume_up">volume_up</span>
+</button>
+</div>
+<!-- Word 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg flex items-center justify-between shadow-[0_4px_24px_rgba(37,25,16,0.02)]">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 bg-surface-container rounded-lg flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="large gray african elephant walking in dust with huge ears fanned out against a warm sunset background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABsb2bBYP-N-fW3iWKcC7Zly1KaWBfXG9PTqcbxJrPj0EmsPtXt-_KjVXPe5BEZAoHJbqRuARakdRtxXJ2HEVjEsSpJVYOJh4Piv6vzssVM7Mv6Ko3ozul4j4_gfaEzA6O7gQdum_p6GxN2Ecg2BdN3zL1K-OnK7zfxn84inhSNqnoDe8RJOa6KZly71SITHBlpJf-ccohhUWcW15eVquQf-wHhCmqWo4GJYnvL_MTCg9OZYAaoCM6zfX2HVRR9e8PF8jeTR3kk7Pr"/>
+</div>
+<div>
+<p class="text-lg font-headline font-bold text-on-surface">Elephant</p>
+<p class="text-sm text-on-surface-variant font-medium">大象</p>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full bg-primary/5 text-primary flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="volume_up">volume_up</span>
+</button>
+</div>
+<!-- Word 3 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg flex items-center justify-between shadow-[0_4px_24px_rgba(37,25,16,0.02)]">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 bg-surface-container rounded-lg flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="giraffe head close up with long neck and gentle eyes peaking through green acacia tree leaves" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCf4R8LXSYu6O-GkCCEy5Iv1jpo4VG2_xCDKYiAW1QHlOVn_-18Pyq80eTjx55jkaMtsKIbPQMaPO3JfkN3qVrmpxZf39MsqsbttBfT9-9EqkYDAFFdclRz3QIquOfsX9r8R2vPj5eDNIMgROcK5XVo_0ed6TS0kUsj6QBfUymns_u-3Sbi6AG1YDaflrAGGPK6YBDF6wra3BCXLgagDpmY30GeMk3eqhVcTbbkwkvG47Uyvxp1d5dYOO-la_hmGXQi7PnIALGydE0n"/>
+</div>
+<div>
+<p class="text-lg font-headline font-bold text-on-surface">Giraffe</p>
+<p class="text-sm text-on-surface-variant font-medium">长颈鹿</p>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full bg-primary/5 text-primary flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="volume_up">volume_up</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Sentence Patterns -->
+<section class="space-y-4">
+<h3 class="text-xl font-headline font-bold text-on-surface">核心句型</h3>
+<div class="space-y-3">
+<div class="bg-primary/5 p-5 rounded-lg border-l-4 border-primary/40 space-y-2 relative">
+<p class="text-lg font-bold text-on-primary-container">"The lion is big."</p>
+<p class="text-sm text-on-surface-variant">这只狮子很大。</p>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="play_arrow" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<div class="bg-secondary/5 p-5 rounded-lg border-l-4 border-secondary/40 space-y-2 relative">
+<p class="text-lg font-bold text-on-secondary-container">"I see a zebra."</p>
+<p class="text-sm text-on-surface-variant">我看到一只斑马。</p>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="play_arrow" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Action Grid -->
+<section class="space-y-4">
+<h3 class="text-xl font-headline font-bold text-on-surface">课后复习包</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col items-center text-center gap-3 active:scale-95 transition-transform cursor-pointer">
+<div class="w-12 h-12 rounded-2xl bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" data-icon="style">style</span>
+</div>
+<span class="font-bold text-on-surface">单词卡片</span>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col items-center text-center gap-3 active:scale-95 transition-transform cursor-pointer">
+<div class="w-12 h-12 rounded-2xl bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="headphones">headphones</span>
+</div>
+<span class="font-bold text-on-surface">听力练习</span>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col items-center text-center gap-3 active:scale-95 transition-transform cursor-pointer">
+<div class="w-12 h-12 rounded-2xl bg-[#d5e5ee] flex items-center justify-center">
+<span class="material-symbols-outlined text-[#3a4950]" data-icon="mic">mic</span>
+</div>
+<span class="font-bold text-on-surface">口语纠音</span>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col items-center text-center gap-3 active:scale-95 transition-transform cursor-pointer">
+<div class="w-12 h-12 rounded-2xl bg-[#fbe4d5] flex items-center justify-center">
+<span class="material-symbols-outlined text-[#98462a]" data-icon="family_restroom">family_restroom</span>
+</div>
+<span class="font-bold text-on-surface">家长辅导</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar Shell -->
+<nav class="fixed bottom-0 w-full rounded-t-[2rem] border-t-[0.5px] border-[#55433d]/10 bg-[#fff8f5]/80 dark:bg-stone-900/80 backdrop-blur-xl shadow-[0_-4px_24px_rgba(37,25,16,0.04)] z-50 flex justify-around items-center px-6 pb-6 pt-3">
+<div class="flex flex-col items-center justify-center text-[#98462a] dark:text-[#f28c6b] font-bold bg-[#f28c6b]/10 rounded-2xl px-3 py-1 tap-highlight-transparent active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="menu_book" data-weight="fill" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px] tracking-wide mt-1">学习</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-stone-400 opacity-70 hover:opacity-100 transition-opacity tap-highlight-transparent active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="Psychology">psychology</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px] tracking-wide mt-1">复习</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-stone-400 opacity-70 hover:opacity-100 transition-opacity tap-highlight-transparent active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px] tracking-wide mt-1">发现</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-stone-400 opacity-70 hover:opacity-100 transition-opacity tap-highlight-transparent active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="family_restroom">family_restroom</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[11px] tracking-wide mt-1">家长</span>
+</div>
+</nav>
+</body></html>

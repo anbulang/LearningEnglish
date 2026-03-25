@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>每周回顾 - The Gentle Curator</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary": "#526168",
+                        "tertiary-fixed": "#d5e5ee",
+                        "secondary": "#006b5c",
+                        "outline-variant": "#dbc1b9",
+                        "on-tertiary-fixed-variant": "#3a4950",
+                        "on-secondary-fixed": "#00201b",
+                        "on-background": "#251910",
+                        "secondary-fixed-dim": "#81d6c3",
+                        "surface-container": "#ffeadc",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fff8f5",
+                        "on-surface-variant": "#55433d",
+                        "on-primary-fixed-variant": "#7a2f16",
+                        "secondary-fixed": "#9df3df",
+                        "on-tertiary-fixed": "#0f1d24",
+                        "inverse-primary": "#ffb59e",
+                        "outline": "#88726c",
+                        "surface-variant": "#f5decf",
+                        "surface-container-high": "#fbe4d5",
+                        "primary": "#98462a",
+                        "inverse-surface": "#3b2e24",
+                        "primary-container": "#f28c6b",
+                        "on-primary-container": "#6c250c",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#ffb59e",
+                        "on-error": "#ffffff",
+                        "on-surface": "#251910",
+                        "on-secondary-container": "#097162",
+                        "surface-container-low": "#fff1e9",
+                        "surface": "#fff8f5",
+                        "on-secondary-fixed-variant": "#005045",
+                        "secondary-container": "#9df3df",
+                        "surface-container-highest": "#f5decf",
+                        "on-error-container": "#93000a",
+                        "background": "#fff8f5",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#ffdbd0",
+                        "inverse-on-surface": "#ffede3",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#b9c9d2",
+                        "surface-tint": "#98462a",
+                        "on-tertiary-container": "#303f46",
+                        "surface-dim": "#ecd6c7",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#9aaab2",
+                        "on-primary-fixed": "#3a0b00"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: #fff8f5; }
+        .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel {
+            background: rgba(255, 248, 245, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- SideNavBar -->
+<nav class="h-screen w-72 fixed left-0 top-0 z-50 bg-[#fff8f5] dark:bg-[#1a1410] border-r border-[#55433d]/10 dark:border-[#fff8f5]/10 flex flex-col py-8 gap-2">
+<div class="px-8 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined">auto_stories</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-primary tracking-tight">Gentle Curator</h2>
+<p class="text-xs text-on-surface-variant">家庭成长伴侣</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1 px-4">
+<a class="flex items-center gap-4 px-6 py-4 text-[#55433d] dark:text-[#d7ccc8] hover:bg-[#55433d]/5 hover:translate-x-1 transition-all duration-300 ease-in-out font-['Plus_Jakarta_Sans'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">home</span>首页
+            </a>
+<a class="flex items-center gap-4 px-6 py-4 text-[#55433d] dark:text-[#d7ccc8] hover:bg-[#55433d]/5 hover:translate-x-1 transition-all duration-300 ease-in-out font-['Plus_Jakarta_Sans'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">library_books</span>资料库
+            </a>
+<a class="flex items-center gap-4 px-6 py-4 text-[#55433d] dark:text-[#d7ccc8] hover:bg-[#55433d]/5 hover:translate-x-1 transition-all duration-300 ease-in-out font-['Plus_Jakarta_Sans'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">auto_stories</span>复习
+            </a>
+<a class="flex items-center gap-4 px-6 py-4 bg-[#f28c6b]/10 dark:bg-[#f28c6b]/20 text-[#98462a] dark:text-[#f28c6b] rounded-r-full font-bold border-l-4 border-[#98462a] hover:translate-x-1 transition-all duration-300 ease-in-out font-['Plus_Jakarta_Sans'] text-sm" href="#">
+<span class="material-symbols-outlined">analytics</span>报告
+            </a>
+<a class="flex items-center gap-4 px-6 py-4 text-[#55433d] dark:text-[#d7ccc8] hover:bg-[#55433d]/5 hover:translate-x-1 transition-all duration-300 ease-in-out font-['Plus_Jakarta_Sans'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">person</span>我的
+            </a>
+</div>
+<div class="mt-auto px-6 py-8">
+<div class="bg-surface-container-low p-6 rounded-lg mb-4">
+<div class="flex items-center gap-3 mb-3">
+<img alt="Child Profile" class="w-10 h-10 rounded-full object-cover border-2 border-primary-container" data-alt="close-up of a smiling child's face with soft natural lighting and warm tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJ9JY5eOAaBsosxOquP37VlEllhuzTn95eh0pyW1glOgSmZRRRUScYm6T-L6t0c-OjtFrGniBY-FfSu4UguuhNrdmZGaw2V-HZrxAxChQ_2AqdHjld4w_zzhFH-h3ei6mv_QfsnX6m4sE7qkOFdGqX3IUsf-7lsTtGfijR7rWKXIjA2kOL3ByapNN1fRBEsqMiwzhg2iHgbvJ6NVg1dcGVGwTpqcISVtiCU-J7bWbcLdqcUlu2t1qREzk3k2bq66oOmOS7srr9GSH0"/>
+<div>
+<p class="text-xs font-headline font-semibold text-on-surface">小慕的进度</p>
+<p class="text-[10px] text-on-surface-variant">本周已坚持 5 天</p>
+</div>
+</div>
+<div class="h-1.5 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[75%]"></div>
+</div>
+</div>
+<button class="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white rounded-full font-headline font-bold shadow-sm active:scale-95 transition-all">
+                开始学习
+            </button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-72 mr-96 p-10 min-h-screen">
+<!-- Header -->
+<header class="mb-10 flex justify-between items-center">
+<div>
+<h1 class="text-4xl font-headline font-extrabold text-on-surface tracking-tight mb-2">每周回顾</h1>
+<p class="text-on-surface-variant font-medium">2024年10月21日 - 10月27日</p>
+</div>
+<div class="flex gap-4">
+<button class="p-3 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">share</span>
+</button>
+<button class="p-3 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</header>
+<!-- Weekly Summary Hero -->
+<section class="mb-12 relative overflow-hidden bg-surface-container-low rounded-xl p-10 flex items-center justify-between">
+<div class="relative z-10 max-w-lg">
+<span class="inline-block px-4 py-1.5 bg-secondary-container text-on-secondary-container rounded-full text-xs font-headline font-bold mb-6">卓越的一周</span>
+<h2 class="text-5xl font-headline font-bold text-primary mb-6 leading-tight">像呼吸一样<br/>自然地学习</h2>
+<p class="text-on-surface-variant text-lg mb-8 leading-relaxed">小慕本周展现了惊人的专注力，特别是在“自然科学”主题词汇的掌握上。继续保持这种好奇心！</p>
+<div class="flex gap-12">
+<div>
+<p class="text-3xl font-headline font-extrabold text-on-surface">12</p>
+<p class="text-sm text-on-surface-variant">完成课程</p>
+</div>
+<div class="w-px h-12 bg-outline-variant/30"></div>
+<div>
+<p class="text-3xl font-headline font-extrabold text-on-surface">340</p>
+<p class="text-sm text-on-surface-variant">累计用时 (分)</p>
+</div>
+<div class="w-px h-12 bg-outline-variant/30"></div>
+<div>
+<p class="text-3xl font-headline font-extrabold text-on-surface">95%</p>
+<p class="text-sm text-on-surface-variant">准效率</p>
+</div>
+</div>
+</div>
+<div class="hidden lg:block relative">
+<div class="absolute -top-12 -right-12 w-64 h-64 bg-primary-container/20 rounded-full blur-3xl"></div>
+<img alt="Study Session" class="w-80 h-96 object-cover rounded-lg shadow-2xl relative z-10 transform rotate-3" data-alt="artistic composition of children's storybooks and wooden toys in a sun-drenched minimalist room" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwZF6qQKugmNV-RDY9_E1_g4fbNbR7Os0GrNxYk6n4ThHp8z9qn9NuAToDDQM3Xe_8xOlukaPbndLbLgqhwlH8WrvMPIDMaBu05JnGdX7Ua8WqZ8PCOjUkZc_wFTBSJY0ObrjHe2aM0EfncmcjG8GsOEueie29Na71E6sdzvKp4JoX05eO7gmDaaEAgnwrpM_hAI90ds_9tLw-eglcswdjqNIIOc3fxSeG_f3cLpOaHlxSo-cXlTZQaDOLJtjxbNZabsKM2HdIHzYP"/>
+</div>
+</section>
+<!-- Grid of Metrics -->
+<section class="grid grid-cols-3 gap-8">
+<div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0px_32px_32px_-16px_rgba(37,25,16,0.04)]">
+<div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-6">
+<span class="material-symbols-outlined">dictionary</span>
+</div>
+<h3 class="font-headline font-bold text-on-surface-variant mb-2">新掌握词汇</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-on-surface">58</span>
+<span class="text-secondary font-bold text-sm">↑ 12%</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-4">超过了 88% 的同龄学生</p>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0px_32px_32px_-16px_rgba(37,25,16,0.04)]">
+<div class="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mb-6">
+<span class="material-symbols-outlined">record_voice_over</span>
+</div>
+<h3 class="font-headline font-bold text-on-surface-variant mb-2">口语练习次数</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-on-surface">124</span>
+<span class="text-primary font-bold text-sm">↑ 5%</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-4">发音准确度平均 4.2 星</p>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0px_32px_32px_-16px_rgba(37,25,16,0.04)]">
+<div class="w-12 h-12 rounded-2xl bg-tertiary-fixed-dim/30 text-tertiary flex items-center justify-center mb-6">
+<span class="material-symbols-outlined">task_alt</span>
+</div>
+<h3 class="font-headline font-bold text-on-surface-variant mb-2">课程完成率</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-on-surface">100%</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-4">本周完美达标</p>
+</div>
+</section>
+<!-- Bento Learning Path -->
+<section class="mt-12">
+<h3 class="text-2xl font-headline font-bold text-on-surface mb-8">学习轨迹</h3>
+<div class="grid grid-cols-4 gap-4 h-64">
+<div class="col-span-2 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between">
+<p class="text-sm font-headline font-bold text-primary">最活跃的主题</p>
+<h4 class="text-3xl font-headline font-bold">海洋生物探秘</h4>
+<div class="flex -space-x-3">
+<div class="w-10 h-10 rounded-full border-2 border-surface-container-high overflow-hidden"><img alt="Ocean" data-alt="close-up of vibrant clownfish swimming in coral reef" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVHuf5cvC8z0y--BMjj0l3d2EEAWtxDks6m-vTqYa0ik5l5H9hQxTqoFQhn94-OzYnodGD5jpDiTJ3gx0VFdNjOlZg7GIGVnxIQ0cMOn-r9UPzDUwH9Irj_3FKXtv470Wvx8TEjnlPk91o1vWvdZzNAPnVOT46TWSDh3UMTlMFNiU2khak5_TVMcgc9_uDgjBEDXvX9X24AqyCQtf8y8EYojNOPLRSHRgFE4yaxweErBilJIPVGUAb2iTgHUmUCrBikOFjkBVnBX8b"/></div>
+<div class="w-10 h-10 rounded-full border-2 border-surface-container-high overflow-hidden"><img alt="Ocean" data-alt="underwater photograph of a sea turtle gliding through clear blue water" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzQMHKMdhx3Fltl89gJhEgmF3agZWDYhqyvrZFbHHs59Dv-4Qyp8226ViJWupOXT5ObEsxW1K7STikPjqotnZ5FYSyGXem-zFX1l041eIvmpkRD-ydtxRiOaA7Hgan3t2TADYDdQvj2dFFPREkkF9RGnicx1eWUcUH_aUnvBPe5UKjQ42MzG2VrSUGrs-45HyMrXO5plcUB0zQPhIai_IfU0aSNEgHOPTaCPEZVnFwNTkWhFCkhqVUiaR4NEz7l88lAU0Lx88dTJQz"/></div>
+</div>
+</div>
+<div class="col-span-1 bg-[#ecd6c7] rounded-lg p-6 flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-4xl mb-2 text-on-surface-variant">schedule</span>
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">最佳学习时间</p>
+<p class="text-xl font-headline font-bold">19:30 - 20:15</p>
+</div>
+<div class="col-span-1 bg-secondary-container rounded-lg p-6 flex flex-col justify-between">
+<p class="text-xs font-bold text-on-secondary-container">本周勋章</p>
+<span class="material-symbols-outlined text-5xl text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+<p class="text-sm font-bold text-on-secondary-container">晨间勤奋家</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Right Sidebar / Insights -->
+<aside class="w-96 fixed right-0 top-0 h-screen glass-panel z-40 p-8 overflow-y-auto border-l border-[#55433d]/5">
+<h2 class="text-2xl font-headline font-bold text-on-surface mb-8">家长洞察</h2>
+<!-- Weak Points -->
+<section class="mb-10">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">warning</span>
+                    薄弱环节
+                </h3>
+<span class="text-xs text-on-surface-variant">需要关注</span>
+</div>
+<div class="space-y-4">
+<div class="bg-surface-container-low p-5 rounded-lg">
+<p class="text-xs font-bold text-on-surface-variant mb-2">词汇发音</p>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-lg font-headline font-bold text-on-surface">Photosynthesis</p>
+<p class="text-xs text-on-surface-variant">光合作用</p>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">volume_up</span>
+</button>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-variant rounded-full">
+<div class="h-full bg-error w-[40%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-5 rounded-lg">
+<p class="text-xs font-bold text-on-surface-variant mb-2">复杂句式</p>
+<p class="text-sm font-medium italic text-on-surface mb-2">"The blue whale is the largest animal to ever live on Earth."</p>
+<p class="text-xs text-on-surface-variant">语法结构：比较级运用</p>
+</div>
+</div>
+</section>
+<!-- Recommended Next Steps -->
+<section>
+<h3 class="font-headline font-bold text-secondary flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+                下周建议
+            </h3>
+<div class="relative pl-6 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-outline-variant/50">
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-secondary border-4 border-surface ring-4 ring-secondary/10"></div>
+<p class="text-xs font-bold text-secondary mb-1">第 1-2 天：复习周</p>
+<h4 class="font-headline font-bold text-on-surface text-sm mb-1">回顾“海洋生物”发音</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">利用睡前 10 分钟进行闪卡复习，重点突破 Photosynthesis 等多音节词汇。</p>
+</div>
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-secondary border-4 border-surface ring-4 ring-secondary/10"></div>
+<p class="text-xs font-bold text-secondary mb-1">第 3-5 天：新主题</p>
+<h4 class="font-headline font-bold text-on-surface text-sm mb-1">开启“宇宙探索”系列</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">引入 5 个关于行星的新单词，并尝试描述太阳系的基本构造。</p>
+</div>
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-secondary border-4 border-surface ring-4 ring-secondary/10"></div>
+<p class="text-xs font-bold text-secondary mb-1">第 6-7 天：互动实践</p>
+<h4 class="font-headline font-bold text-on-surface text-sm mb-1">角色扮演：小小宇航员</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">尝试用英文向家长介绍你最喜欢的星球，锻炼长句表达能力。</p>
+</div>
+</div>
+<button class="w-full mt-10 py-4 bg-surface-container-highest text-primary rounded-full font-headline font-bold hover:bg-primary hover:text-white transition-all duration-300">
+                更新学习计划
+            </button>
+</section>
+<!-- Insights Footer -->
+<div class="mt-12 p-6 bg-primary-fixed rounded-xl border border-primary/10">
+<p class="text-xs font-headline font-bold text-on-primary-fixed mb-2 italic">“学习不是填满水桶，而是点燃火焰。”</p>
+<p class="text-[10px] text-on-primary-fixed-variant text-right">— 威廉·巴特勒·叶芝</p>
+</div>
+</aside>
+</body></html>

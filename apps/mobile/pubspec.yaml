@@ -1,0 +1,27 @@
+name: learning_english_mobile
+description: LearningEnglish adaptive Flutter app for phone and tablet.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  dio: ^5.7.0
+  drift: ^2.20.3
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.8.1
+  learning_english_contracts:
+    path: ../../packages/contracts
+  learning_english_design_tokens:
+    path: ../../packages/design_tokens
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

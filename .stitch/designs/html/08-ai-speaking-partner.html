@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Speaking Practice</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary": "#006b5c",
+              "on-tertiary-fixed": "#0f1d24",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed-dim": "#81d6c3",
+              "on-secondary-fixed-variant": "#005045",
+              "on-secondary": "#ffffff",
+              "primary-fixed-dim": "#ffb59e",
+              "on-tertiary-container": "#303f46",
+              "on-primary": "#ffffff",
+              "tertiary-fixed": "#d5e5ee",
+              "surface-tint": "#98462a",
+              "outline-variant": "#dbc1b9",
+              "on-secondary-fixed": "#00201b",
+              "outline": "#88726c",
+              "on-primary-container": "#6c250c",
+              "on-error": "#ffffff",
+              "primary-fixed": "#ffdbd0",
+              "on-background": "#251910",
+              "on-surface": "#251910",
+              "surface-bright": "#fff8f5",
+              "inverse-surface": "#3b2e24",
+              "surface-container-low": "#fff1e9",
+              "surface": "#fff8f5",
+              "on-error-container": "#93000a",
+              "on-primary-fixed-variant": "#7a2f16",
+              "surface-dim": "#ecd6c7",
+              "surface-variant": "#f5decf",
+              "surface-container-highest": "#f5decf",
+              "surface-container": "#ffeadc",
+              "primary": "#98462a",
+              "error": "#ba1a1a",
+              "inverse-on-surface": "#ffede3",
+              "on-secondary-container": "#097162",
+              "secondary-fixed": "#9df3df",
+              "surface-container-high": "#fbe4d5",
+              "surface-container-lowest": "#ffffff",
+              "on-surface-variant": "#55433d",
+              "background": "#fff8f5",
+              "tertiary-fixed-dim": "#b9c9d2",
+              "inverse-primary": "#ffb59e",
+              "error-container": "#ffdad6",
+              "tertiary": "#526168",
+              "secondary-container": "#9df3df",
+              "primary-container": "#f28c6b",
+              "tertiary-container": "#9aaab2",
+              "on-tertiary-fixed-variant": "#3a4950",
+              "on-primary-fixed": "#3a0b00"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Be Vietnam Pro', sans-serif;
+        background-color: #fff8f5;
+      }
+      h1, h2, h3, .font-headline {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#fff8f5] dark:bg-[#1a1410]">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#98462a] dark:text-[#f28c6b] hover:bg-[#f28c6b]/10 p-2 rounded-full transition-colors scale-95 duration-200 ease-in-out" data-icon="close">close</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-[#251910] dark:text-[#fff8f5] text-lg">Speaking Practice</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="material-symbols-outlined text-[#98462a] dark:text-[#f28c6b] hover:bg-[#f28c6b]/10 p-2 rounded-full transition-colors scale-95 duration-200 ease-in-out" data-icon="insights">insights</button>
+</div>
+</header>
+<main class="pt-20 px-6 max-w-2xl mx-auto space-y-8">
+<!-- Progress Indicator -->
+<div class="space-y-2">
+<div class="flex justify-between items-end px-1">
+<span class="text-label text-on-surface-variant font-medium text-sm">Question 2 of 5</span>
+<span class="text-label text-primary font-bold">40%</span>
+</div>
+<div class="h-3 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[40%] rounded-full"></div>
+</div>
+</div>
+<!-- AI Guide Section -->
+<div class="flex items-start gap-6 pt-4">
+<div class="relative flex-shrink-0">
+<div class="w-20 h-20 rounded-xl bg-primary-container flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="a friendly rounded soft-edged robot character with large expressive eyes and a warm smile, gentle 3D illustration style for kids" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkBJIjZIAcSBAyG7pR5g4tBdPaO271qt99eM7VM4qtivOmkxw1OukdR88h93ODpnCx_lOCxWwlrazcc1A6fE-J30xaeYZb-II8I0ow8chijYVxe45ua3LTUCMotxBgv5s_YAyeJ6NxYVAmN_mOp1shixUlw1iysj2WJX0NUyVofGKnc9Zb7KXbU7zUw5HNP60u5AqvdrI9ROsq_HkQb6pqh5SomQA4wzrJ9NOFuk-3Xzgc5P4EEyMYP5jE112Hfn1yuPK84V2jYVzN"/>
+</div>
+<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-secondary rounded-full border-4 border-background flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[12px]" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg rounded-tl-none shadow-[0_4px_24px_rgba(37,25,16,0.03)] border-outline-variant/10 border relative">
+<p class="text-headline text-lg font-bold leading-tight">"What do you see at the zoo?"</p>
+<div class="absolute top-0 left-[-10px] w-0 h-0 border-t-[10px] border-t-surface-container-lowest border-l-[10px] border-l-transparent"></div>
+</div>
+</div>
+<!-- Prompt Panel -->
+<div class="bg-surface-container-low rounded-xl p-8 space-y-6 text-center">
+<div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white text-primary mb-2 shadow-sm cursor-pointer hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-3xl" data-icon="volume_up">volume_up</span>
+</div>
+<div class="space-y-4">
+<p class="text-on-surface-variant text-sm font-medium tracking-widest uppercase">Target Sentence</p>
+<h2 class="text-headline text-3xl md:text-4xl font-extrabold text-on-surface leading-tight">
+                    "I see a big, <span class="text-primary">tall giraffe</span>."
+                </h2>
+</div>
+<div class="pt-4 flex justify-center gap-2">
+<span class="px-4 py-1.5 bg-secondary/10 text-secondary rounded-full text-sm font-medium">Practice: /dʒɪˈrɑːf/</span>
+</div>
+</div>
+<!-- Feedback Card (Contextual State) -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-secondary/10 shadow-sm space-y-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-surface">Great job! You sound like a pro!</h4>
+<p class="text-body text-sm text-on-surface-variant">Your pronunciation was 92% accurate.</p>
+</div>
+</div>
+<div class="p-4 bg-surface-bright rounded-lg border-l-4 border-primary/30">
+<p class="text-xs font-bold text-primary uppercase tracking-wider mb-1">Tip for next time</p>
+<p class="text-on-surface-variant italic">"Try saying: 'The giraffe is very tall.'"</p>
+</div>
+</div>
+<!-- Recording Interface -->
+<div class="flex flex-col items-center gap-6 py-8">
+<!-- Waveform Representation -->
+<div class="flex items-end gap-1.5 h-12">
+<div class="w-1.5 h-4 bg-primary/20 rounded-full"></div>
+<div class="w-1.5 h-8 bg-primary/40 rounded-full"></div>
+<div class="w-1.5 h-12 bg-primary rounded-full"></div>
+<div class="w-1.5 h-10 bg-primary/60 rounded-full"></div>
+<div class="w-1.5 h-6 bg-primary/30 rounded-full"></div>
+<div class="w-1.5 h-8 bg-primary/50 rounded-full"></div>
+<div class="w-1.5 h-4 bg-primary/20 rounded-full"></div>
+</div>
+<div class="flex items-center gap-8">
+<button class="w-12 h-12 rounded-full flex items-center justify-center text-on-surface-variant bg-surface-container hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="refresh">refresh</span>
+</button>
+<button class="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center shadow-[0_8px_32px_rgba(242,140,107,0.3)] hover:scale-105 active:scale-95 transition-all group">
+<div class="w-20 h-20 rounded-full bg-primary flex items-center justify-center border-4 border-primary-container">
+<span class="material-symbols-outlined text-white text-4xl" data-icon="mic" style="font-variation-settings: 'FILL' 1;">mic</span>
+</div>
+</button>
+<button class="w-12 h-12 rounded-full flex items-center justify-center text-on-surface-variant bg-surface-container hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="skip_next">skip_next</span>
+</button>
+</div>
+<p class="text-label font-bold text-primary animate-pulse">Tap to start speaking</p>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#fff8f5]/80 dark:bg-[#1a1410]/80 backdrop-blur-xl rounded-t-[2rem] shadow-[0_-4px_32px_rgba(37,25,16,0.04)] border-t border-[#251910]/5">
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#d7ccc8] px-5 py-2 hover:text-[#98462a] transition-all cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="map">map</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium tracking-wide">Journey</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-[#f28c6b] dark:bg-[#98462a] text-white rounded-[1.25rem] px-5 py-2 transition-all scale-90 duration-300 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="mic" style="font-variation-settings: 'FILL' 1;">mic</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium tracking-wide">Speak</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#d7ccc8] px-5 py-2 hover:text-[#98462a] transition-all cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book">menu_book</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium tracking-wide">Library</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#d7ccc8] px-5 py-2 hover:text-[#98462a] transition-all cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="family_history">family_history</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium tracking-wide">Parents</span>
+</div>
+</nav>
+</body></html>
