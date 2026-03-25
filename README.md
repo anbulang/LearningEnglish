@@ -21,10 +21,12 @@ This repository now contains the first implementation scaffold for the next exec
 The implemented backend slice covers:
 1. create a course material
 2. poll a material parse job
-3. confirm OCR/AI review
-4. fetch the generated knowledge pack
-5. fetch review tasks
-6. create a practice session
+3. retry OCR/AI review when needed
+4. confirm OCR/AI review
+5. fetch the generated knowledge pack and parent coaching script
+6. fetch review tasks
+7. create a practice session
+8. create a scored speaking attempt
 
 The mobile scaffold covers the same flow in adaptive page structure:
 - 首页
@@ -33,6 +35,8 @@ The mobile scaffold covers the same flow in adaptive page structure:
 - AI 校对
 - 课程详情
 - 复习入口
+- 口语陪练
+- 亲子陪练
 
 ## Tooling Status
 - `python3`: available locally

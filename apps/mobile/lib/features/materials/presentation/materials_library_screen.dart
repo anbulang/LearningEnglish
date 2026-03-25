@@ -5,6 +5,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/state_panel.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../profiles/data/demo_data.dart';
 
@@ -15,6 +16,23 @@ class MaterialsLibraryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final materials = ref.watch(materialsProvider);
     final formFactor = formFactorOf(context);
+
+    if (materials.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('资料库')),
+        body: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: StatePanel(
+            title: '还没有课程资料',
+            description: '上传第一份讲义后，这里会自动整理成课程卡片。',
+            action: FilledButton(
+              onPressed: () => context.go('/materials/scan'),
+              child: const Text('上传第一份讲义'),
+            ),
+          ),
+        ),
+      );
+    }
 
     final list = Column(
       children: <Widget>[

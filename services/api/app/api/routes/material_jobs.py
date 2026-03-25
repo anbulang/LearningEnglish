@@ -70,11 +70,12 @@ def confirm_material_job(
             "status": MaterialStatus.ready,
         }
     )
-    knowledge_pack, review_tasks = pipeline.build_knowledge_assets(material, job)
+    knowledge_pack, review_tasks, coaching_script = pipeline.build_knowledge_assets(material, job)
 
     store.material_jobs[job.id] = job
     store.materials[material.id] = material
     store.knowledge_packs[material.id] = knowledge_pack
+    store.parent_coaching_scripts[material.id] = coaching_script
     for task_id, task in list(store.review_tasks.items()):
         if task.material_id == material.id:
             del store.review_tasks[task_id]
@@ -82,3 +83,26 @@ def confirm_material_job(
         store.review_tasks[task.id] = task
 
     return job
+
+
+@router.post("/{job_id}/retry", response_model=MaterialParseJob)
+def retry_material_job(
+    job_id: str,
+    store: InMemoryStore = Depends(get_store),
+) -> MaterialParseJob:
+    job = store.material_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material job not found")
+
+    material = store.materials[job.material_id]
+    retried_job = job.model_copy(
+        update={
+            "status": JobStatus.processing,
+            "warnings": [],
+            "confidence_summary": "任务已重新排队。",
+        }
+    )
+    retried_material = material.model_copy(update={"status": MaterialStatus.processing})
+    store.material_jobs[job.id] = retried_job
+    store.materials[material.id] = retried_material
+    return retried_job

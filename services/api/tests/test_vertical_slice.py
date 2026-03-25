@@ -7,6 +7,10 @@ client = TestClient(app)
 
 
 def test_vertical_slice_flow() -> None:
+    health_response = client.get("/healthz", headers={"x-request-id": "req_test_1"})
+    assert health_response.status_code == 200
+    assert health_response.headers["x-request-id"] == "req_test_1"
+
     children_response = client.get("/v1/children")
     assert children_response.status_code == 200
     children = children_response.json()
@@ -30,6 +34,10 @@ def test_vertical_slice_flow() -> None:
     material_id = created["material"]["id"]
     job_id = created["job"]["id"]
     assert created["material"]["status"] == "processing"
+
+    retry_response = client.post(f"/v1/material-jobs/{job_id}/retry")
+    assert retry_response.status_code == 200
+    assert retry_response.json()["status"] == "processing"
 
     job_response = client.get(f"/v1/material-jobs/{job_id}")
     assert job_response.status_code == 200

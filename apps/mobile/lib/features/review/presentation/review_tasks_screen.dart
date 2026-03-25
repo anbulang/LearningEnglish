@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 
 class ReviewTasksScreen extends ConsumerWidget {
@@ -52,6 +53,18 @@ class ReviewTasksScreen extends ConsumerWidget {
     }
 
     final tasks = ref.watch(reviewTasksProvider);
+    if (tasks.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('复习')),
+        body: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: const StatePanel(
+            title: '今天没有待复习任务',
+            description: '可以去资料库上传新讲义，或者回到报告页查看本周进度。',
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('复习')),
       body: ListView.separated(

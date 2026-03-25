@@ -4,6 +4,7 @@ import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/analytics/app_analytics.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../profiles/data/demo_data.dart';
 
@@ -54,10 +55,10 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
                   if (_submitted) {
                     return;
                   }
-                  ref.read(lastSpeakingAttemptProvider.notifier).state = const SpeakingAttempt(
+                  ref.read(lastSpeakingAttemptProvider.notifier).state = SpeakingAttempt(
                     id: 'attempt_demo_1',
                     childId: 'child_demo_1',
-                    materialId: 'material_demo_1',
+                    materialId: widget.materialId,
                     promptText: 'What is this?',
                     audioUrl: '',
                     transcript: 'It is a cat.',
@@ -66,6 +67,9 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
                     status: SpeakingAttemptStatus.scored,
                   );
                   ref.read(weeklyReportProvider.notifier).registerSpeakingAttempt();
+                  ref.read(appAnalyticsProvider).track('speaking_attempt_submitted', {
+                    'materialId': widget.materialId,
+                  });
                   setState(() {
                     _submitted = true;
                   });

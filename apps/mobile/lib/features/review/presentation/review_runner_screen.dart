@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../profiles/data/demo_data.dart';
 
@@ -58,6 +59,10 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
                           taskCount: tasks.length,
                           weakItems: const <String>['bird'],
                         );
+                    ref.read(appAnalyticsProvider).track('review_session_completed', {
+                      'materialId': widget.materialId,
+                      'taskCount': tasks.length,
+                    });
                     _sessionRecorded = true;
                   }
                   setState(() {
