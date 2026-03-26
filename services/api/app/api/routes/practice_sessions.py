@@ -1,11 +1,14 @@
-from datetime import datetime, timezone
-from uuid import uuid4
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.core.config import get_store
+from app.api.deps import get_current_parent
+from app.core.db import get_db
+from app.db.models import ChildProfileModel, ParentAccountModel, PracticeSessionModel, ReviewTaskModel, WeeklyReportModel
 from app.models.contracts import PracticeSession, PracticeSessionCreate, ReviewTaskStatus
-from app.repositories.in_memory import InMemoryStore
+from app.services.mappers import practice_session_from_model
 
 router = APIRouter(prefix="/practice-sessions", tags=["practice-sessions"])
 
@@ -13,42 +16,54 @@ router = APIRouter(prefix="/practice-sessions", tags=["practice-sessions"])
 @router.post("", response_model=PracticeSession, status_code=status.HTTP_201_CREATED)
 def create_practice_session(
     payload: PracticeSessionCreate,
-    store: InMemoryStore = Depends(get_store),
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
 ) -> PracticeSession:
-    if payload.child_id not in store.children:
+    child = db.scalar(
+        select(ChildProfileModel).where(
+            ChildProfileModel.id == payload.child_id,
+            ChildProfileModel.parent_account_id == current_parent.id,
+        )
+    )
+    if child is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
-    tasks = []
-    for task_id in payload.review_task_ids:
-        task = store.review_tasks.get(task_id)
-        if task is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task not found: {task_id}")
-        tasks.append(task)
+    tasks = db.scalars(
+        select(ReviewTaskModel).where(
+            ReviewTaskModel.id.in_(payload.review_task_ids or [""]),
+            ReviewTaskModel.child_id == payload.child_id,
+        )
+    ).all()
+    if len(tasks) != len(payload.review_task_ids):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more review tasks were not found")
 
-    session = PracticeSession(
-        id=f"session_{uuid4().hex[:8]}",
+    session = PracticeSessionModel(
         child_id=payload.child_id,
         review_task_ids=payload.review_task_ids,
-        started_at=datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
         score=payload.score,
         weak_points=payload.weak_points,
     )
-    store.practice_sessions[session.id] = session
+    db.add(session)
 
     for task in tasks:
-        store.review_tasks[task.id] = task.model_copy(update={"status": ReviewTaskStatus.completed})
+        task.status = ReviewTaskStatus.completed.value
+        db.add(task)
 
-    report = store.weekly_reports.get(payload.child_id)
-    if report is not None:
-        reviewed_words = report.reviewed_words + len(payload.review_task_ids)
-        weak_items = list(dict.fromkeys([*report.weak_items, *payload.weak_points]))
-        store.weekly_reports[payload.child_id] = report.model_copy(
-            update={
-                "completed_sessions": report.completed_sessions + 1,
-                "reviewed_words": reviewed_words,
-                "weak_items": weak_items,
-            }
+    report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == payload.child_id))
+    if report is None:
+        start = child.created_at.date()
+        report = WeeklyReportModel(
+            child_id=payload.child_id,
+            week_start=start,
+            week_end=start + timedelta(days=6),
+            recommended_actions=["保持每周至少完成两次复习。"],
         )
+        db.add(report)
+    report.completed_sessions += 1
+    report.reviewed_words += len(payload.review_task_ids)
+    report.weak_items = list(dict.fromkeys([*(report.weak_items or []), *payload.weak_points]))
+    db.add(report)
 
-    return session
+    db.commit()
+    db.refresh(session)
+    return practice_session_from_model(session)

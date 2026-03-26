@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.core.config import get_store
+from app.api.deps import get_current_parent
+from app.core.db import get_db
+from app.db.models import ChildProfileModel, CourseMaterialModel, ParentAccountModel, ParentCoachingScriptModel
 from app.models.contracts import ParentCoachingScript
-from app.repositories.in_memory import InMemoryStore
+from app.services.mappers import parent_coaching_script_from_model
 
 router = APIRouter(prefix="/parent-coaching", tags=["parent-coaching"])
 
@@ -10,12 +14,21 @@ router = APIRouter(prefix="/parent-coaching", tags=["parent-coaching"])
 @router.get("/{material_id}", response_model=ParentCoachingScript)
 def get_parent_coaching_script(
     material_id: str,
-    store: InMemoryStore = Depends(get_store),
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
 ) -> ParentCoachingScript:
-    script = store.parent_coaching_scripts.get(material_id)
-    if script is None:
+    row = db.execute(
+        select(ParentCoachingScriptModel)
+        .join(CourseMaterialModel, CourseMaterialModel.id == ParentCoachingScriptModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(
+            ParentCoachingScriptModel.material_id == material_id,
+            ChildProfileModel.parent_account_id == current_parent.id,
+        )
+    ).scalar_one_or_none()
+    if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Parent coaching script not available yet",
         )
-    return script
+    return parent_coaching_script_from_model(row)

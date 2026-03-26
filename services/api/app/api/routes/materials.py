@@ -1,20 +1,21 @@
-from datetime import datetime, timezone
-from uuid import uuid4
-
+from datetime import date, datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.core.config import get_store
-from app.models.contracts import (
-    CourseMaterial,
-    CourseMaterialCreate,
-    JobStatus,
-    MaterialCreateResponse,
-    MaterialParseJob,
-    MaterialStatus,
+from app.api.deps import get_current_parent
+from app.core.config import get_storage
+from app.core.db import get_db
+from app.db.models import (
+    ChildProfileModel,
+    CourseMaterialModel,
+    MaterialParseJobModel,
+    ParentAccountModel,
 )
-from app.repositories.in_memory import InMemoryStore
+from app.models.contracts import CourseMaterial, JobStatus, MaterialCreateResponse, MaterialDetailResponse, MaterialStatus
+from app.services.mappers import course_material_from_model, material_job_from_model
 
 router = APIRouter(prefix="/materials", tags=["materials"])
 
@@ -22,59 +23,111 @@ router = APIRouter(prefix="/materials", tags=["materials"])
 @router.get("", response_model=list[CourseMaterial])
 def list_materials(
     child_id: Optional[str] = None,
-    store: InMemoryStore = Depends(get_store),
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
 ) -> list[CourseMaterial]:
-    items = list(store.materials.values())
+    child_ids = db.scalars(
+        select(ChildProfileModel.id).where(ChildProfileModel.parent_account_id == current_parent.id)
+    ).all()
+    stmt = select(CourseMaterialModel).where(CourseMaterialModel.child_id.in_(child_ids or [""]))
     if child_id:
-        items = [item for item in items if item.child_id == child_id]
-    return sorted(items, key=lambda item: item.lesson_date, reverse=True)
+        stmt = stmt.where(CourseMaterialModel.child_id == child_id)
+    items = db.scalars(stmt.order_by(CourseMaterialModel.lesson_date.desc())).all()
+    return [course_material_from_model(item) for item in items]
 
 
-@router.get("/{material_id}", response_model=CourseMaterial)
+@router.get("/{material_id}", response_model=MaterialDetailResponse)
 def get_material(
     material_id: str,
-    store: InMemoryStore = Depends(get_store),
-) -> CourseMaterial:
-    material = store.materials.get(material_id)
-    if material is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
-    return material
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
+) -> MaterialDetailResponse:
+    material = _get_owned_material(db, current_parent.id, material_id)
+    return MaterialDetailResponse(material=course_material_from_model(material))
 
 
 @router.post("", response_model=MaterialCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_material(
-    payload: CourseMaterialCreate,
-    store: InMemoryStore = Depends(get_store),
+    child_id: str = Form(...),
+    teacher_name: str = Form(...),
+    lesson_date: date = Form(...),
+    title: str = Form(...),
+    topic: str = Form(""),
+    tags: str = Form(""),
+    files: list[UploadFile] = File(...),
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
+    storage=Depends(get_storage),
 ) -> MaterialCreateResponse:
-    if payload.child_id not in store.children:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
-
-    material = CourseMaterial(
-        id=f"material_{uuid4().hex[:8]}",
-        child_id=payload.child_id,
-        teacher_name=payload.teacher_name,
-        lesson_date=payload.lesson_date,
-        title=payload.title,
-        topic=payload.topic,
-        status=MaterialStatus.processing,
-        source_images=payload.source_images,
-        pdf_url=f"demo://{payload.title.lower().replace(' ', '-')}.pdf",
-        ocr_text="",
-        tags=payload.tags,
+    child = db.scalar(
+        select(ChildProfileModel).where(
+            ChildProfileModel.id == child_id,
+            ChildProfileModel.parent_account_id == current_parent.id,
+        )
     )
-    job = MaterialParseJob(
-        id=f"job_{uuid4().hex[:8]}",
+    if child is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
+    if not files:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one source image is required")
+
+    material = CourseMaterialModel(
+        child_id=child_id,
+        teacher_name=teacher_name,
+        lesson_date=lesson_date,
+        title=title,
+        topic=topic,
+        status=MaterialStatus.processing.value,
+        source_images=[],
+        source_image_keys=[],
+        normalized_image_keys=[],
+        tags=[item.strip() for item in tags.split(",") if item.strip()],
+        uploaded_at=datetime.now(timezone.utc),
+    )
+    db.add(material)
+    db.flush()
+
+    asset_rows: list[StoredAssetModel] = []
+    total_size = 0
+    for upload in files:
+        asset = storage.save_upload("material", material.id, upload)
+        db.add(asset)
+        db.flush()
+        asset_rows.append(asset)
+        total_size += asset.size_bytes
+
+    material.source_images = [asset.url for asset in asset_rows]
+    material.source_image_keys = [asset.object_key for asset in asset_rows]
+    material.normalized_image_keys = [asset.object_key for asset in asset_rows]
+    material.file_size_bytes = total_size
+
+    job = MaterialParseJobModel(
         material_id=material.id,
-        status=JobStatus.processing,
-        confidence_summary="",
-        warnings=[],
+        status=JobStatus.processing.value,
+        confidence_summary="上传完成，等待 OCR 与解析。",
         started_at=datetime.now(timezone.utc),
-        finished_at=None,
-        draft_title="",
-        draft_topic="",
+        warnings=[],
+        draft_title=title,
+        draft_topic=topic,
         draft_vocabulary=[],
         draft_sentences=[],
     )
-    store.materials[material.id] = material
-    store.material_jobs[job.id] = job
-    return MaterialCreateResponse(material=material, job=job)
+    db.add(job)
+    db.commit()
+    db.refresh(material)
+    db.refresh(job)
+    return MaterialCreateResponse(material=course_material_from_model(material), job=material_job_from_model(job))
+
+
+def _get_owned_material(db: Session, parent_account_id: str, material_id: str) -> CourseMaterialModel:
+    stmt = (
+        select(CourseMaterialModel)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(
+            CourseMaterialModel.id == material_id,
+            ChildProfileModel.parent_account_id == parent_account_id,
+        )
+    )
+    material = db.scalar(stmt)
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+    return material

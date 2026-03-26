@@ -52,8 +52,38 @@ class SpeakingAttemptStatus(str, Enum):
     failed = "failed"
 
 
+class AuthStatus(str, Enum):
+    authenticated = "authenticated"
+    phone_binding_required = "phone_binding_required"
+
+
+class ParentAccount(BaseModel):
+    id: str
+    display_name: str
+    avatar_url: str = ""
+    phone_number: str = ""
+    phone_verified_at: Optional[datetime] = None
+    wechat_union_id: str = ""
+    wechat_open_id: str = ""
+    created_at: datetime
+    updated_at: datetime
+
+
+class StoredAsset(BaseModel):
+    id: str
+    owner_type: str
+    owner_id: str
+    bucket: str
+    object_key: str
+    content_type: str
+    size_bytes: int
+    url: str
+    created_at: datetime
+
+
 class ChildProfile(BaseModel):
     id: str
+    parent_account_id: str
     name: str
     avatar_url: str = ""
     age: int
@@ -81,7 +111,12 @@ class CourseMaterial(BaseModel):
     topic: str = ""
     status: MaterialStatus
     source_images: list[str] = Field(default_factory=list)
+    source_image_keys: list[str] = Field(default_factory=list)
+    normalized_image_keys: list[str] = Field(default_factory=list)
     pdf_url: str = ""
+    pdf_key: str = ""
+    file_size_bytes: int = 0
+    uploaded_at: Optional[datetime] = None
     ocr_text: str = ""
     tags: list[str] = Field(default_factory=list)
 
@@ -223,9 +258,59 @@ class WeeklyReport(BaseModel):
     recommended_actions: list[str] = Field(default_factory=list)
 
 
+class WechatLoginRequest(BaseModel):
+    auth_code: str
+
+
+class PhoneOtpRequest(BaseModel):
+    bind_token: str
+    phone_number: str
+
+
+class PhoneOtpResponse(BaseModel):
+    request_id: str
+    expires_at: datetime
+    debug_code: Optional[str] = None
+
+
+class PhoneBindRequest(BaseModel):
+    bind_token: str
+    phone_number: str
+    otp_code: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class AuthTokens(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "Bearer"
+    access_token_expires_at: datetime
+    refresh_token_expires_at: datetime
+
+
+class AuthLoginResponse(BaseModel):
+    status: AuthStatus
+    parent_account: ParentAccount
+    children: list[ChildProfile] = Field(default_factory=list)
+    tokens: Optional[AuthTokens] = None
+    bind_token: Optional[str] = None
+
+
+class MeResponse(BaseModel):
+    parent_account: ParentAccount
+    children: list[ChildProfile] = Field(default_factory=list)
+
+
 class MaterialCreateResponse(BaseModel):
     material: CourseMaterial
     job: MaterialParseJob
+
+
+class MaterialDetailResponse(BaseModel):
+    material: CourseMaterial
 
 
 class KnowledgePackDetailResponse(BaseModel):
@@ -235,6 +320,10 @@ class KnowledgePackDetailResponse(BaseModel):
 
 class ReviewTaskListResponse(BaseModel):
     items: list[ReviewTask]
+
+
+class WeeklyReportResponse(BaseModel):
+    report: WeeklyReport
 
 
 class WeeklyReportResponse(BaseModel):

@@ -1,10 +1,14 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.core.config import get_store
+from app.api.deps import get_current_parent
+from app.core.db import get_db
+from app.db.models import ChildProfileModel, ParentAccountModel, ReviewTaskModel
 from app.models.contracts import ReviewTaskListResponse
-from app.repositories.in_memory import InMemoryStore
+from app.services.mappers import review_task_from_model
 
 router = APIRouter(prefix="/review-tasks", tags=["review-tasks"])
 
@@ -13,11 +17,17 @@ router = APIRouter(prefix="/review-tasks", tags=["review-tasks"])
 def list_review_tasks(
     child_id: Optional[str] = None,
     material_id: Optional[str] = None,
-    store: InMemoryStore = Depends(get_store),
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
 ) -> ReviewTaskListResponse:
-    items = list(store.review_tasks.values())
+    stmt = (
+        select(ReviewTaskModel)
+        .join(ChildProfileModel, ChildProfileModel.id == ReviewTaskModel.child_id)
+        .where(ChildProfileModel.parent_account_id == current_parent.id)
+    )
     if child_id:
-        items = [item for item in items if item.child_id == child_id]
+        stmt = stmt.where(ReviewTaskModel.child_id == child_id)
     if material_id:
-        items = [item for item in items if item.material_id == material_id]
-    return ReviewTaskListResponse(items=items)
+        stmt = stmt.where(ReviewTaskModel.material_id == material_id)
+    items = db.scalars(stmt.order_by(ReviewTaskModel.due_date)).all()
+    return ReviewTaskListResponse(items=[review_task_from_model(item) for item in items])

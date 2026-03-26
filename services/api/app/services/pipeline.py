@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional, Protocol
 from uuid import uuid4
 
+import httpx
+
+from app.core.settings import get_settings
 from app.models.contracts import (
     CourseMaterial,
     DifficultyBand,
@@ -33,28 +39,20 @@ class OCRDraft:
 
 
 class OCRProvider(Protocol):
-    def extract(self, material: CourseMaterial) -> OCRDraft:
+    def extract(self, material: CourseMaterial, local_paths: list[Path]) -> OCRDraft:
         ...
 
 
 class LanguageParsingProvider(Protocol):
-    def generate_knowledge_pack(
-        self,
-        material: CourseMaterial,
-        job: MaterialParseJob,
-    ) -> KnowledgePack:
+    def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
         ...
 
-    def generate_review_tasks(
-        self,
-        material: CourseMaterial,
-        knowledge_pack: KnowledgePack,
-    ) -> list[ReviewTask]:
+    def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
         ...
 
 
 class StubOCRProvider:
-    def extract(self, material: CourseMaterial) -> OCRDraft:
+    def extract(self, material: CourseMaterial, local_paths: list[Path]) -> OCRDraft:
         topic = material.topic or "课堂主题"
         raw_tokens = [token.strip("?.!,").lower() for token in material.title.split()]
         seed_words = [token for token in raw_tokens if token]
@@ -70,17 +68,53 @@ class StubOCRProvider:
             topic=topic,
             vocabulary=vocabulary,
             sentences=sentences,
-            warnings=["建议家长核对低频词和专有名词。"],
-            confidence_summary="OCR 与结构化解析已完成，建议人工快速确认。",
+            warnings=["当前环境未启用真实 OCR，已使用可运行的开发回退结果。"],
+            confidence_summary="开发环境使用 fallback OCR 草稿，请家长确认后继续。",
+        )
+
+
+class PaddleOCRProvider:
+    def __init__(self) -> None:
+        try:
+            from paddleocr import PaddleOCR
+        except ImportError as exc:  # pragma: no cover - optional runtime dependency
+            raise RuntimeError("paddleocr is not installed") from exc
+        self._ocr = PaddleOCR(use_angle_cls=True, lang="en")
+
+    def extract(self, material: CourseMaterial, local_paths: list[Path]) -> OCRDraft:
+        lines: list[str] = []
+        confidences: list[float] = []
+        for path in local_paths:
+            result = self._ocr.ocr(str(path), cls=True)
+            for page in result:
+                for entry in page or []:
+                    if len(entry) < 2:
+                        continue
+                    text, confidence = entry[1]
+                    if text:
+                        lines.append(text.strip())
+                        confidences.append(float(confidence))
+        ocr_text = " ".join(lines)
+        vocabulary = _extract_candidate_vocabulary(ocr_text)
+        sentences = _extract_candidate_sentences(lines)
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        confidence_summary = f"OCR 平均置信度 {avg_confidence:.0%}。"
+        warnings = []
+        if avg_confidence < 0.78:
+            warnings.append("OCR 置信度偏低，建议家长重点检查低频词和整句。")
+        return OCRDraft(
+            ocr_text=ocr_text,
+            title=material.title,
+            topic=material.topic or _infer_topic(ocr_text),
+            vocabulary=vocabulary[:8] or ["cat", "dog", "bird"],
+            sentences=sentences[:6] or ["What is this?", "It is a cat."],
+            warnings=warnings,
+            confidence_summary=confidence_summary,
         )
 
 
 class StubLanguageParsingProvider:
-    def generate_knowledge_pack(
-        self,
-        material: CourseMaterial,
-        job: MaterialParseJob,
-    ) -> KnowledgePack:
+    def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
         knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
         vocabulary_items = [
             VocabularyItem(
@@ -109,19 +143,15 @@ class StubLanguageParsingProvider:
         return KnowledgePack(
             id=knowledge_pack_id,
             material_id=material.id,
-            topic=job.draft_topic or material.topic,
+            topic=job.draft_topic or material.topic or _infer_topic(job.draft_title),
             difficulty_band=DifficultyBand.repeat,
-            lesson_summary=f"本课围绕 {job.draft_topic or material.topic} 展开，重点复习 {', '.join(job.draft_vocabulary[:3])}。",
+            lesson_summary=f"本课围绕 {job.draft_topic or material.topic or '课堂主题'} 展开，重点复习 {', '.join(job.draft_vocabulary[:3])}。",
             review_recommendation="先完成词卡和听音选图，再进入家长问答。",
             vocabulary_items=vocabulary_items,
             sentence_patterns=sentence_patterns,
         )
 
-    def generate_review_tasks(
-        self,
-        material: CourseMaterial,
-        knowledge_pack: KnowledgePack,
-    ) -> list[ReviewTask]:
+    def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
         now = datetime.now(timezone.utc)
         words = [item.word for item in knowledge_pack.vocabulary_items[:3]]
         first_word = words[0] if words else "cat"
@@ -178,17 +208,92 @@ class StubLanguageParsingProvider:
         ]
 
 
-class DemoPipelineService:
-    def __init__(
-        self,
-        ocr_provider: Optional[OCRProvider] = None,
-        parsing_provider: Optional[LanguageParsingProvider] = None,
-    ) -> None:
-        self.ocr_provider = ocr_provider or StubOCRProvider()
-        self.parsing_provider = parsing_provider or StubLanguageParsingProvider()
+class QwenLanguageParsingProvider:
+    def __init__(self, api_key: str, model: str) -> None:
+        self.api_key = api_key
+        self.model = model
 
-    def prepare_job(self, material: CourseMaterial, job: MaterialParseJob) -> MaterialParseJob:
-        draft = self.ocr_provider.extract(material)
+    def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
+        prompt = {
+            "title": job.draft_title or material.title,
+            "topic": job.draft_topic or material.topic,
+            "vocabulary": job.draft_vocabulary,
+            "sentences": job.draft_sentences,
+        }
+        response = httpx.post(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": self.model,
+                "temperature": 0.2,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You convert early-childhood English worksheet content into a JSON object "
+                            "with keys: topic, lesson_summary, review_recommendation, vocabulary_items, sentence_patterns. "
+                            "Keep Chinese explanations short and child-friendly."
+                        ),
+                    },
+                    {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
+                ],
+                "response_format": {"type": "json_object"},
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+        payload = json.loads(content)
+        knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
+        vocabulary_items = [
+            VocabularyItem(
+                id=f"word_{uuid4().hex[:8]}",
+                knowledge_pack_id=knowledge_pack_id,
+                word=item["word"],
+                phonics=item.get("phonics", ""),
+                meaning_cn=item.get("meaning_cn", ""),
+                image_url=item.get("image_url", ""),
+                audio_url=item.get("audio_url", ""),
+                example_sentence=item.get("example_sentence", ""),
+            )
+            for item in payload.get("vocabulary_items", [])
+        ]
+        sentence_patterns = [
+            SentencePattern(
+                id=f"sentence_{uuid4().hex[:8]}",
+                knowledge_pack_id=knowledge_pack_id,
+                sentence=item["sentence"],
+                meaning_cn=item.get("meaning_cn", ""),
+                usage_type=item.get("usage_type", ""),
+                audio_url=item.get("audio_url", ""),
+            )
+            for item in payload.get("sentence_patterns", [])
+        ]
+        return KnowledgePack(
+            id=knowledge_pack_id,
+            material_id=material.id,
+            topic=payload.get("topic") or job.draft_topic or material.topic,
+            difficulty_band=DifficultyBand.repeat,
+            lesson_summary=payload.get("lesson_summary") or "本课围绕课堂主题展开。",
+            review_recommendation=payload.get("review_recommendation") or "先词卡，再做理解练习。",
+            vocabulary_items=vocabulary_items or StubLanguageParsingProvider().generate_knowledge_pack(material, job).vocabulary_items,
+            sentence_patterns=sentence_patterns or StubLanguageParsingProvider().generate_knowledge_pack(material, job).sentence_patterns,
+        )
+
+    def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
+        return StubLanguageParsingProvider().generate_review_tasks(material, knowledge_pack)
+
+
+class ProviderBackedPipelineService:
+    def __init__(self, ocr_provider: OCRProvider, parsing_provider: LanguageParsingProvider) -> None:
+        self.ocr_provider = ocr_provider
+        self.parsing_provider = parsing_provider
+
+    def prepare_job(self, material: CourseMaterial, job: MaterialParseJob, local_paths: list[Path]) -> MaterialParseJob:
+        draft = self.ocr_provider.extract(material, local_paths)
         return job.model_copy(
             update={
                 "status": JobStatus.needs_review,
@@ -232,3 +337,51 @@ class DemoPipelineService:
             ],
         )
         return knowledge_pack, review_tasks, coaching_script
+
+
+def build_pipeline_service() -> ProviderBackedPipelineService:
+    settings = get_settings()
+    ocr_provider: OCRProvider
+    try:
+        ocr_provider = PaddleOCRProvider()
+    except Exception:
+        ocr_provider = StubOCRProvider()
+    if settings.dashscope_api_key:
+        parsing_provider: LanguageParsingProvider = QwenLanguageParsingProvider(
+            api_key=settings.dashscope_api_key,
+            model=settings.qwen_model,
+        )
+    else:
+        parsing_provider = StubLanguageParsingProvider()
+    return ProviderBackedPipelineService(ocr_provider=ocr_provider, parsing_provider=parsing_provider)
+
+
+def _extract_candidate_vocabulary(text: str) -> list[str]:
+    words = re.findall(r"[A-Za-z]{2,}", text.lower())
+    deduped: list[str] = []
+    for word in words:
+        if word in {"what", "this", "that", "is", "it", "a", "an", "the"}:
+            continue
+        if word not in deduped:
+            deduped.append(word)
+    return deduped
+
+
+def _extract_candidate_sentences(lines: list[str]) -> list[str]:
+    sentences: list[str] = []
+    for line in lines:
+        clean = line.strip()
+        if not clean:
+            continue
+        if clean.endswith("?") or clean.endswith(".") or len(clean.split()) > 2:
+            sentences.append(clean)
+    return sentences
+
+
+def _infer_topic(text: str) -> str:
+    lowered = text.lower()
+    if any(word in lowered for word in ("cat", "dog", "bird", "animal")):
+        return "动物"
+    if any(word in lowered for word in ("apple", "banana", "fruit")):
+        return "水果"
+    return "课堂主题"
