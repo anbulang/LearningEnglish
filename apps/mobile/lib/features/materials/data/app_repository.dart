@@ -179,6 +179,16 @@ class AppRepository implements MaterialsRepository {
     return MaterialParseJob.fromJson(response.data ?? const <String, dynamic>{});
   }
 
+  Future<MaterialParseJob> retryMaterialJob({
+    required String jobId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/material-jobs/$jobId/retry',
+      options: _options,
+    );
+    return MaterialParseJob.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
   Future<PracticeSession> createPracticeSession({
     required String childId,
     required List<String> reviewTaskIds,

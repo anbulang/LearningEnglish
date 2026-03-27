@@ -17,6 +17,10 @@ def _auth_headers(client: TestClient) -> tuple[dict[str, str], str]:
     login_response = client.post("/v1/auth/wechat/login", json={"auth_code": "pilot-parent"})
     assert login_response.status_code == 200
     login_payload = login_response.json()
+    if login_payload["status"] == "authenticated":
+        tokens = login_payload["tokens"]
+        return {"Authorization": f"Bearer {tokens['access_token']}"}, tokens["refresh_token"]
+
     assert login_payload["status"] == "phone_binding_required"
     bind_token = login_payload["bind_token"]
 

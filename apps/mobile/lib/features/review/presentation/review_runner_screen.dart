@@ -5,6 +5,7 @@ import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/analytics/app_analytics.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
@@ -75,7 +76,11 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => StatePanel(
             title: '复习任务加载失败',
-            description: error.toString(),
+            description: describeApiError(error, fallback: '复习任务加载失败，请稍后重试。'),
+            action: FilledButton(
+              onPressed: () => ref.invalidate(reviewTasksProvider),
+              child: const Text('重新加载'),
+            ),
           ),
         ),
       ),

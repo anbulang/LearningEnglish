@@ -1,10 +1,13 @@
 PYTHON ?= python3
 FLUTTER ?= flutter
 
-.PHONY: api-install api-dev api-test worker-install worker-dev infra-up infra-down mobile-bootstrap mobile-analyze
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down mobile-bootstrap mobile-analyze mobile-apk
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
+
+api-migrate:
+	cd services/api && .venv/bin/alembic upgrade head
 
 api-dev:
 	cd services/api && .venv/bin/uvicorn app.main:app --reload
@@ -17,6 +20,9 @@ worker-install:
 
 worker-dev:
 	cd services/workers && .venv/bin/celery -A workers_app.celery_app.celery_app worker --loglevel=info
+
+worker-test:
+	cd services/workers && .venv/bin/pytest
 
 infra-up:
 	docker compose -f infra/docker-compose.yml up -d
@@ -31,3 +37,6 @@ mobile-bootstrap:
 
 mobile-analyze:
 	cd apps/mobile && $(FLUTTER) analyze
+
+mobile-apk:
+	cd apps/mobile && $(FLUTTER) build apk --debug

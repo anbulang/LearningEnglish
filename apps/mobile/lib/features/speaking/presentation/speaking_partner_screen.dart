@@ -4,6 +4,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
@@ -23,6 +24,7 @@ class SpeakingPartnerScreen extends ConsumerStatefulWidget {
 
 class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
   bool _submitted = false;
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -57,20 +59,27 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
                   if (_submitted || child == null) {
                     return;
                   }
-                  final created = await ref.read(appRepositoryProvider).createSpeakingAttempt(
-                        childId: child.id,
-                        materialId: widget.materialId,
-                        promptText: 'What is this?',
-                        transcript: 'It is a cat.',
-                      );
-                  ref.read(lastSpeakingAttemptProvider.notifier).state = created;
-                  ref.invalidate(weeklyReportProvider);
-                  ref.read(appAnalyticsProvider).track('speaking_attempt_submitted', {
-                    'materialId': widget.materialId,
-                  });
-                  setState(() {
-                    _submitted = true;
-                  });
+                  try {
+                    final created = await ref.read(appRepositoryProvider).createSpeakingAttempt(
+                          childId: child.id,
+                          materialId: widget.materialId,
+                          promptText: 'What is this?',
+                          transcript: 'It is a cat.',
+                        );
+                    ref.read(lastSpeakingAttemptProvider.notifier).state = created;
+                    ref.invalidate(weeklyReportProvider);
+                    ref.read(appAnalyticsProvider).track('speaking_attempt_submitted', {
+                      'materialId': widget.materialId,
+                    });
+                    setState(() {
+                      _submitted = true;
+                      _errorMessage = null;
+                    });
+                  } catch (error) {
+                    setState(() {
+                      _errorMessage = describeApiError(error, fallback: '口语提交失败，请稍后重试。');
+                    });
+                  }
                 },
                 icon: const Icon(Icons.mic_rounded),
                 label: const Text('提交回答'),
@@ -80,6 +89,7 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
                   ref.read(lastSpeakingAttemptProvider.notifier).state = null;
                   setState(() {
                     _submitted = false;
+                    _errorMessage = null;
                   });
                 },
                 icon: const Icon(Icons.refresh_rounded),
@@ -87,6 +97,14 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
               ),
             ],
           ),
+          if (_errorMessage != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            StatePanel(
+              title: '提交失败',
+              description: _errorMessage!,
+              icon: Icons.error_outline_rounded,
+            ),
+          ],
         ],
       ),
     );

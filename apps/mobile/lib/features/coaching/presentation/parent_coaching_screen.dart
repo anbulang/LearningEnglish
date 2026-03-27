@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
@@ -54,7 +55,11 @@ class ParentCoachingScreen extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => StatePanel(
         title: '亲子陪练脚本加载失败',
-        description: error.toString(),
+        description: describeApiError(error, fallback: '亲子陪练脚本暂时不可用，请稍后重试。'),
+        action: FilledButton(
+          onPressed: () => ref.invalidate(parentCoachingScriptProvider(materialId)),
+          child: const Text('刷新脚本'),
+        ),
       ),
     );
 

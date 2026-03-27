@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_contracts/contracts.dart';
 
+import '../../../core/network/api_error.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../auth/data/auth_repository.dart';
 import 'session_models.dart';
@@ -91,7 +92,7 @@ class SessionController extends StateNotifier<SessionState> {
       state = state.copyWith(
         stage: SessionStage.signedOut,
         isBusy: false,
-        errorMessage: error.message ?? '微信登录失败',
+        errorMessage: describeApiError(error, fallback: '微信登录失败'),
       );
     }
   }
@@ -110,7 +111,10 @@ class SessionController extends StateNotifier<SessionState> {
       state = state.copyWith(isBusy: false);
       return otpCode;
     } on DioException catch (error) {
-      state = state.copyWith(isBusy: false, errorMessage: error.message ?? '验证码发送失败');
+      state = state.copyWith(
+        isBusy: false,
+        errorMessage: describeApiError(error, fallback: '验证码发送失败'),
+      );
       return null;
     }
   }
@@ -132,7 +136,10 @@ class SessionController extends StateNotifier<SessionState> {
       );
       await _persistAuthenticated(result);
     } on DioException catch (error) {
-      state = state.copyWith(isBusy: false, errorMessage: error.message ?? '手机号绑定失败');
+      state = state.copyWith(
+        isBusy: false,
+        errorMessage: describeApiError(error, fallback: '手机号绑定失败'),
+      );
     }
   }
 

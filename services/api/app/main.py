@@ -4,6 +4,8 @@ from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
@@ -57,3 +59,12 @@ async def request_logging_middleware(request: Request, call_next) -> Response:
 @app.get("/healthz", tags=["health"])
 def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    first_error = exc.errors()[0] if exc.errors() else {}
+    location = ".".join(str(item) for item in first_error.get("loc", [])[1:])
+    message = first_error.get("msg", "Request validation failed")
+    detail = f"{location}: {message}" if location else message
+    return JSONResponse(status_code=422, content={"detail": detail})

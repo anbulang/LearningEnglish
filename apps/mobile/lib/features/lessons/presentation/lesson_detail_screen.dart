@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
@@ -100,14 +101,32 @@ class LessonDetailScreen extends ConsumerWidget {
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => StatePanel(
-          title: '课程内容加载失败',
-          description: error.toString(),
+          title: '课程内容暂未就绪',
+          description: describeApiError(error, fallback: '知识包还没有准备好，请稍后刷新或回到资料库查看处理状态。'),
+          action: Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: <Widget>[
+              FilledButton(
+                onPressed: () => ref.invalidate(knowledgePackProvider(materialId)),
+                child: const Text('刷新'),
+              ),
+              OutlinedButton(
+                onPressed: () => context.go('/materials'),
+                child: const Text('回到资料库'),
+              ),
+            ],
+          ),
         ),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => StatePanel(
         title: '课程详情加载失败',
-        description: error.toString(),
+        description: describeApiError(error, fallback: '课程详情加载失败，请稍后重试。'),
+        action: FilledButton(
+          onPressed: () => ref.invalidate(materialProvider(materialId)),
+          child: const Text('重新加载'),
+        ),
       ),
     );
 

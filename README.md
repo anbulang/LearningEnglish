@@ -44,8 +44,8 @@ The Flutter app now targets the same flow in adaptive page structure:
 ## Tooling Status
 - `python3`: available locally
 - `uv`: available locally
-- `flutter`: verified locally with Flutter `3.41.5`
-- `dart`: verified locally with Dart `3.11.3`
+- `flutter`: verified locally with Flutter `3.41.6`
+- `dart`: verified locally with Dart `3.11.4`
 
 The Flutter workspace has been bootstrapped locally and `flutter analyze` passes for `apps/mobile`.
 
@@ -71,12 +71,22 @@ cp infra/.env.example infra/.env
 docker compose -f infra/docker-compose.yml up -d
 ```
 
+### Database Migration
+```bash
+make api-migrate
+```
+
 ### Mobile
 ```bash
 make mobile-bootstrap
 make mobile-analyze
 cd apps/mobile
 flutter run
+```
+
+Build a local Android test APK:
+```bash
+make mobile-apk
 ```
 
 To point the mobile app at a non-local API host:
@@ -102,3 +112,22 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 - Adaptive navigation: phone, compact tablet, full tablet breakpoints
 - Domain naming alignment with `docs/architecture/data-models.md`
 - Alembic migration: `services/api/alembic/versions/20260327_0001_init_mvp_schema.py`
+
+## Short MVP Delivery Flow
+Use this when preparing a demo or internal test package:
+
+1. `cp infra/.env.example infra/.env`
+2. `make infra-up`
+3. `make api-install && make worker-install`
+4. `make api-migrate`
+5. Start API: `make api-dev`
+6. Start worker: `make worker-dev`
+7. Validate backend: `make api-test && make worker-test`
+8. Validate mobile: `make mobile-bootstrap && make mobile-analyze`
+9. Run app locally: `cd apps/mobile && flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1`
+10. Build Android debug APK: `make mobile-apk`
+
+## Demo Login Notes
+- MVP defaults to stub providers so it can run without real WeChat, SMS, OCR, or LLM credentials.
+- In non-production environments, phone OTP responses include `debug_code`, currently `123456`.
+- Core demo path: 登录 -> 绑定手机号 -> 创建默认孩子 -> 上传讲义 -> AI 校对 -> 课程详情 -> 复习 -> 报告。

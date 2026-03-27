@@ -6,6 +6,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
@@ -65,7 +66,7 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
       context.go('/materials/review/${created.job.id}?materialId=${created.material.id}');
     } catch (error) {
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage = describeApiError(error, fallback: '上传失败，请稍后重试。');
       });
     } finally {
       if (mounted) {
@@ -159,7 +160,7 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
             runSpacing: AppSpacing.sm,
             children: <Widget>[
               FilledButton.icon(
-                onPressed: _submitting ? null : _submit,
+                onPressed: _submitting || draft.pages.isEmpty ? null : _submit,
                 icon: const Icon(Icons.cloud_upload_rounded),
                 label: Text(_submitting ? '上传中...' : '完成上传'),
               ),

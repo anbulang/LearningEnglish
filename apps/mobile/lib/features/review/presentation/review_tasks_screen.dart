@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
+import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
@@ -55,7 +56,11 @@ class ReviewTasksScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.md),
             child: StatePanel(
               title: '报告加载失败',
-              description: error.toString(),
+              description: describeApiError(error, fallback: '报告暂时不可用，请稍后重试。'),
+              action: FilledButton(
+                onPressed: () => ref.invalidate(weeklyReportProvider),
+                child: const Text('刷新报告'),
+              ),
             ),
           ),
         ),
@@ -105,7 +110,11 @@ class ReviewTasksScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: StatePanel(
             title: '复习任务加载失败',
-            description: error.toString(),
+            description: describeApiError(error, fallback: '复习任务暂时不可用，请稍后重试。'),
+            action: FilledButton(
+              onPressed: () => ref.invalidate(reviewTasksProvider),
+              child: const Text('重新加载'),
+            ),
           ),
         ),
       ),
