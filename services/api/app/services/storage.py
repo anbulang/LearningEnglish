@@ -12,8 +12,12 @@ from app.db.models import StoredAssetModel
 
 try:
     import boto3
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
 except ImportError:  # pragma: no cover - optional runtime dependency
     boto3 = None
+    Config = None
+    ClientError = Exception
 
 
 class LocalStorageService:
@@ -55,7 +59,9 @@ class S3StorageService:
             aws_access_key_id=settings.object_storage_access_key or None,
             aws_secret_access_key=settings.object_storage_secret_key or None,
             region_name=settings.object_storage_region,
+            config=Config(s3={"addressing_style": "path"}) if Config is not None and settings.use_path_style_s3 else None,
         )
+        self._ensure_bucket()
 
     def save_upload(self, owner_type: str, owner_id: str, upload: UploadFile) -> StoredAssetModel:
         extension = Path(upload.filename or "upload.bin").suffix or ".bin"
@@ -83,6 +89,12 @@ class S3StorageService:
         with target as fp:
             self.client.download_fileobj(asset.bucket, asset.object_key, fp)
         return Path(target.name)
+
+    def _ensure_bucket(self) -> None:
+        try:
+            self.client.head_bucket(Bucket=self.settings.storage_bucket)
+        except ClientError:
+            self.client.create_bucket(Bucket=self.settings.storage_bucket)
 
 
 def get_storage_service():

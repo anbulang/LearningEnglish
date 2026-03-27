@@ -5,6 +5,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 
 class LessonDetailScreen extends ConsumerWidget {
@@ -17,84 +18,97 @@ class LessonDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final materials = ref.watch(materialsProvider);
-    final material = materials.firstWhere((item) => item.id == materialId);
-    final knowledge = ref.watch(knowledgePackProvider);
+    final materialAsync = ref.watch(materialProvider(materialId));
+    final knowledgeAsync = ref.watch(knowledgePackProvider(materialId));
     final formFactor = formFactorOf(context);
 
-    final detailContent = ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      children: <Widget>[
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(material.title, style: AppTextStyles.pageTitle),
-              const SizedBox(height: AppSpacing.sm),
-              Text('${material.teacherName} · ${material.lessonDate.month}/${material.lessonDate.day} · ${material.topic}'),
-              const SizedBox(height: AppSpacing.md),
-              Text(knowledge.lessonSummary),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('核心单词', style: AppTextStyles.sectionTitle),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: knowledge.vocabularyItems
-                    .map((item) => Chip(label: Text('${item.word} · ${item.meaningCn}')))
-                    .toList(),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('重点句型', style: AppTextStyles.sectionTitle),
-              const SizedBox(height: AppSpacing.sm),
-              ...knowledge.sentencePatterns.map(
-                (item) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(item.sentence),
-                  subtitle: Text(item.meaningCn),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              FilledButton.icon(
-                onPressed: () => context.go('/review/session/$materialId'),
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('开始本课复习'),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
+    final detailContent = materialAsync.when(
+      data: (material) => knowledgeAsync.when(
+        data: (knowledge) => ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: <Widget>[
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  OutlinedButton.icon(
-                    onPressed: () => context.go('/review/speaking/$materialId'),
-                    icon: const Icon(Icons.mic_none_rounded),
-                    label: const Text('口语陪练'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => context.go('/review/coaching/$materialId'),
-                    icon: const Icon(Icons.favorite_border_rounded),
-                    label: const Text('亲子陪练'),
+                  Text(material.title, style: AppTextStyles.pageTitle),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text('${material.teacherName} · ${material.lessonDate.month}/${material.lessonDate.day} · ${material.topic}'),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(knowledge.lessonSummary),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('核心单词', style: AppTextStyles.sectionTitle),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: knowledge.vocabularyItems
+                        .map((item) => Chip(label: Text('${item.word} · ${item.meaningCn}')))
+                        .toList(),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('重点句型', style: AppTextStyles.sectionTitle),
+                  const SizedBox(height: AppSpacing.sm),
+                  ...knowledge.sentencePatterns.map(
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(item.sentence),
+                      subtitle: Text(item.meaningCn),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/review/session/$materialId'),
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('开始本课复习'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: <Widget>[
+                      OutlinedButton.icon(
+                        onPressed: () => context.go('/review/speaking/$materialId'),
+                        icon: const Icon(Icons.mic_none_rounded),
+                        label: const Text('口语陪练'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => context.go('/review/coaching/$materialId'),
+                        icon: const Icon(Icons.favorite_border_rounded),
+                        label: const Text('亲子陪练'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => StatePanel(
+          title: '课程内容加载失败',
+          description: error.toString(),
+        ),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => StatePanel(
+        title: '课程详情加载失败',
+        description: error.toString(),
+      ),
     );
 
     if (!formFactor.isTablet) {

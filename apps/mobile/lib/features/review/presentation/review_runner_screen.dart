@@ -6,6 +6,8 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/analytics/app_analytics.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/state_panel.dart';
+import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
 
 class ReviewRunnerScreen extends ConsumerStatefulWidget {
@@ -27,49 +29,55 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
   @override
   Widget build(BuildContext context) {
     final allTasks = ref.watch(reviewTasksProvider);
-    final tasks = allTasks.where((task) => task.materialId == widget.materialId).toList();
-
-    if (tasks.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('复习任务')),
-        body: const Center(child: Text('当前没有可进行的复习任务')),
-      );
-    }
-
-    final completedCount =
-        tasks.where((task) => task.status == ReviewTaskStatus.completed).length;
-    final isFinished = completedCount == tasks.length || _currentIndex >= tasks.length;
+    final child = ref.watch(activeChildProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('复习进行中')),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
-        child: isFinished
-            ? _ReviewFinishedState(materialId: widget.materialId)
-            : _ReviewTaskStage(
-                task: tasks[_currentIndex],
-                currentIndex: _currentIndex,
-                totalCount: tasks.length,
-                onNext: () {
-                  if (_currentIndex + 1 == tasks.length && !_sessionRecorded) {
-                    ref
-                        .read(reviewTasksProvider.notifier)
-                        .completeTasks(tasks.map((task) => task.id));
-                    ref.read(weeklyReportProvider.notifier).registerCompletedSession(
-                          taskCount: tasks.length,
-                          weakItems: const <String>['bird'],
-                        );
-                    ref.read(appAnalyticsProvider).track('review_session_completed', {
-                      'materialId': widget.materialId,
-                      'taskCount': tasks.length,
-                    });
-                    _sessionRecorded = true;
-                  }
-                  setState(() {
-                    _currentIndex += 1;
-                  });
-                },
-              ),
+        child: allTasks.when(
+          data: (items) {
+            final tasks = items.where((task) => task.materialId == widget.materialId).toList();
+            if (tasks.isEmpty || child == null) {
+              return const Center(child: Text('当前没有可进行的复习任务'));
+            }
+            final isFinished = _currentIndex >= tasks.length;
+            return isFinished
+                ? _ReviewFinishedState(materialId: widget.materialId)
+                : _ReviewTaskStage(
+                    task: tasks[_currentIndex],
+                    currentIndex: _currentIndex,
+                    totalCount: tasks.length,
+                    onNext: () async {
+                      if (_currentIndex + 1 == tasks.length && !_sessionRecorded) {
+                        await ref.read(appRepositoryProvider).createPracticeSession(
+                              childId: child.id,
+                              reviewTaskIds: tasks.map((task) => task.id).toList(),
+                              score: 92,
+                              weakPoints: const <String>['bird'],
+                            );
+                        ref.invalidate(reviewTasksProvider);
+                        ref.invalidate(weeklyReportProvider);
+                        ref.read(appAnalyticsProvider).track('review_session_completed', {
+                          'materialId': widget.materialId,
+                          'taskCount': tasks.length,
+                        });
+                        _sessionRecorded = true;
+                      }
+                      if (mounted) {
+                        setState(() {
+                          _currentIndex += 1;
+                        });
+                      }
+                    },
+                  );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => StatePanel(
+            title: '复习任务加载失败',
+            description: error.toString(),
+          ),
+        ),
       ),
     );
   }

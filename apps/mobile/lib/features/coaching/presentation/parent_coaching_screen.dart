@@ -4,6 +4,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 
 class ParentCoachingScreen extends ConsumerWidget {
@@ -16,37 +17,44 @@ class ParentCoachingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final script = ref.watch(parentCoachingScriptProvider);
+    final scriptAsync = ref.watch(parentCoachingScriptProvider(materialId));
     final formFactor = formFactorOf(context);
 
-    final scriptPanel = AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(script.title, style: AppTextStyles.pageTitle),
-          const SizedBox(height: AppSpacing.sm),
-          Text(script.intro),
-          const SizedBox(height: AppSpacing.md),
-          ...script.steps.map(
-            (step) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(step.title, style: AppTextStyles.cardTitle),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('现在怎么说：${step.parentPrompt}'),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('孩子卡住时：${step.stuckHint}'),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('继续扩展：${step.expansionPrompt}'),
-                  ],
+    final scriptPanel = scriptAsync.when(
+      data: (script) => AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(script.title, style: AppTextStyles.pageTitle),
+            const SizedBox(height: AppSpacing.sm),
+            Text(script.intro),
+            const SizedBox(height: AppSpacing.md),
+            ...script.steps.map(
+              (step) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(step.title, style: AppTextStyles.cardTitle),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('现在怎么说：${step.parentPrompt}'),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('孩子卡住时：${step.stuckHint}'),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('继续扩展：${step.expansionPrompt}'),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => StatePanel(
+        title: '亲子陪练脚本加载失败',
+        description: error.toString(),
       ),
     );
 

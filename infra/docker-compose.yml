@@ -41,7 +41,12 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql://learning_english:learning_english@postgres:5432/learning_english
+      STORAGE_BACKEND: s3
       OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      OBJECT_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
+      OBJECT_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minio123}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-learning-english}
+      OBJECT_STORAGE_USE_PATH_STYLE: "true"
     ports:
       - "${API_PORT:-8000}:8000"
 
@@ -58,7 +63,12 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       DATABASE_URL: postgresql://learning_english:learning_english@postgres:5432/learning_english
+      STORAGE_BACKEND: s3
       OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      OBJECT_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
+      OBJECT_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minio123}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-learning-english}
+      OBJECT_STORAGE_USE_PATH_STYLE: "true"
 
 volumes:
   postgres_data:

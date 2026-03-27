@@ -17,23 +17,6 @@ class MaterialsLibraryScreen extends ConsumerWidget {
     final materials = ref.watch(materialsProvider);
     final formFactor = formFactorOf(context);
 
-    if (materials.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('资料库')),
-        body: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: StatePanel(
-            title: '还没有课程资料',
-            description: '上传第一份讲义后，这里会自动整理成课程卡片。',
-            action: FilledButton(
-              onPressed: () => context.go('/materials/scan'),
-              child: const Text('上传第一份讲义'),
-            ),
-          ),
-        ),
-      );
-    }
-
     final list = Column(
       children: <Widget>[
         TextField(
@@ -57,22 +40,56 @@ class MaterialsLibraryScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        ...materials.map(
-          (material) => Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: AppCard(
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(material.title, style: AppTextStyles.cardTitle),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Text('${material.lessonDate.month}/${material.lessonDate.day} · ${material.teacherName}'),
+        ...materials.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return <Widget>[
+                StatePanel(
+                  title: '还没有课程资料',
+                  description: '上传第一份讲义后，这里会自动整理成课程卡片。',
+                  action: FilledButton(
+                    onPressed: () => context.go('/materials/scan'),
+                    child: const Text('上传第一份讲义'),
+                  ),
                 ),
-                trailing: MaterialStatusChip(material.status),
-                onTap: () => context.go('/lessons/${material.id}'),
+              ];
+            }
+            return items
+                .map(
+                  (material) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: AppCard(
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(material.title, style: AppTextStyles.cardTitle),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text('${material.lessonDate.month}/${material.lessonDate.day} · ${material.teacherName}'),
+                        ),
+                        trailing: MaterialStatusChip(material.status),
+                        onTap: () => context.go('/lessons/${material.id}'),
+                      ),
+                    ),
+                  ),
+                )
+                .toList();
+          },
+          loading: () => const <Widget>[
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ],
+          error: (_, __) => <Widget>[
+            StatePanel(
+              title: '资料库加载失败',
+              description: '请检查网络或稍后重试。',
+              action: FilledButton(
+                onPressed: () => ref.invalidate(materialsProvider),
+                child: const Text('重新加载'),
               ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -95,7 +112,7 @@ class MaterialsLibraryScreen extends ConsumerWidget {
       );
     }
 
-    final selected = materials.first;
+    final selected = materials.valueOrNull?.isNotEmpty == true ? materials.valueOrNull!.first : null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('资料库'),
@@ -115,28 +132,33 @@ class MaterialsLibraryScreen extends ConsumerWidget {
             Expanded(child: ListView(children: <Widget>[list])),
             const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(selected.title, style: AppTextStyles.sectionTitle),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text('主题：${selected.topic}'),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text('OCR 摘要'),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(selected.ocrText),
-                    const Spacer(),
-                    Align(
-                      alignment: Alignment.bottomLeft,
-                      child: FilledButton(
-                        onPressed: () => context.go('/lessons/${selected.id}'),
-                        child: const Text('查看课程详情'),
+              child: selected == null
+                  ? const StatePanel(
+                      title: '选择一份课程资料',
+                      description: '平板模式下会在右侧显示讲义摘要和详情入口。',
+                    )
+                  : AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(selected.title, style: AppTextStyles.sectionTitle),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text('主题：${selected.topic}'),
+                          const SizedBox(height: AppSpacing.sm),
+                          const Text('OCR 摘要'),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(selected.ocrText),
+                          const Spacer(),
+                          Align(
+                            alignment: Alignment.bottomLeft,
+                            child: FilledButton(
+                              onPressed: () => context.go('/lessons/${selected.id}'),
+                              child: const Text('查看课程详情'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),

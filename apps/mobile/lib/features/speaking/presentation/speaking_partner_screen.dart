@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/state_panel.dart';
+import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
 
 class SpeakingPartnerScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,7 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
   Widget build(BuildContext context) {
     final formFactor = formFactorOf(context);
     final attempt = ref.watch(lastSpeakingAttemptProvider);
+    final child = ref.watch(activeChildProvider);
     final stage = AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,22 +53,18 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
             runSpacing: AppSpacing.sm,
             children: <Widget>[
               FilledButton.icon(
-                onPressed: () {
-                  if (_submitted) {
+                onPressed: () async {
+                  if (_submitted || child == null) {
                     return;
                   }
-                  ref.read(lastSpeakingAttemptProvider.notifier).state = SpeakingAttempt(
-                    id: 'attempt_demo_1',
-                    childId: 'child_demo_1',
-                    materialId: widget.materialId,
-                    promptText: 'What is this?',
-                    audioUrl: '',
-                    transcript: 'It is a cat.',
-                    pronunciationScore: 0.86,
-                    feedback: 'Great job! 把 cat 的结尾再收紧一点会更自然。',
-                    status: SpeakingAttemptStatus.scored,
-                  );
-                  ref.read(weeklyReportProvider.notifier).registerSpeakingAttempt();
+                  final created = await ref.read(appRepositoryProvider).createSpeakingAttempt(
+                        childId: child.id,
+                        materialId: widget.materialId,
+                        promptText: 'What is this?',
+                        transcript: 'It is a cat.',
+                      );
+                  ref.read(lastSpeakingAttemptProvider.notifier).state = created;
+                  ref.invalidate(weeklyReportProvider);
                   ref.read(appAnalyticsProvider).track('speaking_attempt_submitted', {
                     'materialId': widget.materialId,
                   });
@@ -114,7 +112,12 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
       appBar: AppBar(title: const Text('口语陪练')),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
-        child: formFactor.isTablet
+        child: child == null
+            ? const StatePanel(
+                title: '缺少孩子档案',
+                description: '请先完成家长账号初始化。',
+              )
+            : formFactor.isTablet
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
