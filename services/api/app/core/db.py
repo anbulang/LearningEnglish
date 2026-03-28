@@ -14,10 +14,13 @@ class Base(DeclarativeBase):
 
 def _create_engine():
     settings = get_settings()
+    database_url = settings.database_url
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     connect_args = {}
-    if settings.database_url.startswith("sqlite"):
+    if database_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
-    return create_engine(settings.database_url, future=True, connect_args=connect_args)
+    return create_engine(database_url, future=True, connect_args=connect_args)
 
 
 engine = _create_engine()
