@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.db import init_db
-from app.core.settings import get_settings
+from app.core.settings import ensure_local_paths, get_settings
 
 
 logger = logging.getLogger("learning_english.api")
@@ -20,7 +20,7 @@ logger = logging.getLogger("learning_english.api")
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings = get_settings()
-    settings.local_storage_path.mkdir(parents=True, exist_ok=True)
+    ensure_local_paths(settings)
     init_db()
     yield
 
@@ -33,7 +33,7 @@ app = FastAPI(
 )
 
 settings = get_settings()
-settings.local_storage_path.mkdir(parents=True, exist_ok=True)
+ensure_local_paths(settings)
 app.mount("/uploads", StaticFiles(directory=settings.local_storage_path), name="uploads")
 app.include_router(api_router)
 

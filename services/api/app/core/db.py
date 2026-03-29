@@ -36,6 +36,9 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
+    settings = get_settings()
+    if settings.app_env != "testing":
+        return
     from app.db import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)

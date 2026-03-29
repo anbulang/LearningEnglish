@@ -33,11 +33,12 @@ class Settings:
 
 @lru_cache
 def get_settings() -> Settings:
-    root = Path(__file__).resolve().parents[3]
-    default_storage = root / "tmp" / "uploads"
+    project_root = Path(__file__).resolve().parents[4]
+    service_root = Path(__file__).resolve().parents[2]
+    default_storage = project_root / "tmp" / "uploads"
     return Settings(
         app_env=os.getenv("APP_ENV", "development"),
-        database_url=os.getenv("DATABASE_URL", f"sqlite:///{root / 'tmp' / 'learning_english.db'}"),
+        database_url=os.getenv("DATABASE_URL", f"sqlite:///{service_root / 'tmp' / 'learning_english.db'}"),
         jwt_secret=os.getenv("JWT_SECRET", "learning-english-dev-secret"),
         access_token_minutes=int(os.getenv("ACCESS_TOKEN_MINUTES", "30")),
         refresh_token_days=int(os.getenv("REFRESH_TOKEN_DAYS", "14")),
@@ -58,3 +59,10 @@ def get_settings() -> Settings:
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
     )
+
+
+def ensure_local_paths(settings: Settings) -> None:
+    settings.local_storage_path.mkdir(parents=True, exist_ok=True)
+    if settings.database_url.startswith("sqlite:///"):
+        database_path = Path(settings.database_url.removeprefix("sqlite:///"))
+        database_path.parent.mkdir(parents=True, exist_ok=True)
