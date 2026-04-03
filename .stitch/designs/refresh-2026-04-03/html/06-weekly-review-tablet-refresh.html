@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed-dim": "#81d6c3",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#3a4950",
+                    "on-secondary-fixed": "#00201b",
+                    "surface-tint": "#98462a",
+                    "secondary": "#006b5c",
+                    "on-tertiary-container": "#303f46",
+                    "tertiary-fixed-dim": "#b9c9d2",
+                    "surface-dim": "#ecd6c7",
+                    "tertiary-container": "#9aaab2",
+                    "on-secondary-fixed-variant": "#005045",
+                    "primary-container": "#f28c6b",
+                    "surface": "#fff8f5",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-surface": "#251910",
+                    "outline-variant": "#dbc1b9",
+                    "on-background": "#251910",
+                    "secondary-fixed": "#9df3df",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#7a2f16",
+                    "on-secondary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-on-surface": "#ffede3",
+                    "outline": "#88726c",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#d5e5ee",
+                    "inverse-surface": "#3b2e24",
+                    "surface-container": "#ffeadc",
+                    "surface-bright": "#fff8f5",
+                    "surface-container-low": "#fff1e9",
+                    "primary-fixed": "#ffdbd0",
+                    "surface-container-highest": "#f5decf",
+                    "primary": "#98462a",
+                    "background": "#fff8f5",
+                    "on-tertiary": "#ffffff",
+                    "surface-variant": "#f5decf",
+                    "on-tertiary-fixed": "#0f1d24",
+                    "on-primary-container": "#6c250c",
+                    "inverse-primary": "#ffb59e",
+                    "on-surface-variant": "#55433d",
+                    "surface-container-high": "#fbe4d5",
+                    "primary-fixed-dim": "#ffb59e",
+                    "on-secondary-container": "#097162",
+                    "on-primary-fixed": "#3a0b00",
+                    "tertiary": "#526168",
+                    "secondary-container": "#9df3df"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Be Vietnam Pro"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-shift-only { background-color: rgba(255, 248, 245, 0.95); }
+        .scrapbook-texture {
+            background-image: radial-gradient(#dbc1b9 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body scrapbook-texture min-h-screen">
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-[#fff8f5] dark:bg-stone-950 px-8 py-6 flex justify-between items-center w-full max-w-screen-2xl mx-auto px-10">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-bold text-[#251910] dark:text-[#fff8f5] font-['Plus_Jakarta_Sans'] tracking-tight">The Gentle Curator</span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-[#55433d] dark:text-stone-400 font-['Plus_Jakarta_Sans'] font-bold hover:opacity-80 transition-opacity" href="#">Library</a>
+<a class="text-[#55433d] dark:text-stone-400 font-['Plus_Jakarta_Sans'] font-bold hover:opacity-80 transition-opacity" href="#">Learning</a>
+<a class="text-[#98462a] dark:text-[#f28c6b] font-['Plus_Jakarta_Sans'] font-bold" href="#">Progress</a>
+<div class="flex items-center gap-4 ml-4">
+<span class="material-symbols-outlined text-[#98462a] cursor-pointer" data-icon="menu_book">menu_book</span>
+<span class="material-symbols-outlined text-[#98462a] cursor-pointer" data-icon="account_circle">account_circle</span>
+</div>
+</nav>
+</header>
+<!-- Side Navigation Anchor (Hidden on Mobile) -->
+<aside class="fixed left-0 top-0 h-full hidden lg:flex flex-col items-center py-12 space-y-8 bg-[#fff8f5] dark:bg-stone-900 h-full w-24 md:w-32 rounded-r-[3rem] shadow-[4px_0px_32px_0px_rgba(37,25,16,0.04)] z-40 pt-28">
+<div class="flex flex-col items-center gap-8 w-full px-4">
+<div class="text-[#55433d] dark:text-stone-400 flex flex-col items-center gap-2 p-4 hover:bg-[#fff0eb] dark:hover:bg-stone-800 rounded-[2rem] transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="text-[10px] uppercase tracking-wider font-bold">Library</span>
+</div>
+<div class="text-[#55433d] dark:text-stone-400 flex flex-col items-center gap-2 p-4 hover:bg-[#fff0eb] dark:hover:bg-stone-800 rounded-[2rem] transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="text-[10px] uppercase tracking-wider font-bold">Learn</span>
+</div>
+<div class="bg-[#f28c6b] dark:bg-[#98462a] text-white rounded-[2rem] p-4 scale-110 shadow-sm flex flex-col items-center gap-2 cursor-default">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="text-[10px] uppercase tracking-wider font-bold">Stats</span>
+</div>
+<div class="text-[#55433d] dark:text-stone-400 flex flex-col items-center gap-2 p-4 hover:bg-[#fff0eb] dark:hover:bg-stone-800 rounded-[2rem] transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="supervisor_account">supervisor_account</span>
+<span class="text-[10px] uppercase tracking-wider font-bold">Parent</span>
+</div>
+</div>
+</aside>
+<main class="lg:ml-32 pt-32 pb-20 px-6 max-w-7xl mx-auto">
+<!-- Header Section -->
+<header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="max-w-2xl">
+<span class="text-primary font-headline font-bold text-sm tracking-widest uppercase mb-2 block">Weekly Review</span>
+<h1 class="text-5xl md:text-6xl font-headline font-extrabold text-on-surface leading-tight">A Week of <span class="text-primary italic">Deep Roots</span> &amp; Discovery</h1>
+<p class="text-on-surface-variant text-xl mt-4 leading-relaxed font-body">Leo has spent 4.2 hours exploring the wonders of ancient civilizations and botanical science this week.</p>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-low p-4 rounded-lg">
+<div class="w-14 h-14 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-3xl" data-icon="calendar_month">calendar_month</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Current Streak</p>
+<p class="text-2xl font-headline font-black text-on-surface">12 Days</p>
+</div>
+</div>
+</header>
+<!-- Main Bento Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Growth Illustration & Metrics (Left Column) -->
+<div class="lg:col-span-7 space-y-8">
+<!-- Large Growth Feature -->
+<div class="bg-surface-container-lowest p-10 rounded-xl relative overflow-hidden flex flex-col md:flex-row gap-8 min-h-[450px]">
+<div class="z-10 flex-1 flex flex-col justify-between">
+<div>
+<h3 class="text-3xl font-headline font-bold text-on-surface mb-2">Curiosity Tree</h3>
+<p class="text-on-surface-variant font-body">Visualizing Leo's expanding vocabulary and concepts mastered.</p>
+</div>
+<div class="space-y-6 mt-8">
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-bold uppercase tracking-wide">
+<span class="text-on-surface">New Concepts</span>
+<span class="text-primary">+24</span>
+</div>
+<div class="h-3 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[75%] rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-bold uppercase tracking-wide">
+<span class="text-on-surface">Focus Minutes</span>
+<span class="text-secondary">252m</span>
+</div>
+<div class="h-3 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[88%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Decorative Illustration Placeholder -->
+<div class="flex-1 relative min-h-[300px]">
+<div class="absolute inset-0 bg-secondary-container/20 rounded-lg flex items-center justify-center">
+<img class="w-full h-full object-cover rounded-lg mix-blend-multiply opacity-80" data-alt="Whimsical watercolor illustration of a lush magical tree growing out of an open antique book with floating glowing leaves" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwdx0-F0xiDONVl9-ihHNvattT6nWSSK14k-mAUUCwaCOMeTVvFHJrOwwTF78ePZlmSfgF3G-OT0s3h7U9dH26K7iwo-MyAytgras_Wg78qYvbnDcTVtQqYUF39HM5fRMGixyN7WO4FAzwHi9AUcP6b3vI0QieqpUh1QL1c0uUglXtsEGzKEkADtlJ6s89p5qyedHV2PrruSplutA6GwpmLpxYkJv1UBtIaBlu5uQNqKPsU0Ilkl8gvyt8QcXutl-UgLLmis_Xoj3J"/>
+</div>
+<!-- Badge Overlays -->
+<div class="absolute -top-4 -right-4 bg-primary-container text-on-primary-container p-4 rounded-full shadow-lg rotate-12 flex flex-col items-center">
+<span class="material-symbols-outlined" data-icon="star" data-weight="fill">star</span>
+<span class="text-[10px] font-black uppercase">Top Student</span>
+</div>
+</div>
+</div>
+<!-- Learning Milestones (Stickers) -->
+<div class="bg-surface-container-low p-8 rounded-lg">
+<h4 class="text-xl font-headline font-bold text-on-surface mb-6">Badges Earned This Week</h4>
+<div class="flex flex-wrap gap-8 justify-around">
+<div class="group cursor-pointer text-center">
+<div class="w-20 h-20 bg-secondary-fixed rounded-full flex items-center justify-center mb-3 shadow-sm border-4 border-white transform transition-transform hover:scale-110 -rotate-3">
+<span class="material-symbols-outlined text-4xl text-on-secondary-fixed" data-icon="psychology">psychology</span>
+</div>
+<span class="text-xs font-bold text-on-surface block">Analytical</span>
+</div>
+<div class="group cursor-pointer text-center">
+<div class="w-20 h-20 bg-primary-fixed rounded-full flex items-center justify-center mb-3 shadow-sm border-4 border-white transform transition-transform hover:scale-110 rotate-6">
+<span class="material-symbols-outlined text-4xl text-on-primary-fixed" data-icon="palette">palette</span>
+</div>
+<span class="text-xs font-bold text-on-surface block">Creative</span>
+</div>
+<div class="group cursor-pointer text-center">
+<div class="w-20 h-20 bg-tertiary-fixed rounded-full flex items-center justify-center mb-3 shadow-sm border-4 border-white transform transition-transform hover:scale-110 -rotate-6">
+<span class="material-symbols-outlined text-4xl text-on-tertiary-fixed" data-icon="nature">nature</span>
+</div>
+<span class="text-xs font-bold text-on-surface block">Botanist</span>
+</div>
+<div class="group cursor-pointer text-center">
+<div class="w-20 h-20 bg-secondary-container rounded-full flex items-center justify-center mb-3 shadow-sm border-4 border-white transform transition-transform hover:scale-110 rotate-3">
+<span class="material-symbols-outlined text-4xl text-on-secondary-container" data-icon="history_edu">history_edu</span>
+</div>
+<span class="text-xs font-bold text-on-surface block">Storyteller</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Insights & Next Steps (Right Column) -->
+<div class="lg:col-span-5 space-y-8">
+<!-- Parent Insights Module -->
+<div class="bg-surface p-8 rounded-xl border border-outline-variant/10 shadow-[0_32px_64px_-12px_rgba(37,25,16,0.08)] backdrop-blur-xl bg-opacity-80">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="visibility">visibility</span>
+<h4 class="text-2xl font-headline font-bold text-on-surface">Curator's Note</h4>
+</div>
+<div class="space-y-6">
+<div class="p-6 bg-surface-container-low rounded-lg border-l-4 border-primary">
+<h5 class="font-bold text-on-surface mb-1">Focus Insight</h5>
+<p class="text-on-surface-variant text-sm leading-relaxed">Leo showed significant engagement with "The Lifecycle of Ferns." He spent 14 minutes on a single page, indicating deep curiosity in biology.</p>
+</div>
+<div class="p-6 bg-surface-container-low rounded-lg border-l-4 border-secondary">
+<h5 class="font-bold text-on-surface mb-1">Social Learning</h5>
+<p class="text-on-surface-variant text-sm leading-relaxed">He shared 3 stories this week—consider discussing the "Architecture of Ants" during dinner to reinforce his learning.</p>
+</div>
+</div>
+<button class="w-full mt-8 py-4 bg-primary text-white rounded-full font-headline font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                        View Detailed Log <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Next Steps / Recommended Content -->
+<div class="bg-surface-container-highest p-8 rounded-xl">
+<h4 class="text-xl font-headline font-bold text-on-surface mb-6">Seeds for Next Week</h4>
+<div class="space-y-4">
+<div class="flex items-center gap-4 group cursor-pointer bg-surface-container-lowest p-3 rounded-lg hover:translate-x-1 transition-transform">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-stone-200">
+<img class="w-full h-full object-cover" data-alt="Macro photo of intricate snowflake patterns against a soft blue winter background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCs2EsFk9SpPOedCApLO0chKKStxX7AgldKOrmdiAKYCYb_H5WDsrD42zwv0rgEjQx9bDLxthX7RYuZ4Xq6g54i5Wm34jSE0IpTu4RwUSfq5_jIVk4Zl9MrqfQ46Bl0jq8JdjWRUxPFt9683whfE7Dc7L5d1nOH9DlSxB5IunHy1jOZTuEWMyQaTx5C53ePVosYCqrIhhqwuK_bnf1a030gNGGRi8xa0jhNRYC7ZmT52Qq1bN20HA2c31emi_GArGA8JaaU7mskDJUL"/>
+</div>
+<div class="flex-1">
+<span class="text-[10px] font-bold text-secondary uppercase">Science</span>
+<p class="font-bold text-on-surface leading-tight">The Geometry of Snow</p>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="add_circle">add_circle</span>
+</div>
+<div class="flex items-center gap-4 group cursor-pointer bg-surface-container-lowest p-3 rounded-lg hover:translate-x-1 transition-transform">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-stone-200">
+<img class="w-full h-full object-cover" data-alt="Antique world map with faded ink and golden compass details on parchment paper" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMLH3razLjSLunfSGJtjG2lFaGX6Tb5LyPrloeI26MaEVoBCVxUnyrepDhyWCulS5yzKPE_45ZDahjMKn4wf0uW-r6Nt4pkAdQ3NuuY2TOzDwhBCjAPgV69dP62NNFQNO_v4vYzQw09p2cE_KDzXrylCZ-BcDotiPbtEEhxSb9AREtk363O2AqYRM04ykpbGuhNR8bBbxDvYZs5zedTEXBdXmkhtNswfc6oKmwt6WPAfP0kmW-pCUyI1C8Z7ng1Lqg3qqeBcWu2WWN"/>
+</div>
+<div class="flex-1">
+<span class="text-[10px] font-bold text-primary uppercase">History</span>
+<p class="font-bold text-on-surface leading-tight">Silk Road Travelers</p>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="add_circle">add_circle</span>
+</div>
+</div>
+</div>
+<!-- Shared Activity Prompt -->
+<div class="bg-secondary p-8 rounded-xl text-on-secondary relative overflow-hidden">
+<div class="relative z-10">
+<h4 class="text-xl font-headline font-bold mb-2">Weekend Ritual</h4>
+<p class="text-secondary-container text-sm mb-6 leading-relaxed">Try building a paper bridge today to explore the engineering concepts Leo studied on Tuesday.</p>
+<button class="bg-secondary-fixed text-on-secondary-fixed px-6 py-2 rounded-full text-sm font-bold">Show Guide</button>
+</div>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl text-white/10 rotate-12" data-icon="architecture">architecture</span>
+</div>
+</div>
+</div>
+<!-- Feedback Section -->
+<footer class="mt-20 border-t border-outline-variant/30 pt-12 text-center max-w-2xl mx-auto">
+<h5 class="text-2xl font-headline font-bold text-on-surface mb-2">How was the learning journey?</h5>
+<p class="text-on-surface-variant font-body mb-8">Your feedback helps curate a more personalized path for Leo's growing mind.</p>
+<div class="flex justify-center gap-4">
+<button class="px-8 py-3 bg-surface-container-low rounded-full font-bold text-on-surface hover:bg-surface-container-high transition-colors">Adjust Difficulty</button>
+<button class="px-8 py-3 bg-surface-container-low rounded-full font-bold text-on-surface hover:bg-surface-container-high transition-colors">Change Interests</button>
+</div>
+</footer>
+</main>
+<!-- Bottom Nav for Mobile -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-[#fff8f5] px-6 py-4 flex justify-around items-center border-t border-outline-variant/20 z-50">
+<div class="flex flex-col items-center gap-1 text-[#55433d]">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="text-[10px] font-bold">Library</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-[#55433d]">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="text-[10px] font-bold">Learn</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-[#98462a]">
+<span class="material-symbols-outlined" data-icon="insights" data-weight="fill">insights</span>
+<span class="text-[10px] font-bold">Stats</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-[#55433d]">
+<span class="material-symbols-outlined" data-icon="supervisor_account">supervisor_account</span>
+<span class="text-[10px] font-bold">Parent</span>
+</div>
+</nav>
+</body></html>

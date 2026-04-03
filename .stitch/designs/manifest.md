@@ -9,6 +9,61 @@
   - `screenshots/`
   - `html/`
 
+## Refresh Session
+- Date: `2026-04-03`
+- Goal: move the product from a calm editorial companion to a warmer illustrated picture-book style without changing IA
+- Stitch edit sessions:
+  - `9484468874890779372`
+  - `7684826395399749801`
+  - `1595409666745941179`
+  - `5550562506511108785`
+- Local refresh asset root:
+  - `refresh-2026-04-03/screenshots/`
+  - `refresh-2026-04-03/html/`
+
+## Refresh Variant Exports
+- `refresh-01-parent-home`
+  - title: `Parent Home Refresh`
+  - screen_id: `0824314ac1544ea98abeb4adef2e2460`
+  - device: `MOBILE`
+  - screenshot: `refresh-2026-04-03/screenshots/01-parent-home-refresh.png`
+  - html: `refresh-2026-04-03/html/01-parent-home-refresh.html`
+- `refresh-02-lesson-detail`
+  - title: `Lesson Detail Refresh`
+  - screen_id: `d71a895b47be40a98c119aaa68b057f3`
+  - device: `MOBILE`
+  - screenshot: `refresh-2026-04-03/screenshots/02-lesson-detail-refresh.png`
+  - html: `refresh-2026-04-03/html/02-lesson-detail-refresh.html`
+- `refresh-03-vocabulary-card`
+  - title: `Vocabulary Card Refresh`
+  - screen_id: `8ecca1a13ff34f45a2f0b24a9d2db690`
+  - device: `MOBILE`
+  - screenshot: `refresh-2026-04-03/screenshots/03-vocabulary-card-refresh.png`
+  - html: `refresh-2026-04-03/html/03-vocabulary-card-refresh.html`
+- `refresh-04-family-profile`
+  - title: `Family Profile Refresh`
+  - screen_id: `b1d3a8b506f04088a0089d198ee40c0a`
+  - device: `MOBILE`
+  - screenshot: `refresh-2026-04-03/screenshots/04-family-profile-refresh.png`
+  - html: `refresh-2026-04-03/html/04-family-profile-refresh.html`
+- `refresh-05-parent-home-tablet`
+  - title: `Parent Home (Tablet) Refresh`
+  - screen_id: `d7ca3aa5cc6b4b43a4a5699da15190f4`
+  - device: `DESKTOP`
+  - screenshot: `refresh-2026-04-03/screenshots/05-parent-home-tablet-refresh.png`
+  - html: `refresh-2026-04-03/html/05-parent-home-tablet-refresh.html`
+- `refresh-06-weekly-review-tablet`
+  - title: `Weekly Review (Tablet) Refresh`
+  - screen_id: `cb13786cf8d442908b620fe07a29d11a`
+  - device: `DESKTOP`
+  - screenshot: `refresh-2026-04-03/screenshots/06-weekly-review-tablet-refresh.png`
+  - html: `refresh-2026-04-03/html/06-weekly-review-tablet-refresh.html`
+
+## Notes
+- All 16 original screens were used as the source set for this redesign round inside Stitch.
+- The refresh flow generated illustrated variants rather than mutating the original exported asset inventory in place.
+- The exported subset above serves as the local visual review pack for the new direction; remaining refresh variants continue to live in the Stitch project.
+
 ## Screen Inventory
 - `01-parent-home-screen`
   - title: `Parent Home Screen`

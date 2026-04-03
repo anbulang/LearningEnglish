@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#ffdbd0",
+                    "on-secondary-container": "#097162",
+                    "on-secondary-fixed": "#00201b",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#b9c9d2",
+                    "surface-bright": "#fff8f5",
+                    "secondary-fixed-dim": "#81d6c3",
+                    "on-tertiary-container": "#303f46",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#55433d",
+                    "outline-variant": "#dbc1b9",
+                    "on-tertiary-fixed-variant": "#3a4950",
+                    "tertiary-container": "#9aaab2",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-variant": "#f5decf",
+                    "surface-tint": "#98462a",
+                    "surface-container": "#ffeadc",
+                    "inverse-on-surface": "#ffede3",
+                    "on-error": "#ffffff",
+                    "surface": "#fff8f5",
+                    "surface-dim": "#ecd6c7",
+                    "inverse-surface": "#3b2e24",
+                    "secondary": "#006b5c",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#7a2f16",
+                    "primary-fixed-dim": "#ffb59e",
+                    "primary": "#98462a",
+                    "on-surface": "#251910",
+                    "inverse-primary": "#ffb59e",
+                    "tertiary-fixed": "#d5e5ee",
+                    "on-secondary-fixed-variant": "#005045",
+                    "surface-container-low": "#fff1e9",
+                    "surface-container-high": "#fbe4d5",
+                    "secondary-fixed": "#9df3df",
+                    "surface-container-highest": "#f5decf",
+                    "secondary-container": "#9df3df",
+                    "outline": "#88726c",
+                    "primary-container": "#f28c6b",
+                    "on-background": "#251910",
+                    "background": "#fff8f5",
+                    "on-primary-container": "#6c250c",
+                    "on-tertiary-fixed": "#0f1d24",
+                    "tertiary": "#526168",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed": "#3a0b00",
+                    "on-error-container": "#93000a",
+                    "error-container": "#ffdad6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Be Vietnam Pro"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-shadow {
+            shadow: 0 4px 32px rgba(37, 25, 16, 0.04);
+        }
+        .asymmetric-bleed {
+            clip-path: polygon(0 0, 100% 0, 100% 90%, 0% 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed">
+<nav class="w-full top-0 sticky bg-[#fff8f5] dark:bg-stone-950 flex justify-between items-center px-6 py-4 w-full z-50">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#98462a] cursor-pointer" data-icon="arrow_back">arrow_back</span>
+<span class="font-plus-jakarta-sans font-extrabold text-[#98462a] text-xl tracking-tighter">Curator</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border-2 border-primary/10">
+<img alt="Parent Profile" data-alt="Close up portrait of a friendly smiling teacher with soft lighting in a warm classroom setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr8hC8B7dZyZ32o96c4pWyOF53ns5-uk3_enN7UhApWsNP_tF02WpEUCO5jmmL4f5SksTxsVHVtAwhwZHCN9ZZCvwY2wTDWqzHeAmHTIAC3CFF-6FnqPMIwrrWXseh-j-ZZrpZcmdEobpqs5N74yCmJ5wSccTXGE1nsGfKqB6ZLAmqMTO556YxxmU1YmwcKb_GI8n9rQBPkn2Mb5OwDPiTydpYTnUTQFM63ekrTWdOfF5yJ-K_QnMthm-w_NRNapLm_YkVdM9GdBiA"/>
+</div>
+<span class="material-symbols-outlined text-[#98462a] dark:text-[#f28c6b] hover:opacity-80 transition-opacity cursor-pointer" data-icon="settings">settings</span>
+</div>
+</nav>
+<main class="pb-32">
+<section class="relative px-6 pt-4">
+<div class="bg-surface-container-low rounded-lg overflow-hidden relative min-h-[340px] flex flex-col md:flex-row">
+<div class="flex-1 p-8 md:p-12 z-10 flex flex-col justify-center">
+<div class="inline-flex items-center gap-2 px-4 py-2 bg-secondary-container text-on-secondary-container rounded-full w-fit mb-6 shadow-sm rotate-[-1deg]">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-label font-bold text-xs uppercase tracking-wider">Review State: Excellent</span>
+</div>
+<h1 class="font-headline font-extrabold text-4xl md:text-6xl text-on-surface leading-tight tracking-tighter mb-4">
+                        At the <span class="text-primary">Zoo</span>
+</h1>
+<div class="flex items-center gap-4 mt-2">
+<div class="flex flex-col">
+<span class="font-label font-bold text-on-surface">Ms. Sarah Jenkins</span>
+<span class="font-label text-sm text-on-surface-variant">Language Arts • Oct 24, 2023</span>
+</div>
+</div>
+</div>
+<div class="flex-1 relative min-h-[240px] md:min-h-full">
+<img alt="Lesson Header" class="absolute inset-0 w-full h-full object-cover asymmetric-bleed" data-alt="Whimsical watercolor illustration of a friendly giraffe and elephant in a lush stylized zoo setting with soft textures and warm pastel colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCONeul7XGd3poHs7cRD1fuCXrDVDswQ1XUWuiKYNRxGDqREc0pD3ucb6Csel7xxeujgTGdRubVA0SdlLaBZDRO4E72bdCepbGm8RYB-tD-vPQ0ZZ9LWQQosS3wJtdC9q92TlWMK3unDfo6vhuMld5nl9EnwMaA3kKJLwNyhrBFtjPRbsWBo6S8rlUvgOLNKRTZCLKjRjs8XEhw0vMeROpbk13SDH2HSCn8Fl2o8Z8NPx2kq0d2jq-D_mFWh5othQafU2N2yY2q2YHe"/>
+</div>
+</div>
+</section>
+<section class="px-6 mt-12">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-headline font-bold text-2xl text-on-surface">Learning Pack</h2>
+<p class="font-body text-on-surface-variant mt-1">Curated activities for today's lesson</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Vocabulary Card -->
+<div class="group bg-surface-container-lowest p-6 rounded-lg editorial-shadow transition-all hover:translate-y-[-4px] cursor-pointer">
+<div class="w-14 h-14 bg-primary-container/20 rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="translate">translate</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2">Essential Vocabulary</h3>
+<p class="font-body text-sm text-on-surface-variant mb-6">12 new words about exotic animals and their habitats.</p>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-outline-variant/10">
+<span class="font-label text-xs font-bold text-primary">85% MASTERED</span>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+<!-- Listening Card -->
+<div class="group bg-surface-container-lowest p-6 rounded-lg editorial-shadow transition-all hover:translate-y-[-4px] cursor-pointer">
+<div class="w-14 h-14 bg-secondary-container/20 rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="record_voice_over">record_voice_over</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2">Native Listening</h3>
+<p class="font-body text-sm text-on-surface-variant mb-6">Audio story about a day at the zoo with interactive cues.</p>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-outline-variant/10">
+<span class="font-label text-xs font-bold text-secondary">READY TO START</span>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform" data-icon="play_circle">play_circle</span>
+</div>
+</div>
+<!-- Quiz Card -->
+<div class="group bg-surface-container-low p-6 rounded-lg transition-all hover:translate-y-[-4px] cursor-pointer border-2 border-dashed border-outline-variant/30">
+<div class="w-14 h-14 bg-tertiary-container/20 rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-tertiary text-3xl" data-icon="quiz">quiz</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2">Knowledge Check</h3>
+<p class="font-body text-sm text-on-surface-variant mb-6">Quick 5-minute quiz to solidify today's learning.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<span class="font-label text-xs font-bold text-tertiary">LOCKED</span>
+<span class="material-symbols-outlined text-on-surface-variant/40" data-icon="lock">lock</span>
+</div>
+</div>
+</div>
+</section>
+<section class="px-6 mt-16">
+<h2 class="font-headline font-bold text-2xl text-on-surface mb-8">Lesson Materials</h2>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm flex flex-col md:flex-row">
+<div class="w-full md:w-1/3 bg-surface-dim aspect-[3/4] p-4 flex items-center justify-center">
+<div class="w-full h-full bg-white rounded-md shadow-lg border border-outline-variant/20 overflow-hidden relative p-8">
+<div class="space-y-4">
+<div class="h-4 w-3/4 bg-surface-variant rounded-full"></div>
+<div class="h-4 w-full bg-surface-variant rounded-full"></div>
+<div class="h-4 w-5/6 bg-surface-variant rounded-full"></div>
+<div class="pt-8 grid grid-cols-2 gap-4">
+<div class="aspect-square bg-surface-container rounded-lg"></div>
+<div class="aspect-square bg-surface-container rounded-lg"></div>
+</div>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent flex items-end justify-center pb-8">
+<div class="px-6 py-2 bg-primary text-on-primary rounded-full font-label text-sm font-bold shadow-md">
+                                Preview Document
+                            </div>
+</div>
+</div>
+</div>
+<div class="flex-1 p-8 md:p-12">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+<span class="font-label font-bold text-on-surface-variant uppercase tracking-tighter text-sm">Reference PDF</span>
+</div>
+<h3 class="font-headline font-bold text-2xl mb-4">Zoo Explorers Handbook.pdf</h3>
+<p class="font-body text-on-surface-variant leading-relaxed mb-8 max-w-md">
+                        This curated guide includes all the illustrations and writing exercises we covered during the live session. Perfect for printing and practice.
+                    </p>
+<div class="flex flex-wrap gap-4">
+<button class="px-8 py-4 bg-primary text-on-primary rounded-full font-label font-bold flex items-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                            Download Pack
+                        </button>
+<button class="px-8 py-4 bg-surface-container-high text-primary rounded-full font-label font-bold hover:bg-surface-container-highest transition-colors">
+                            Print for Home
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#fff8f5]/80 dark:bg-stone-900/80 backdrop-blur-xl shadow-[0_-4px_32px_rgba(37,25,16,0.04)] rounded-t-[2rem] md:hidden">
+<div class="flex flex-col items-center justify-center text-[#55433d] px-5 py-2 hover:text-[#98462a] transition-colors cursor-pointer group">
+<span class="material-symbols-outlined group-active:scale-110 duration-500" data-icon="home">home</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] px-5 py-2 hover:text-[#98462a] transition-colors cursor-pointer group">
+<span class="material-symbols-outlined group-active:scale-110 duration-500" data-icon="menu_book">menu_book</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Library</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] px-5 py-2 hover:text-[#98462a] transition-colors cursor-pointer group">
+<span class="material-symbols-outlined group-active:scale-110 duration-500" data-icon="photo_camera">photo_camera</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Scan</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-[#f28c6b]/10 text-[#98462a] rounded-full px-5 py-2 cursor-pointer group">
+<span class="material-symbols-outlined group-active:scale-110 duration-500" data-icon="auto_stories" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Lessons</span>
+</div>
+</footer>
+</body></html>

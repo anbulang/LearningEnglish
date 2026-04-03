@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Curator Kids - Learn</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#9df3df",
+                    "on-surface": "#251910",
+                    "on-background": "#251910",
+                    "tertiary": "#526168",
+                    "tertiary-fixed": "#d5e5ee",
+                    "on-primary": "#ffffff",
+                    "inverse-on-surface": "#ffede3",
+                    "outline-variant": "#dbc1b9",
+                    "surface-container": "#ffeadc",
+                    "on-tertiary-fixed-variant": "#3a4950",
+                    "surface-container-high": "#fbe4d5",
+                    "on-tertiary-fixed": "#0f1d24",
+                    "primary-container": "#f28c6b",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#fff1e9",
+                    "on-primary-container": "#6c250c",
+                    "surface-bright": "#fff8f5",
+                    "surface-tint": "#98462a",
+                    "surface": "#fff8f5",
+                    "surface-dim": "#ecd6c7",
+                    "background": "#fff8f5",
+                    "on-tertiary-container": "#303f46",
+                    "primary-fixed": "#ffdbd0",
+                    "primary": "#98462a",
+                    "on-secondary-fixed-variant": "#005045",
+                    "on-primary-fixed-variant": "#7a2f16",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#ffb59e",
+                    "tertiary-fixed-dim": "#b9c9d2",
+                    "primary-fixed-dim": "#ffb59e",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "surface-container-highest": "#f5decf",
+                    "error-container": "#ffdad6",
+                    "secondary-container": "#9df3df",
+                    "secondary": "#006b5c",
+                    "outline": "#88726c",
+                    "on-primary-fixed": "#3a0b00",
+                    "tertiary-container": "#9aaab2",
+                    "surface-variant": "#f5decf",
+                    "on-secondary-container": "#097162",
+                    "error": "#ba1a1a",
+                    "secondary-fixed-dim": "#81d6c3",
+                    "on-surface-variant": "#55433d",
+                    "on-secondary-fixed": "#00201b",
+                    "inverse-surface": "#3b2e24"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Be Vietnam Pro"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #fff8f5;
+            background-image: radial-gradient(#ecd6c7 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tap-highlight-transparent {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body text-on-surface selection:bg-primary-fixed antialiased">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-[#fff8f5]/80 backdrop-blur-xl shadow-[0_32px_64px_rgba(37,25,16,0.04)]">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-low text-primary hover:opacity-80 transition-opacity scale-95 duration-300 ease-out">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<span class="text-xl font-black text-[#251910] font-headline tracking-tight">Curator Kids</span>
+</div>
+</div>
+<!-- Progress Bar Integration -->
+<div class="hidden md:flex flex-1 max-w-xs mx-12 items-center gap-3">
+<div class="w-full bg-surface-container-highest h-2.5 rounded-full overflow-hidden">
+<div class="bg-secondary w-[65%] h-full rounded-full"></div>
+</div>
+<span class="text-xs font-bold text-secondary font-label">65%</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="Child's soft-profile avatar" class="w-full h-full object-cover" data-alt="Soft-profile avatar of a young child with warm lighting and a gentle expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkBgWHQJMOsAVSNfxVqtvzly59mxwUmUjznkEyNKdvHuv8glOJokChpUeEUMpGP427RPQ0VC33ovQtd9LuNjBHqNkWSR9ISHmWW0onN72dsutqMdRryn9o94BgG2XzYn68sObf0ib9TMzNnNHBhVgX1t58PZXu64j_4gOwNcH50a9NbHGV6ZqZLf7PQusEkOBPjJGKoN4tFpjLH0M-fhB1jbQYc6YYmJNqCjPSga1TBSVOLycECqLy7-tdrUxMQRx8YhtNViGjZiN7"/>
+</div>
+<span class="material-symbols-outlined text-[#98462a]">settings</span>
+</div>
+</div>
+</header>
+<!-- Mobile Progress (Visible only on small screens) -->
+<div class="md:hidden fixed top-[72px] w-full px-6 py-2 z-40">
+<div class="flex items-center gap-3 bg-surface-container-low/90 backdrop-blur-md px-4 py-2 rounded-full border border-outline-variant/10">
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary w-[65%] h-full rounded-full"></div>
+</div>
+<span class="text-[10px] font-bold text-secondary font-label whitespace-nowrap">65% DONE</span>
+</div>
+</div>
+<!-- Main Content Canvas -->
+<main class="pt-28 pb-32 px-6 min-h-screen flex flex-col items-center max-w-4xl mx-auto">
+<!-- Large Editorial Word Card -->
+<div class="w-full bg-surface-container-lowest rounded-xl p-6 md:p-12 relative overflow-hidden shadow-[0_32px_64px_rgba(37,25,16,0.04)] group">
+<div class="absolute inset-0 paper-texture"></div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center relative z-10">
+<!-- Illustration Side -->
+<div class="aspect-square w-full bg-surface-container-low rounded-lg overflow-hidden relative border border-outline-variant/15">
+<img alt="Lion paper-cut illustration" class="w-full h-full object-cover mix-blend-multiply opacity-90" data-alt="Stylized paper-cut illustration of a lion with a majestic golden mane, soft warm colors, storybook aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD29wNdwfWkU4HR4sUvfy7cEdOU3Npgaeyht8_mIP3z5rQB35qix8HX9kXsQBX3GHDc8t03HP8k14nGDdg9EhxL-LeKXNk8YkUJeF-OMNhKWTbzqPo-itJuFkezaMjfLWQ3X0_ESAnBHf3dGc9Hf7cLUgUbQLylzsFpWVWDJIM72wLfIayO8cFAM-4lHx8d9bI0EfHYvQRYGCVWv-OAJ5WfNwr7lvn7IOR7ZNhcS7_2Gzi0otkiqrOphP66G5oiapgtxRBkV3FEP_QQ"/>
+<div class="absolute bottom-4 right-4">
+<div class="bg-secondary-container/90 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 text-on-secondary-container">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="text-xs font-bold font-label uppercase tracking-widest">Memory Anchor</span>
+</div>
+</div>
+</div>
+<!-- Text & Phonetic Side -->
+<div class="flex flex-col text-center md:text-left">
+<div class="mb-2">
+<span class="inline-block px-4 py-1.5 rounded-full bg-secondary-container text-secondary text-xs font-bold font-label tracking-wide mb-4">NOUN • ANIMALS</span>
+</div>
+<h1 class="text-7xl md:text-8xl font-black text-on-surface font-headline leading-none tracking-tighter mb-4">LION</h1>
+<div class="flex flex-col gap-2 mb-8">
+<div class="flex items-center justify-center md:justify-start gap-3">
+<span class="text-xl md:text-2xl font-medium text-on-surface-variant font-body tracking-wider">/ˈlaɪ.ən/</span>
+<button class="w-8 h-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center hover:bg-sky-200 transition-colors">
+<span class="material-symbols-outlined text-xl">volume_up</span>
+</button>
+</div>
+<h2 class="text-3xl md:text-4xl font-bold text-primary font-body mt-2">狮子 <span class="text-base font-normal text-outline">(shī zi)</span></h2>
+</div>
+<!-- Audio Control Module -->
+<div class="bg-surface-container-low p-6 rounded-lg border border-outline-variant/10">
+<div class="flex items-center justify-between mb-4">
+<span class="text-xs font-bold text-on-surface-variant font-label">PRONUNCIATION COACH</span>
+<span class="material-symbols-outlined text-sky-500">graphic_eq</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-container text-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<div class="flex-1 space-y-2">
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-sky-400 w-1/3 rounded-full"></div>
+</div>
+<div class="flex justify-between text-[10px] font-bold text-outline uppercase tracking-tighter">
+<span>Repeat after me</span>
+<span>0:02 / 0:06</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Asymmetric Detail Module (Editorial Context) -->
+<div class="mt-12 w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 bg-surface-container-high/50 p-8 rounded-lg relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
+<h3 class="text-xl font-bold text-on-surface font-headline mb-4">Example Sentence</h3>
+<p class="text-xl font-medium text-on-surface-variant font-body italic leading-relaxed">
+                    "The <span class="text-primary font-bold">lion</span> is the king of the jungle."
+                </p>
+<p class="text-lg text-outline font-body mt-2">
+                    狮子是森林之王。
+                </p>
+</div>
+<div class="bg-secondary-container/30 p-8 rounded-lg flex flex-col justify-center border border-secondary/10">
+<span class="text-xs font-bold text-secondary font-label mb-2 uppercase">Parental Insight</span>
+<p class="text-sm font-medium text-on-secondary-container font-body leading-snug">
+                    Visual memory is peaking. Discuss the lion's mane to build descriptive vocabulary.
+                </p>
+</div>
+</div>
+<!-- Next Step CTA -->
+<div class="mt-16 mb-8">
+<button class="px-12 py-5 rounded-full bg-gradient-to-r from-primary to-primary-container text-white font-bold text-lg font-label shadow-xl hover:opacity-90 transition-all flex items-center gap-3 group">
+                LEARN NEXT WORD
+                <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Hidden if task-focused, but requested in JSON) -->
+<nav class="fixed bottom-0 w-full z-50 bg-[#fff8f5]/90 dark:bg-[#251910]/90 backdrop-blur-xl shadow-[0_-8px_32px_rgba(37,25,16,0.03)] rounded-t-[2rem]">
+<div class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-3">
+<a class="flex flex-col items-center justify-center bg-[#f28c6b]/20 text-[#98462a] dark:text-[#f28c6b] rounded-full px-5 py-2 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Learn</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 hover:bg-[#f28c6b]/10 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">extension</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Play</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 hover:bg-[#f28c6b]/10 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Speak</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 hover:bg-[#f28c6b]/10 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">family_history</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Parent</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 hover:bg-[#f28c6b]/10 tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">face</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>

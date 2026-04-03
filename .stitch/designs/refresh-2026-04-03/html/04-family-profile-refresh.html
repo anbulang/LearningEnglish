@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#9df3df",
+                    "on-surface": "#251910",
+                    "on-background": "#251910",
+                    "tertiary": "#526168",
+                    "tertiary-fixed": "#d5e5ee",
+                    "on-primary": "#ffffff",
+                    "inverse-on-surface": "#ffede3",
+                    "outline-variant": "#dbc1b9",
+                    "surface-container": "#ffeadc",
+                    "on-tertiary-fixed-variant": "#3a4950",
+                    "surface-container-high": "#fbe4d5",
+                    "on-tertiary-fixed": "#0f1d24",
+                    "primary-container": "#f28c6b",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#fff1e9",
+                    "on-primary-container": "#6c250c",
+                    "surface-bright": "#fff8f5",
+                    "surface-tint": "#98462a",
+                    "surface": "#fff8f5",
+                    "surface-dim": "#ecd6c7",
+                    "background": "#fff8f5",
+                    "on-tertiary-container": "#303f46",
+                    "primary-fixed": "#ffdbd0",
+                    "primary": "#98462a",
+                    "on-secondary-fixed-variant": "#005045",
+                    "on-primary-fixed-variant": "#7a2f16",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#ffb59e",
+                    "tertiary-fixed-dim": "#b9c9d2",
+                    "primary-fixed-dim": "#ffb59e",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "surface-container-highest": "#f5decf",
+                    "error-container": "#ffdad6",
+                    "secondary-container": "#9df3df",
+                    "secondary": "#006b5c",
+                    "outline": "#88726c",
+                    "on-primary-fixed": "#3a0b00",
+                    "tertiary-container": "#9aaab2",
+                    "surface-variant": "#f5decf",
+                    "on-secondary-container": "#097162",
+                    "error": "#ba1a1a",
+                    "secondary-fixed-dim": "#81d6c3",
+                    "on-surface-variant": "#55433d",
+                    "on-secondary-fixed": "#00201b",
+                    "inverse-surface": "#3b2e24"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Be Vietnam Pro"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        h1, h2, h3, .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased selection:bg-secondary-fixed/30 pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#fff8f5]/80 dark:bg-[#251910]/80 backdrop-blur-xl shadow-[0_32px_64px_rgba(37,25,16,0.04)]">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Soft profile illustration of a cheerful child with warm colors and gentle artistic style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUN-rns6dZOVhjp76FpL1LDO5uGoS_7Abjb-E0OhJgXbnzh30kySAATTX2kUFkUC1GKkeI5kspYkqxhY1V7ehDOjTC78PZm-61QFCXT88qgrs4yOMVI423K5h3rkb_Dq7CbYZPl48OGFz_l66bD6VsVr2iMJpoJ8RGTQRxNVZrtiSO7M0TwvgtaEWX6o0RFCWfwVkiVDvgK5RhlVoRGztqOnNz9opksFRkwLxZGk47GzsN6_RVYewoPpdBABkaKsYcwSiEdvNqdgzJ"/>
+</div>
+<span class="text-xl font-black text-[#251910] dark:text-[#fff8f5] font-['Plus_Jakarta_Sans'] tracking-tight">Curator Kids</span>
+</div>
+<button class="text-[#98462a] dark:text-[#f28c6b] hover:opacity-80 transition-opacity scale-95 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-screen-xl mx-auto">
+<!-- Profile Memory Anchor Section -->
+<section class="mb-12">
+<h1 class="text-3xl font-extrabold text-on-surface mb-8 tracking-tight">Family Profiles</h1>
+<div class="flex flex-wrap gap-8 items-end">
+<!-- Xinhuan -->
+<div class="flex flex-col items-center gap-3 group cursor-pointer">
+<div class="relative w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-primary to-primary-container ring-4 ring-offset-4 ring-offset-background ring-transparent group-hover:ring-primary/20 transition-all">
+<div class="w-full h-full rounded-full overflow-hidden bg-surface-container-lowest">
+<img class="w-full h-full object-cover" data-alt="Editorial style portrait of a young child with a gentle expression and soft warm studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMXcA01DDAVa7lrMHVoPrkTzkyLPV7FLYRkmVeMCDSDz7TmYZhs4MnDUXHle8YIkNeJTFY6Urs1ayXo9GZdpuPxuVk5WsNFH2N9Qj8v-ruc6pfcfspNUZNgzh2rD7Xh4HzU0I7i1hWByHUFjNNTvYlBgjXb09U88KvbnpB90V0JVHQpcGJrdHLCBKV4t1-hwa8mHJ0Z5uAKGb6FQ2SvefLimHkoOlSbVVrn_Etl6Drt_C8ghApVSYQDvEqSVYh1mvI0dezjaYqEWOh"/>
+</div>
+</div>
+<span class="font-headline font-bold text-on-surface">Xinhuan</span>
+</div>
+<!-- Lele -->
+<div class="flex flex-col items-center gap-3 group cursor-pointer opacity-70 hover:opacity-100 transition-opacity">
+<div class="relative w-24 h-24 rounded-full p-1 bg-surface-container-high transition-all">
+<div class="w-full h-full rounded-full overflow-hidden bg-surface-container-lowest">
+<img class="w-full h-full object-cover" data-alt="Soft watercolor illustration of a laughing child in a circular frame with warm pastel colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoLszXoy8q_vzd3XTC_jcW6ATBnPN5ARBfuBkO24_erdAyXhDijz_dHXbLYrKiU8ltmUyDAxQgNwse19AVp_1mZFcOFuf7aIfceSDzqxeDFO5ceCwJit1me3wa6aIjEdDMX4LKRfTOAMSqvLm12nPbgSoxcKrlyaU_rgc9kf2Z0fBmAnY_mUJOYuiwJzFkdgoCbIrhtpjBK0KJmCTjxpo3T1EY343dIMWvHUNOzz6QeB2N92XYsVNuTp8InpgTQbWF_0t_2FoNCcQl"/>
+</div>
+</div>
+<span class="font-headline font-semibold text-on-surface-variant">Lele</span>
+</div>
+<!-- New Avatar Slot -->
+<div class="flex flex-col items-center gap-3 group cursor-pointer">
+<div class="w-20 h-20 rounded-full border-2 border-dashed border-outline-variant flex items-center justify-center text-outline group-hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-3xl">add</span>
+</div>
+<span class="font-headline text-sm font-semibold text-on-surface-variant">New</span>
+</div>
+</div>
+</section>
+<!-- Bento Layout for Stats & Goals -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-12">
+<!-- Child Info Section (Soft Grouped Cards) -->
+<div class="md:col-span-7 bg-surface-container-low rounded-lg p-8">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-xl font-bold text-on-surface font-headline">Child Info</h2>
+<span class="material-symbols-outlined text-outline">edit</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-[0_32px_64px_rgba(37,25,16,0.02)]">
+<span class="text-xs font-label font-bold text-dust-brown uppercase tracking-widest mb-2 block opacity-60">Current Age</span>
+<div class="text-2xl font-headline font-bold text-on-surface">5 Years</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-[0_32px_64px_rgba(37,25,16,0.02)]">
+<span class="text-xs font-label font-bold text-dust-brown uppercase tracking-widest mb-2 block opacity-60">Language Level</span>
+<div class="text-2xl font-headline font-bold text-on-surface">Level 2</div>
+</div>
+</div>
+<div class="mt-8">
+<h3 class="text-sm font-bold text-on-surface-variant mb-4 font-headline">Learning Goals</h3>
+<div class="flex flex-wrap gap-2">
+<span class="bg-secondary-container text-on-secondary-container px-4 py-2 rounded-full text-sm font-semibold">Phonics Mastery</span>
+<span class="bg-secondary-container text-on-secondary-container px-4 py-2 rounded-full text-sm font-semibold">Storytelling</span>
+<span class="bg-surface-container-highest text-on-surface-variant px-4 py-2 rounded-full text-sm font-semibold">Social Skills</span>
+<div class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-primary cursor-pointer hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-lg">add</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Weekly Progress -->
+<div class="md:col-span-5 bg-surface-container-highest rounded-lg p-8 relative overflow-hidden flex flex-col justify-between">
+<div>
+<h2 class="text-xl font-bold text-on-surface font-headline mb-2">Weekly Progress</h2>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6">Xinhuan is doing great! 85% of the goal reached this week.</p>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold font-label text-on-surface-variant">
+<span>HOURS SPENT</span>
+<span>4.2 / 5.0</span>
+</div>
+<div class="h-3 w-full bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 85%;"></div>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-lowest/50 backdrop-blur p-4 rounded-lg">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">stars</span>
+<div>
+<div class="text-sm font-bold text-on-surface">Curator's Tip</div>
+<div class="text-xs text-on-surface-variant">Try 'Bedtime Fables' to hit 100%!</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Parent Controls Section -->
+<section class="bg-surface rounded-xl p-8 shadow-[0_32px_64px_rgba(37,25,16,0.03)] border border-outline-variant/15 mb-12">
+<h2 class="text-xl font-bold text-on-surface font-headline mb-8">Parent Controls</h2>
+<div class="space-y-4">
+<!-- Toggle 1 -->
+<div class="flex items-center justify-between py-2">
+<div class="flex gap-4 items-center">
+<div class="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+<div>
+<div class="font-bold text-on-surface">Daily Learning Reminders</div>
+<div class="text-sm text-on-surface-variant">Get notified when it's play time</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-secondary-container rounded-full relative cursor-pointer">
+<div class="absolute right-1 top-1 w-4 h-4 bg-secondary rounded-full"></div>
+</div>
+</div>
+<!-- Toggle 2 -->
+<div class="flex items-center justify-between py-2">
+<div class="flex gap-4 items-center">
+<div class="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div>
+<div class="font-bold text-on-surface">Weekly AI Coach Updates</div>
+<div class="text-sm text-on-surface-variant">Detailed performance insights via email</div>
+</div>
+</div>
+<div class="w-12 h-6 bg-surface-dim rounded-full relative cursor-pointer">
+<div class="absolute left-1 top-1 w-4 h-4 bg-on-surface-variant/40 rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Action Area -->
+<div class="flex flex-col items-center gap-6 py-8">
+<button class="w-full max-w-xs py-4 px-8 rounded-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-headline font-bold text-lg shadow-lg hover:opacity-90 transition-opacity">
+                Switch Profile
+            </button>
+<button class="text-primary font-headline font-bold hover:underline">
+                Sign Out
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-[#fff8f5]/90 dark:bg-[#251910]/90 backdrop-blur-xl rounded-t-[2rem] shadow-[0_-8px_32px_rgba(37,25,16,0.03)]">
+<div class="flex justify-around items-center px-4 pb-6 pt-3">
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 transition-opacity hover:bg-[#f28c6b]/10 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="auto_stories">auto_stories</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Learn</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 transition-opacity hover:bg-[#f28c6b]/10 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="extension">extension</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Play</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 transition-opacity hover:bg-[#f28c6b]/10 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="smart_toy">smart_toy</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Speak</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] dark:text-[#fff8f5]/60 px-5 py-2 transition-opacity hover:bg-[#f28c6b]/10 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="family_history">family_history</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Parent</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-[#f28c6b]/20 text-[#98462a] dark:text-[#f28c6b] rounded-full px-5 py-2 animate-spring">
+<span class="material-symbols-outlined mb-1" data-icon="face" style="font-variation-settings: 'FILL' 1;">face</span>
+<span class="font-['Plus_Jakarta_Sans'] text-xs font-semibold">Profile</span>
+</div>
+</div>
+</nav>
+</body></html>

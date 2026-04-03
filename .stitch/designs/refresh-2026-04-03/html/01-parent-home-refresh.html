@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#ffdbd0",
+                    "on-secondary-container": "#097162",
+                    "on-secondary-fixed": "#00201b",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#b9c9d2",
+                    "surface-bright": "#fff8f5",
+                    "secondary-fixed-dim": "#81d6c3",
+                    "on-tertiary-container": "#303f46",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#55433d",
+                    "outline-variant": "#dbc1b9",
+                    "on-tertiary-fixed-variant": "#3a4950",
+                    "tertiary-container": "#9aaab2",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-variant": "#f5decf",
+                    "surface-tint": "#98462a",
+                    "surface-container": "#ffeadc",
+                    "inverse-on-surface": "#ffede3",
+                    "on-error": "#ffffff",
+                    "surface": "#fff8f5",
+                    "surface-dim": "#ecd6c7",
+                    "inverse-surface": "#3b2e24",
+                    "secondary": "#006b5c",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#7a2f16",
+                    "primary-fixed-dim": "#ffb59e",
+                    "primary": "#98462a",
+                    "on-surface": "#251910",
+                    "inverse-primary": "#ffb59e",
+                    "tertiary-fixed": "#d5e5ee",
+                    "on-secondary-fixed-variant": "#005045",
+                    "surface-container-low": "#fff1e9",
+                    "surface-container-high": "#fbe4d5",
+                    "secondary-fixed": "#9df3df",
+                    "surface-container-highest": "#f5decf",
+                    "secondary-container": "#9df3df",
+                    "outline": "#88726c",
+                    "primary-container": "#f28c6b",
+                    "on-background": "#251910",
+                    "background": "#fff8f5",
+                    "on-primary-container": "#6c250c",
+                    "on-tertiary-fixed": "#0f1d24",
+                    "tertiary": "#526168",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed": "#3a0b00",
+                    "on-error-container": "#93000a",
+                    "error-container": "#ffdad6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Be Vietnam Pro"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .paper-cut-edge {
+            clip-path: polygon(0% 0%, 100% 0%, 100% 95%, 98% 97%, 95% 95%, 92% 98%, 89% 95%, 85% 97%, 82% 95%, 78% 98%, 75% 95%, 72% 97%, 68% 95%, 65% 98%, 62% 95%, 58% 97%, 55% 95%, 52% 98%, 48% 95%, 45% 97%, 42% 95%, 38% 98%, 35% 95%, 32% 97%, 28% 95%, 25% 98%, 22% 95%, 18% 97%, 15% 95%, 12% 98%, 8% 95%, 5% 97%, 2% 95%, 0% 98%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background font-body text-on-surface antialiased pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-[#fff8f5] dark:bg-stone-950 flex justify-between items-center px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container overflow-hidden ring-2 ring-primary/10">
+<img alt="Parent Profile" data-alt="Portrait of a smiling young mother in a warm knit sweater, soft natural lighting, editorial style photograph" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3mxJWN9HqWLI_Dmic1z0tnc8ZKpbFDzIh-0vHDFPOUap-3NEoUahCeJlHUSQ5W9cyjGhAJAR2LUrvaFB9SCxm0Vvr1zDnn9S-By4XsLosALTN2c0mxi_7z5e7KDFAh4ytycUxPRdb3Lf0DJcfbp_W34LOx7BKwm147YyTtvo967jyFvaPhjN2qM4fGi6wAmY4U56Unu3jm3ma2uBFT0LZ7VfPXFSEIZKQcJQUPtVXVlti3c-p2WMg4PjuL4AhBmxCIXnGSCVM6G3-"/>
+</div>
+<span class="font-plus-jakarta-sans font-extrabold text-[#98462a] text-xl tracking-tighter">Curator</span>
+</div>
+<button class="text-[#98462a] dark:text-[#f28c6b] hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-2xl" data-icon="settings">settings</span>
+</button>
+</header>
+<main class="px-6 space-y-10 mt-4">
+<!-- Hero Section: AI-Illustrated Study -->
+<section class="relative">
+<div class="bg-surface-container-low rounded-lg overflow-hidden paper-cut-edge pb-12 pt-6 px-6">
+<div class="flex flex-col md:flex-row gap-8 items-center">
+<div class="w-full md:w-1/2 space-y-4">
+<h1 class="font-headline text-4xl font-extrabold text-on-surface leading-tight tracking-tight">
+                            The Ritual of <br/> <span class="text-primary italic">Learning Together</span>
+</h1>
+<p class="text-on-surface-variant max-w-xs text-lg">Every story shared is a brick in their future world.</p>
+</div>
+<div class="w-full md:w-1/2 relative">
+<div class="aspect-[4/3] rounded-lg overflow-hidden bg-primary-fixed/20 shadow-xl">
+<img alt="Study Illustration" class="w-full h-full object-cover" data-alt="Soft AI-illustrated scene of a parent and child reading a glowing book together, paper-cut texture, warm coral and linen colors, whimsical style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBm6iaauLFZm8rKBPXsilwCIEABID_eJ5u15fHzxqTybqfe4ts2C8Vzhoyr8vPM4eB8_IKh5x7Dz-gLa63TKdqDVCqeXBtNTGKZRZWF2OT2HJWochspJAIlD9pwZILby2R8fWIBK3WJAddICZI4QweQGc79NppYNMXSVEVTbnuABT9xhWNQWQeKwrANy6ZvMTRPX0RY9v_wPQf3FhQIsRkJlAbBAmxoMHyRIx68xDz1cJHnNh4MIhZYdAM1yeYaCanAXEyM3q0Ux-6O"/>
+</div>
+<!-- Floating Sticker Accent -->
+<div class="absolute -bottom-4 -right-4 bg-secondary-container p-4 rounded-full rotate-12 shadow-lg border-4 border-white">
+<span class="material-symbols-outlined text-secondary scale-125" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Encouragement Banner & Progress Badge -->
+<section class="flex flex-col md:flex-row gap-4">
+<div class="flex-1 bg-primary/5 rounded-lg p-6 flex items-center justify-between group hover:bg-primary/10 transition-colors">
+<div class="space-y-1">
+<p class="font-headline font-bold text-primary">You're doing great!</p>
+<p class="text-sm text-on-surface-variant">4 lessons completed this week.</p>
+</div>
+<div class="bg-white p-3 rounded-full shadow-sm text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+</div>
+</div>
+<div class="w-full md:w-auto bg-surface-container-lowest rounded-lg p-4 flex items-center gap-4 shadow-[0_4px_24px_rgba(37,25,16,0.04)]">
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="none" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-secondary" cx="32" cy="32" fill="none" r="28" stroke="currentColor" stroke-dasharray="175" stroke-dashoffset="40" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-2xl" data-icon="emoji_events" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+</div>
+</div>
+<div class="pr-4">
+<p class="font-headline font-bold text-on-surface leading-none">Silver Tier</p>
+<p class="text-xs text-on-surface-variant mt-1">20 points to Gold</p>
+</div>
+</div>
+</section>
+<!-- Lesson Thumbnails: Themed Bento Grid -->
+<section class="space-y-6">
+<div class="flex justify-between items-end">
+<h2 class="font-headline text-2xl font-bold">Curated for Leo</h2>
+<button class="text-primary font-bold text-sm hover:underline">See all</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- At the Zoo Lesson -->
+<div class="group relative bg-surface-container-low rounded-lg overflow-hidden flex flex-col hover:translate-y-[-4px] transition-all">
+<div class="aspect-video w-full relative overflow-hidden">
+<img alt="At the Zoo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Digital collage of a stylized lion and giraffe in a paper-cut lush jungle setting, mint and ochre tones, playful children's book style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQu5uUZqE6J5bI-Tc1LY9Ws0g10b_dC616fM-UIrQrIpEMj8qXogbrEMLHHrNo55_8KqQRCtyzaLrELXEeMs74GoqC53NJPiPu6VA8s33O2bEy9Zu3CQHHP58AVdAoO4P86U_XOYk7LsfI5MkVbrr3kbSPe_ndSfNUO_s-zTlZK9V-zIHBT3DeQhKFxkCGOBkYp_7HDETxeP4Ed-z4NB82SVBpOTgcGFrFDjPXiM9SBCix_ly02NlqEdIpfzBl19GOlwCwDUrK4pC6"/>
+<div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold tracking-widest text-secondary uppercase">Exploration</div>
+</div>
+<div class="p-6 space-y-2">
+<h3 class="font-headline text-xl font-bold text-on-surface">At the Zoo</h3>
+<p class="text-sm text-on-surface-variant">Learn vocabulary about African wildlife through interactive storytelling.</p>
+<div class="pt-4 flex items-center justify-between">
+<span class="text-xs font-semibold text-dust-brown bg-surface-container-high px-3 py-1 rounded-full">12-15 Mins</span>
+<button class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Counting 1-10 Lesson -->
+<div class="group relative bg-surface-container-low rounded-lg overflow-hidden flex flex-col hover:translate-y-[-4px] transition-all">
+<div class="aspect-video w-full relative overflow-hidden">
+<img alt="Counting 1-10" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Whimsical illustration of colorful wooden number blocks 1 to 10 stacked asymmetrically on a linen background, soft shadows, warm aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQmylKP1ZTuYsfolBKkP-56RFIHztkhrzgS34OeBS1LRKM1OdAzV8sN_j2iLmnoiTg9bxbFZ8KjFiOsfZ-kzwpgJ8rNSb2TxebzBA5rjFEUyEAVVrUdf7KOBwMKoAihDWyt45lprwDIiAxzGbBfdijeZoQZJ-DLjXDWkYk8yiFgOR16VN-hTNWovTl9Bw0LLnOr8FA0WEkc-zK1CliW0XD8CrChPk1UMOOqxRmuz6JPy_ZB1gTsrfVClvxi9BVbt9aTfUuU9kCuOVW"/>
+<div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold tracking-widest text-primary uppercase">Fundamentals</div>
+</div>
+<div class="p-6 space-y-2">
+<h3 class="font-headline text-xl font-bold text-on-surface">Counting 1-10</h3>
+<p class="text-sm text-on-surface-variant">Introduction to numbers using rhythmic rhymes and digital block play.</p>
+<div class="pt-4 flex items-center justify-between">
+<span class="text-xs font-semibold text-dust-brown bg-surface-container-high px-3 py-1 rounded-full">8-10 Mins</span>
+<button class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Insights Summary Card -->
+<section class="bg-surface-container-low rounded-lg p-8 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+<div class="relative z-10 flex flex-col md:flex-row gap-8">
+<div class="flex-1 space-y-4">
+<h3 class="font-headline text-2xl font-bold">Learning Insights</h3>
+<p class="text-on-surface-variant leading-relaxed">Leo is showing strong progress in <span class="font-bold text-secondary">Visual Matching</span> this week. Consider exploring more animal-themed lessons to build on this interest.</p>
+<button class="bg-primary text-white px-6 py-3 rounded-full font-bold text-sm hover:opacity-90 transition-opacity">Full Weekly Report</button>
+</div>
+<div class="flex gap-2 items-end h-32 w-full md:w-auto">
+<div class="w-8 bg-secondary/20 rounded-t-lg h-1/2"></div>
+<div class="w-8 bg-secondary/40 rounded-t-lg h-2/3"></div>
+<div class="w-8 bg-secondary/60 rounded-t-lg h-3/4"></div>
+<div class="w-8 bg-secondary rounded-t-lg h-full"></div>
+<div class="w-8 bg-secondary/30 rounded-t-lg h-1/2"></div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#fff8f5]/80 dark:bg-stone-900/80 backdrop-blur-xl rounded-t-[2rem] shadow-[0_-4px_32px_rgba(37,25,16,0.04)]">
+<div class="flex flex-col items-center justify-center bg-[#f28c6b]/10 text-[#98462a] rounded-full px-5 py-2 group cursor-pointer transition-all duration-500 scale-110">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] px-5 py-2 group hover:text-[#98462a] transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Library</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] px-5 py-2 group hover:text-[#98462a] transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="photo_camera">photo_camera</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Scan</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#55433d] px-5 py-2 group hover:text-[#98462a] transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-plus-jakarta-sans text-[11px] font-semibold">Lessons</span>
+</div>
+</nav>
+</body></html>
