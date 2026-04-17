@@ -5,6 +5,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../profiles/data/demo_data.dart';
@@ -19,6 +20,15 @@ class MaterialsLibraryScreen extends ConsumerWidget {
 
     final list = Column(
       children: <Widget>[
+        IllustratedHeroCard(
+          eyebrow: '资料整理',
+          title: '把每一张课堂讲义都整理成能复习的小课包',
+          description: '先搜主题，再按状态筛选。每一课都带上更清楚的主题缩略图和复习状态。',
+          accent: AppColors.skyBlue,
+          illustration: Icons.collections_bookmark_rounded,
+          badge: const StickerBadge(label: '讲义宝', icon: Icons.auto_awesome_rounded),
+        ),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           decoration: InputDecoration(
             hintText: '搜索单词、主题、日期',
@@ -32,11 +42,12 @@ class MaterialsLibraryScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         Wrap(
           spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
           children: const <Widget>[
-            Chip(label: Text('全部')),
-            Chip(label: Text('待校对')),
-            Chip(label: Text('可复习')),
-            Chip(label: Text('动物')),
+            StickerBadge(label: '全部'),
+            StickerBadge(label: '待校对', color: AppColors.errorSurface),
+            StickerBadge(label: '可复习', color: AppColors.mintLeaf),
+            StickerBadge(label: '动物', color: AppColors.skyBlue),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -59,15 +70,39 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                   (material) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: AppCard(
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(material.title, style: AppTextStyles.cardTitle),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xs),
-                          child: Text('${material.lessonDate.month}/${material.lessonDate.day} · ${material.teacherName}'),
-                        ),
-                        trailing: MaterialStatusChip(material.status),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(AppRadii.card),
                         onTap: () => context.go('/lessons/${material.id}'),
+                        child: Row(
+                          children: <Widget>[
+                            LessonCoverThumbnail(
+                              title: material.title,
+                              subtitle: material.topic,
+                              icon: _libraryIcon(material.topic),
+                              accent: _libraryAccent(material.topic),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Row(
+                                    children: <Widget>[
+                                      Expanded(child: Text(material.title, style: AppTextStyles.cardTitle)),
+                                      MaterialStatusChip(material.status),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    '${material.lessonDate.month}/${material.lessonDate.day} · ${material.teacherName}',
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text('主题：${material.topic}', style: AppTextStyles.helper),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -141,9 +176,14 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(selected.title, style: AppTextStyles.sectionTitle),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text('主题：${selected.topic}'),
+                          IllustratedHeroCard(
+                            eyebrow: '课程预览',
+                            title: selected.title,
+                            description: '右侧保留摘要与 OCR 内容，帮助你在平板上更快决定先复习哪一课。',
+                            accent: _libraryAccent(selected.topic),
+                            illustration: _libraryIcon(selected.topic),
+                            badge: StickerBadge(label: selected.topic, color: _libraryAccent(selected.topic)),
+                          ),
                           const SizedBox(height: AppSpacing.sm),
                           const Text('OCR 摘要'),
                           const SizedBox(height: AppSpacing.xs),
@@ -165,4 +205,18 @@ class MaterialsLibraryScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Color _libraryAccent(String topic) {
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return AppColors.mintLeaf;
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return AppColors.butterYellow;
+  if (topic.contains('自然拼读') || topic.toLowerCase().contains('phonics')) return AppColors.skyBlue;
+  return AppColors.softSheet;
+}
+
+IconData _libraryIcon(String topic) {
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return Icons.pets_rounded;
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return Icons.pin_rounded;
+  if (topic.contains('自然拼读') || topic.toLowerCase().contains('phonics')) return Icons.record_voice_over_rounded;
+  return Icons.menu_book_rounded;
 }

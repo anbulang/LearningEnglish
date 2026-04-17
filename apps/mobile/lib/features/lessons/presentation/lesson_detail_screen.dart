@@ -6,6 +6,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 
@@ -28,30 +29,48 @@ class LessonDetailScreen extends ConsumerWidget {
         data: (knowledge) => ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: <Widget>[
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(material.title, style: AppTextStyles.pageTitle),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text('${material.teacherName} · ${material.lessonDate.month}/${material.lessonDate.day} · ${material.topic}'),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(knowledge.lessonSummary),
-                ],
-              ),
+            IllustratedHeroCard(
+              eyebrow: '本课复习包',
+              title: material.title,
+              description:
+                  '${material.teacherName} · ${material.lessonDate.month}/${material.lessonDate.day} · ${material.topic}\n\n${knowledge.lessonSummary}',
+              accent: _lessonAccent(material.topic),
+              illustration: _lessonIcon(material.topic),
+              badge: const StickerBadge(label: '可开练', icon: Icons.check_circle_rounded, color: AppColors.mintLeaf),
             ),
             const SizedBox(height: AppSpacing.md),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('核心单词', style: AppTextStyles.sectionTitle),
+                  Row(
+                    children: <Widget>[
+                      Text('核心单词', style: AppTextStyles.sectionTitle),
+                      const SizedBox(width: AppSpacing.sm),
+                      const StickerBadge(label: '词卡包', color: AppColors.skyBlue),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children: knowledge.vocabularyItems
-                        .map((item) => Chip(label: Text('${item.word} · ${item.meaningCn}')))
+                        .map(
+                          (item) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.sm,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Color.alphaBlend(
+                                _lessonAccent(material.topic).withValues(alpha: 0.12),
+                                AppColors.paperWhite,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Text('${item.word} · ${item.meaningCn}', style: AppTextStyles.body),
+                          ),
+                        )
                         .toList(),
                   ),
                 ],
@@ -62,26 +81,44 @@ class LessonDetailScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('重点句型', style: AppTextStyles.sectionTitle),
+                  Row(
+                    children: <Widget>[
+                      Text('重点句型', style: AppTextStyles.sectionTitle),
+                      const SizedBox(width: AppSpacing.sm),
+                      const StickerBadge(label: '跟读句型', color: AppColors.butterYellow),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   ...knowledge.sentencePatterns.map(
-                    (item) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(item.sentence),
-                      subtitle: Text(item.meaningCn),
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.softSheet,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(item.sentence, style: AppTextStyles.cardTitle),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(item.meaningCn),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  FilledButton.icon(
-                    onPressed: () => context.go('/review/session/$materialId'),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('开始本课复习'),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
                   Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children: <Widget>[
+                      FilledButton.icon(
+                        onPressed: () => context.go('/review/session/$materialId'),
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('开始本课复习'),
+                      ),
                       OutlinedButton.icon(
                         onPressed: () => context.go('/review/speaking/$materialId'),
                         icon: const Icon(Icons.mic_none_rounded),
@@ -154,7 +191,16 @@ class LessonDetailScreen extends ConsumerWidget {
                           color: AppColors.softSheet,
                           borderRadius: BorderRadius.circular(AppRadii.card),
                         ),
-                        child: const Center(child: Text('Worksheet / PDF Preview')),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const <Widget>[
+                              Icon(Icons.article_rounded, size: 48, color: AppColors.cocoaCoral),
+                              SizedBox(height: AppSpacing.sm),
+                              Text('Worksheet / PDF Preview'),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -168,4 +214,16 @@ class LessonDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Color _lessonAccent(String topic) {
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return AppColors.mintLeaf;
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return AppColors.butterYellow;
+  return AppColors.skyBlue;
+}
+
+IconData _lessonIcon(String topic) {
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return Icons.pets_rounded;
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return Icons.looks_one_rounded;
+  return Icons.menu_book_rounded;
 }

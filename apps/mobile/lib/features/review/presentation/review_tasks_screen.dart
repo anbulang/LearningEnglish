@@ -5,6 +5,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 
@@ -26,15 +27,31 @@ class ReviewTasksScreen extends ConsumerWidget {
           data: (value) => ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: <Widget>[
+              IllustratedHeroCard(
+                eyebrow: '成长报告',
+                title: '这周的学习树又长高了一点',
+                description:
+                    '完成 ${value.completedSessions} 次复习，复习 ${value.reviewedWords} 个单词，口语练习 ${value.speakingAttempts} 次。',
+                accent: AppColors.mintLeaf,
+                illustration: Icons.park_rounded,
+                badge: const StickerBadge(label: '连续复习中', icon: Icons.workspace_premium_rounded),
+              ),
+              const SizedBox(height: AppSpacing.md),
               AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text('本周复习概览', style: AppTextStyles.pageTitle),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text('完成 ${value.completedSessions} 次复习'),
-                    Text('复习 ${value.reviewedWords} 个单词'),
-                    Text('口语练习 ${value.speakingAttempts} 次'),
+                    Text('本周亮点', style: AppTextStyles.sectionTitle),
+                    const SizedBox(height: AppSpacing.md),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: <Widget>[
+                        _metricTile('完成复习', '${value.completedSessions}', Icons.book_rounded, AppColors.skyBlue),
+                        _metricTile('单词复习', '${value.reviewedWords}', Icons.style_rounded, AppColors.butterYellow),
+                        _metricTile('口语练习', '${value.speakingAttempts}', Icons.mic_rounded, AppColors.mintLeaf),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -45,7 +62,25 @@ class ReviewTasksScreen extends ConsumerWidget {
                   children: <Widget>[
                     Text('推荐动作', style: AppTextStyles.sectionTitle),
                     const SizedBox(height: AppSpacing.sm),
-                    ...value.recommendedActions.map((item) => Text('• $item')),
+                    ...value.recommendedActions.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.softSheet,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              const Icon(Icons.auto_awesome_rounded, color: AppColors.coralJam, size: 18),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(child: Text(item)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -89,7 +124,26 @@ class ReviewTasksScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(task.contentJson['prompt'] as String? ?? '复习任务', style: AppTextStyles.sectionTitle),
+                    Row(
+                      children: <Widget>[
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: _taskAccent(task.taskType.value).withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(_taskIcon(task.taskType.value), color: AppColors.cocoaCoral),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            task.contentJson['prompt'] as String? ?? '复习任务',
+                            style: AppTextStyles.sectionTitle,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     Text('类型：${task.taskType.value} · 难度：${task.difficulty}'),
                     const SizedBox(height: AppSpacing.md),
@@ -120,4 +174,36 @@ class ReviewTasksScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Widget _metricTile(String label, String value, IconData icon, Color accent) {
+  return Container(
+    width: 150,
+    padding: const EdgeInsets.all(AppSpacing.md),
+    decoration: BoxDecoration(
+      color: Color.alphaBlend(accent.withValues(alpha: 0.18), AppColors.paperWhite),
+      borderRadius: BorderRadius.circular(AppRadii.card),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Icon(icon, color: AppColors.cocoaCoral),
+        const SizedBox(height: AppSpacing.sm),
+        Text(value, style: AppTextStyles.pageTitle),
+        Text(label, style: AppTextStyles.helper),
+      ],
+    ),
+  );
+}
+
+Color _taskAccent(String taskType) {
+  if (taskType.contains('listen')) return AppColors.skyBlue;
+  if (taskType.contains('match')) return AppColors.butterYellow;
+  return AppColors.mintLeaf;
+}
+
+IconData _taskIcon(String taskType) {
+  if (taskType.contains('listen')) return Icons.headphones_rounded;
+  if (taskType.contains('match')) return Icons.extension_rounded;
+  return Icons.style_rounded;
 }

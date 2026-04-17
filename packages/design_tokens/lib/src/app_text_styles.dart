@@ -6,6 +6,14 @@ abstract final class AppTextStyles {
   static const String displayFamily = 'Plus Jakarta Sans';
   static const String bodyFamily = 'Be Vietnam Pro';
 
+  static const TextStyle heroTitle = TextStyle(
+    fontFamily: displayFamily,
+    fontSize: 32,
+    height: 38 / 32,
+    fontWeight: FontWeight.w700,
+    color: AppColors.inkCocoa,
+  );
+
   static const TextStyle pageTitle = TextStyle(
     fontFamily: displayFamily,
     fontSize: 28,
@@ -44,5 +52,13 @@ abstract final class AppTextStyles {
     height: 16 / 12,
     fontWeight: FontWeight.w500,
     color: AppColors.dustBrown,
+  );
+
+  static const TextStyle eyebrow = TextStyle(
+    fontFamily: displayFamily,
+    fontSize: 12,
+    height: 16 / 12,
+    fontWeight: FontWeight.w700,
+    color: AppColors.cocoaCoral,
   );
 }

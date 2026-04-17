@@ -8,6 +8,8 @@ abstract final class AppColors {
   static const Color cocoaCoral = Color(0xFF98462A);
   static const Color mintLeaf = Color(0xFF9DF3DF);
   static const Color forestMint = Color(0xFF006B5C);
+  static const Color butterYellow = Color(0xFFFFD86A);
+  static const Color skyBlue = Color(0xFFBFE7FF);
   static const Color inkCocoa = Color(0xFF251910);
   static const Color dustBrown = Color(0xFF55433D);
   static const Color outlineVariant = Color(0xFFDBC1B9);

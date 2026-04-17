@@ -5,6 +5,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../materials/data/app_repository.dart';
@@ -52,72 +53,66 @@ class HomeScreen extends ConsumerWidget {
     final dashboard = ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: <Widget>[
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('你好，今天继续陪 ${child.name} 复习', style: AppTextStyles.pageTitle),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                tasks.when(
-                  data: (items) => '建议先完成 ${items.length} 个任务，控制在 ${child.preferredReviewDurationMinutes} 分钟内。',
-                  loading: () => '正在同步今天的复习任务...',
-                  error: (_, __) => '任务同步失败，请稍后重试。',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: <Widget>[
-                  FilledButton.icon(
-                    onPressed: () => context.go('/materials/scan'),
-                    icon: const Icon(Icons.camera_alt_rounded),
-                    label: const Text('上传讲义'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      final loadedMaterials = materials.valueOrNull;
-                      final firstMaterial =
-                          loadedMaterials != null && loadedMaterials.isNotEmpty ? loadedMaterials.first : null;
-                      if (firstMaterial != null) {
-                        context.go('/review/session/${firstMaterial.id}');
-                      } else {
-                        context.go('/review');
-                      }
-                    },
-                    icon: const Icon(Icons.play_circle_outline_rounded),
-                    label: const Text('开始复习'),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      final loadedMaterials = materials.valueOrNull;
-                      final firstMaterial =
-                          loadedMaterials != null && loadedMaterials.isNotEmpty ? loadedMaterials.first : null;
-                      if (firstMaterial != null) {
-                        context.go('/review/coaching/${firstMaterial.id}');
-                      }
-                    },
-                    icon: const Icon(Icons.favorite_outline_rounded),
-                    label: const Text('亲子陪练'),
-                  ),
-                ],
-              ),
-            ],
+        IllustratedHeroCard(
+          eyebrow: '今日陪学',
+          title: '和 ${child.name} 一起把课堂讲义变成小课包',
+          description: tasks.when(
+            data: (items) => '今天建议先完成 ${items.length} 个任务，控制在 ${child.preferredReviewDurationMinutes} 分钟内。',
+            loading: () => '正在同步今天的复习任务...',
+            error: (_, __) => '任务同步失败，请稍后重试。',
           ),
+          accent: AppColors.coralJam,
+          illustration: Icons.menu_book_rounded,
+          badge: const StickerBadge(label: '轻松 10 分钟', icon: Icons.auto_awesome_rounded),
+          actions: <Widget>[
+            FilledButton.icon(
+              onPressed: () => context.go('/materials/scan'),
+              icon: const Icon(Icons.camera_alt_rounded),
+              label: const Text('上传讲义'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () {
+                final loadedMaterials = materials.valueOrNull;
+                final firstMaterial =
+                    loadedMaterials != null && loadedMaterials.isNotEmpty ? loadedMaterials.first : null;
+                if (firstMaterial != null) {
+                  context.go('/review/session/${firstMaterial.id}');
+                } else {
+                  context.go('/review');
+                }
+              },
+              icon: const Icon(Icons.play_circle_outline_rounded),
+              label: const Text('开始复习'),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.md),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('今日待复习', style: AppTextStyles.sectionTitle),
+              Row(
+                children: <Widget>[
+                  Text('今日待复习', style: AppTextStyles.sectionTitle),
+                  const SizedBox(width: AppSpacing.sm),
+                  const StickerBadge(label: '鼓励模式', icon: Icons.favorite_rounded, color: AppColors.mintLeaf),
+                ],
+              ),
               const SizedBox(height: AppSpacing.sm),
               ...tasks.when(
                 data: (items) => items
                     .map(
                       (task) => ListTile(
                         contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: _taskAccent(task.taskType.value).withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(_taskIcon(task.taskType.value), color: AppColors.cocoaCoral),
+                        ),
                         title: Text(task.contentJson['prompt'] as String? ?? '复习任务'),
                         subtitle: Text(task.taskType.value),
                         trailing: const Icon(Icons.chevron_right_rounded),
@@ -148,12 +143,38 @@ class HomeScreen extends ConsumerWidget {
               ...materials.when(
                 data: (items) => items
                     .map(
-                      (material) => ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(material.title),
-                        subtitle: Text('${material.teacherName} · ${material.topic}'),
-                        trailing: MaterialStatusChip(material.status),
-                        onTap: () => context.go('/lessons/${material.id}'),
+                      (material) => Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(AppRadii.card),
+                          onTap: () => context.go('/lessons/${material.id}'),
+                          child: Row(
+                            children: <Widget>[
+                              LessonCoverThumbnail(
+                                title: material.title,
+                                subtitle: material.topic,
+                                icon: _topicIcon(material.topic),
+                                accent: _topicAccent(material.topic),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(material.title, style: AppTextStyles.cardTitle),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text(
+                                      '${material.teacherName} · ${material.topic}',
+                                      style: AppTextStyles.body,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              MaterialStatusChip(material.status),
+                            ],
+                          ),
+                        ),
                       ),
                     )
                     .toList(),
@@ -197,9 +218,9 @@ class HomeScreen extends ConsumerWidget {
                             const SizedBox(height: AppSpacing.sm),
                             ...report.when(
                               data: (value) => <Widget>[
-                                Text('已完成 ${value.completedSessions} 次复习'),
-                                Text('复习单词 ${value.reviewedWords} 个'),
-                                Text('口语尝试 ${value.speakingAttempts} 次'),
+                                _metricRow('已完成复习', '${value.completedSessions} 次', Icons.bookmark_added_rounded),
+                                _metricRow('复习单词', '${value.reviewedWords} 个', Icons.style_rounded),
+                                _metricRow('口语尝试', '${value.speakingAttempts} 次', Icons.mic_rounded),
                               ],
                               loading: () => const <Widget>[CircularProgressIndicator()],
                               error: (_, __) => const <Widget>[Text('报告加载失败')],
@@ -215,7 +236,27 @@ class HomeScreen extends ConsumerWidget {
                           Text('本周薄弱点', style: AppTextStyles.sectionTitle),
                           const SizedBox(height: AppSpacing.sm),
                           ...report.when(
-                            data: (value) => value.weakItems.map((item) => Text('• $item')).toList(),
+                            data: (value) => value.weakItems
+                                .map(
+                                  (item) => Padding(
+                                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(AppSpacing.sm),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.softSheet,
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
+                                      child: Row(
+                                        children: <Widget>[
+                                          const Icon(Icons.push_pin_rounded, color: AppColors.coralJam),
+                                          const SizedBox(width: AppSpacing.sm),
+                                          Expanded(child: Text(item)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                             loading: () => const <Widget>[Text('正在汇总...')],
                             error: (_, __) => const <Widget>[Text('暂无数据')],
                           ),
@@ -230,4 +271,50 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Widget _metricRow(String label, String value, IconData icon) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    child: Row(
+      children: <Widget>[
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: AppColors.mintLeaf.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: AppColors.forestMint, size: 20),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(child: Text(label, style: AppTextStyles.body)),
+        Text(value, style: AppTextStyles.cardTitle),
+      ],
+    ),
+  );
+}
+
+Color _taskAccent(String taskType) {
+  if (taskType.contains('listen')) return AppColors.skyBlue;
+  if (taskType.contains('match')) return AppColors.butterYellow;
+  return AppColors.mintLeaf;
+}
+
+IconData _taskIcon(String taskType) {
+  if (taskType.contains('listen')) return Icons.headphones_rounded;
+  if (taskType.contains('match')) return Icons.extension_rounded;
+  return Icons.style_rounded;
+}
+
+Color _topicAccent(String topic) {
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return AppColors.mintLeaf;
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return AppColors.butterYellow;
+  return AppColors.skyBlue;
+}
+
+IconData _topicIcon(String topic) {
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return Icons.pets_rounded;
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return Icons.looks_one_rounded;
+  return Icons.auto_stories_rounded;
 }
