@@ -6,6 +6,7 @@ import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
@@ -35,18 +36,26 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('AI 口语陪练', style: AppTextStyles.pageTitle),
+          const IllustratedHeroCard(
+            eyebrow: 'AI 口语陪练',
+            title: '跟着温柔的小伙伴开口说一句英语',
+            description: '先听提问，再提交一次回答。当前阶段还是 stub transcript，但会完整记录反馈和周报变化。',
+            accent: AppColors.skyBlue,
+            illustration: Icons.record_voice_over_rounded,
+            badge: StickerBadge(label: '开口说一说', icon: Icons.mic_rounded, color: AppColors.skyBlue),
+          ),
+          const SizedBox(height: AppSpacing.md),
           const SizedBox(height: AppSpacing.sm),
           const Text('老师提问：What is this?'),
           const SizedBox(height: AppSpacing.md),
           Container(
             height: 180,
             decoration: BoxDecoration(
-              color: AppColors.softSheet,
+              color: AppColors.skyBlue.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(AppRadii.panel),
             ),
             child: const Center(
-              child: Icon(Icons.record_voice_over_rounded, size: 72),
+              child: Icon(Icons.record_voice_over_rounded, size: 72, color: AppColors.cocoaCoral),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -111,7 +120,7 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
 
     final result = AppCard(
       child: attempt == null
-          ? const Text('提交一次回答后，这里会显示转写和反馈。')
+          ? const Text('提交一次回答后，这里会显示转写、鼓励反馈和更自然的回答提示。')
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../data/demo_data.dart';
 import '../../session/data/session_controller.dart';
 
@@ -21,6 +22,15 @@ class ProfileScreen extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: <Widget>[
+                IllustratedHeroCard(
+                  eyebrow: '家庭档案',
+                  title: '${child.name} 的学习小档案',
+                  description: '这里管理家长账号、孩子资料、学习目标和提醒偏好，保持整套课后复习节奏稳定。',
+                  accent: AppColors.coralJam,
+                  illustration: Icons.family_restroom_rounded,
+                  badge: StickerBadge(label: child.level, icon: Icons.star_rounded, color: AppColors.butterYellow),
+                ),
+                const SizedBox(height: AppSpacing.md),
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

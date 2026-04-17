@@ -5,6 +5,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 
@@ -26,9 +27,14 @@ class ParentCoachingScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(script.title, style: AppTextStyles.pageTitle),
-            const SizedBox(height: AppSpacing.sm),
-            Text(script.intro),
+            IllustratedHeroCard(
+              eyebrow: '亲子陪练',
+              title: script.title,
+              description: script.intro,
+              accent: AppColors.coralJam,
+              illustration: Icons.favorite_rounded,
+              badge: const StickerBadge(label: '家长跟着说', icon: Icons.record_voice_over_rounded),
+            ),
             const SizedBox(height: AppSpacing.md),
             ...script.steps.map(
               (step) => Padding(
@@ -37,7 +43,13 @@ class ParentCoachingScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(step.title, style: AppTextStyles.cardTitle),
+                      Row(
+                        children: <Widget>[
+                          Text(step.title, style: AppTextStyles.cardTitle),
+                          const SizedBox(width: AppSpacing.sm),
+                          const StickerBadge(label: '陪练步骤', color: AppColors.butterYellow),
+                        ],
+                      ),
                       const SizedBox(height: AppSpacing.xs),
                       Text('现在怎么说：${step.parentPrompt}'),
                       const SizedBox(height: AppSpacing.xs),

@@ -8,6 +8,7 @@ import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
@@ -102,7 +103,7 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    const Icon(Icons.document_scanner_rounded, size: 64),
+                    const Icon(Icons.document_scanner_rounded, size: 64, color: AppColors.cocoaCoral),
                     const SizedBox(height: AppSpacing.sm),
                     Text('已选择 ${draft.pages.length} 页讲义'),
                     const SizedBox(height: AppSpacing.xs),
@@ -117,7 +118,13 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('拍照上传', style: AppTextStyles.sectionTitle),
+          Row(
+            children: const <Widget>[
+              Text('拍照上传', style: AppTextStyles.sectionTitle),
+              SizedBox(width: AppSpacing.sm),
+              StickerBadge(label: '讲义变复习包', icon: Icons.auto_awesome_rounded),
+            ],
+          ),
           const SizedBox(height: AppSpacing.sm),
           const Text('本阶段先接真实图片上传、AI 识别和家长校对链路。'),
           const SizedBox(height: AppSpacing.md),
@@ -187,13 +194,38 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
         child: formFactor.isTablet
             ? Row(
                 children: <Widget>[
+                  Expanded(
+                    child: ListView(
+                      children: const <Widget>[
+                        IllustratedHeroCard(
+                          eyebrow: '上传讲义',
+                          title: '拍一拍课堂讲义，下一步就能生成孩子的复习包',
+                          description: '上传页现在更像一个温和的扫描工作台，先整理讲义，再交给 AI 识别和家长校对。',
+                          accent: AppColors.skyBlue,
+                          illustration: Icons.camera_alt_rounded,
+                          badge: StickerBadge(label: '多页支持', icon: Icons.layers_rounded, color: AppColors.butterYellow),
+                        ),
+                        SizedBox(height: AppSpacing.md),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(child: preview),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(child: controls),
                 ],
               )
-            : Column(
+            : ListView(
                 children: <Widget>[
+                  const IllustratedHeroCard(
+                    eyebrow: '上传讲义',
+                    title: '把课堂纸张拍下来，交给 AI 帮你整理复习包',
+                    description: '先选讲义页，再补课程标题和老师名，最后一键上传进入校对流程。',
+                    accent: AppColors.skyBlue,
+                    illustration: Icons.camera_alt_rounded,
+                    badge: StickerBadge(label: '轻松整理', icon: Icons.auto_awesome_rounded),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
                   preview,
                   const SizedBox(height: AppSpacing.md),
                   controls,

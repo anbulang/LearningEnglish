@@ -7,6 +7,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
@@ -99,46 +100,100 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
     final extracted = jobAsync.when(
       data: (job) {
         if (job.status == JobStatus.processing || job.status == JobStatus.queued) {
-          return StatePanel(
-            title: 'AI 正在处理中',
-            description: '讲义已上传成功，正在提取单词和句型。稍后刷新即可查看结果。',
-            action: FilledButton(
-              onPressed: _submitting ? null : () => ref.invalidate(materialJobProvider(widget.jobId)),
-              child: const Text('刷新结果'),
-            ),
+          return Column(
+            children: <Widget>[
+              const IllustratedHeroCard(
+                eyebrow: 'AI 理解中',
+                title: '讲义正在慢慢变成可复习的小课包',
+                description: '系统会先识别课题、单词和句型，再交给家长确认。这个阶段只需要稍后刷新看结果。',
+                accent: AppColors.skyBlue,
+                illustration: Icons.psychology_alt_rounded,
+                badge: StickerBadge(label: '处理中', icon: Icons.hourglass_top_rounded, color: AppColors.skyBlue),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              StatePanel(
+                title: 'AI 正在处理中',
+                description: '讲义已上传成功，正在提取单词和句型。稍后刷新即可查看结果。',
+                action: FilledButton(
+                  onPressed: _submitting ? null : () => ref.invalidate(materialJobProvider(widget.jobId)),
+                  child: const Text('刷新结果'),
+                ),
+              ),
+            ],
           );
         }
         if (job.status == JobStatus.ready) {
-          return StatePanel(
-            title: '课程详情已生成',
-            description: '本课知识包已经准备好，可以直接进入课程详情开始复习。',
-            action: FilledButton(
-              onPressed: () => context.go('/lessons/${widget.materialId}'),
-              child: const Text('查看课程详情'),
-            ),
+          return Column(
+            children: <Widget>[
+              const IllustratedHeroCard(
+                eyebrow: '已准备好',
+                title: '课程详情已经整理完成，可以直接开始复习了',
+                description: '本课知识包已经生成，接下来可以进入课程详情、词卡练习、口语陪练和亲子陪练。',
+                accent: AppColors.mintLeaf,
+                illustration: Icons.check_circle_rounded,
+                badge: StickerBadge(label: '可复习', icon: Icons.auto_awesome_rounded, color: AppColors.mintLeaf),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              StatePanel(
+                title: '课程详情已生成',
+                description: '本课知识包已经准备好，可以直接进入课程详情开始复习。',
+                action: FilledButton(
+                  onPressed: () => context.go('/lessons/${widget.materialId}'),
+                  child: const Text('查看课程详情'),
+                ),
+              ),
+            ],
           );
         }
         if (job.status == JobStatus.failed) {
-          return StatePanel(
-            title: 'AI 处理失败',
-            description: _actionError ?? job.confidenceSummary,
-            icon: Icons.error_outline_rounded,
-            action: FilledButton(
-              onPressed: _submitting ? null : _retryJob,
-              child: Text(_submitting ? '重试中...' : '重新处理'),
-            ),
+          return Column(
+            children: <Widget>[
+              const IllustratedHeroCard(
+                eyebrow: '需要重试',
+                title: '这次理解讲义时卡住了，再试一次就好',
+                description: '真实讲义有时会因为图片质量或排版复杂而失败。你可以直接重新处理。',
+                accent: AppColors.coralJam,
+                illustration: Icons.refresh_rounded,
+                badge: StickerBadge(label: '可重试', icon: Icons.replay_rounded, color: AppColors.errorSurface),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              StatePanel(
+                title: 'AI 处理失败',
+                description: _actionError ?? job.confidenceSummary,
+                icon: Icons.error_outline_rounded,
+                action: FilledButton(
+                  onPressed: _submitting ? null : _retryJob,
+                  child: Text(_submitting ? '重试中...' : '重新处理'),
+                ),
+              ),
+            ],
           );
         }
         return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              const IllustratedHeroCard(
+                eyebrow: '家长校对',
+                title: 'AI 已经整理出草稿，你看一眼就能生成正式课程详情',
+                description: '先确认标题、主题、词汇和句型。低置信度内容会用提醒样式突出显示。',
+                accent: AppColors.coralJam,
+                illustration: Icons.fact_check_rounded,
+                badge: StickerBadge(label: '审核确认', icon: Icons.edit_note_rounded),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Text('AI 识别结果', style: AppTextStyles.sectionTitle),
               const SizedBox(height: AppSpacing.sm),
               Text('课程标题：${job.draftTitle}'),
               Text('主题：${job.draftTopic}'),
               const SizedBox(height: AppSpacing.md),
-              Text('词汇', style: AppTextStyles.cardTitle),
+              Row(
+                children: const <Widget>[
+                  Text('词汇', style: AppTextStyles.cardTitle),
+                  SizedBox(width: AppSpacing.sm),
+                  StickerBadge(label: '词卡候选', color: AppColors.skyBlue),
+                ],
+              ),
               const SizedBox(height: AppSpacing.xs),
               if (job.draftVocabulary.isEmpty)
                 const Text('暂未提取到词汇，请家长确认后继续。')
@@ -146,19 +201,53 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 Wrap(
                   spacing: AppSpacing.xs,
                   runSpacing: AppSpacing.xs,
-                  children: job.draftVocabulary.map((word) => Chip(label: Text(word))).toList(),
+                  children: job.draftVocabulary
+                      .map(
+                        (word) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.skyBlue.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Text(word),
+                        ),
+                      )
+                      .toList(),
                 ),
               const SizedBox(height: AppSpacing.md),
-              Text('句型', style: AppTextStyles.cardTitle),
+              Row(
+                children: const <Widget>[
+                  Text('句型', style: AppTextStyles.cardTitle),
+                  SizedBox(width: AppSpacing.sm),
+                  StickerBadge(label: '跟读候选', color: AppColors.butterYellow),
+                ],
+              ),
               const SizedBox(height: AppSpacing.xs),
               if (job.draftSentences.isEmpty)
                 const Text('暂未提取到句型，请家长确认后继续。')
               else
-                ...job.draftSentences.map((sentence) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.subtitles_rounded),
-                      title: Text(sentence),
-                    )),
+                ...job.draftSentences.map(
+                  (sentence) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.softSheet,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(Icons.subtitles_rounded, color: AppColors.cocoaCoral),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(child: Text(sentence)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               if (job.warnings.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.md),
                 Container(
@@ -241,7 +330,16 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                       color: AppColors.softSheet,
                       borderRadius: BorderRadius.circular(AppRadii.card),
                     ),
-                    child: const Center(child: Text('原始讲义预览')),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const <Widget>[
+                          Icon(Icons.description_rounded, size: 52, color: AppColors.cocoaCoral),
+                          SizedBox(height: AppSpacing.sm),
+                          Text('原始讲义预览'),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

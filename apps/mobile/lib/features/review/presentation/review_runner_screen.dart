@@ -7,6 +7,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 import '../../../core/analytics/app_analytics.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
@@ -106,6 +107,19 @@ class _ReviewTaskStage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        IllustratedHeroCard(
+          eyebrow: '复习进行中',
+          title: task.contentJson['prompt'] as String? ?? '复习任务',
+          description: '第 ${currentIndex + 1} 题，共 $totalCount 题。一步一步完成就好。',
+          accent: _taskAccent(task.taskType),
+          illustration: _taskIcon(task.taskType),
+          badge: StickerBadge(
+            label: '任务 ${currentIndex + 1}/$totalCount',
+            icon: Icons.flag_rounded,
+            color: _taskAccent(task.taskType).withValues(alpha: 0.55),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,8 +131,6 @@ class _ReviewTaskStage extends StatelessWidget {
                 minHeight: 8,
                 borderRadius: BorderRadius.circular(AppRadii.pill),
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(task.contentJson['prompt'] as String? ?? '复习任务', style: AppTextStyles.pageTitle),
               const SizedBox(height: AppSpacing.md),
               _TaskSurface(task: task),
             ],
@@ -150,6 +162,16 @@ class _TaskSurface extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: <Widget>[
+              Container(
+                width: 148,
+                height: 148,
+                decoration: BoxDecoration(
+                  color: AppColors.skyBlue.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(Icons.pets_rounded, size: 64, color: AppColors.cocoaCoral),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Text(task.contentJson['word'] as String? ?? '', style: AppTextStyles.pageTitle),
               const SizedBox(height: AppSpacing.sm),
               Text(task.contentJson['hint'] as String? ?? '点击播放音频并跟读'),
@@ -169,7 +191,15 @@ class _TaskSurface extends StatelessWidget {
                   child: AppCard(
                     child: ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.hearing_rounded),
+                      leading: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.skyBlue.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(Icons.hearing_rounded, color: AppColors.cocoaCoral),
+                      ),
                       title: Text(choice),
                     ),
                   ),
@@ -186,9 +216,33 @@ class _TaskSurface extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              ...left.map((item) => Text('Q: $item')),
+              ...left.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.softSheet,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text('Q: $item'),
+                  ),
+                ),
+              ),
               const SizedBox(height: AppSpacing.md),
-              ...right.map((item) => Text('A: $item')),
+              ...right.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.mintLeaf.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text('A: $item'),
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -206,34 +260,77 @@ class _ReviewFinishedState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text('本次复习完成', style: AppTextStyles.pageTitle),
-          const SizedBox(height: AppSpacing.sm),
-          const Text('已经记录完成情况，接下来可以继续做口语问答或亲子陪练。'),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+    return Column(
+      children: <Widget>[
+        const IllustratedHeroCard(
+          eyebrow: '完成啦',
+          title: '这一轮复习已经收进本周成长记录里',
+          description: '现在可以继续做口语问答，也可以切到亲子陪练，让家长跟着提示再陪孩子说一轮。',
+          accent: AppColors.mintLeaf,
+          illustration: Icons.workspace_premium_rounded,
+          badge: StickerBadge(label: 'Good job', icon: Icons.celebration_rounded),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              FilledButton(
-                onPressed: () => context.go('/review/speaking/$materialId'),
-                child: const Text('继续口语陪练'),
-              ),
-              OutlinedButton(
-                onPressed: () => context.go('/review/coaching/$materialId'),
-                child: const Text('进入亲子陪练'),
-              ),
-              TextButton(
-                onPressed: () => context.go('/reports'),
-                child: const Text('查看本周报告'),
+              Text('本次复习完成', style: AppTextStyles.pageTitle),
+              const SizedBox(height: AppSpacing.sm),
+              const Text('已经记录完成情况，接下来可以继续做口语问答或亲子陪练。'),
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: <Widget>[
+                  FilledButton(
+                    onPressed: () => context.go('/review/speaking/$materialId'),
+                    child: const Text('继续口语陪练'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => context.go('/review/coaching/$materialId'),
+                    child: const Text('进入亲子陪练'),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/reports'),
+                    child: const Text('查看本周报告'),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
+  }
+}
+
+Color _taskAccent(TaskType type) {
+  switch (type) {
+    case TaskType.flashcard:
+      return AppColors.skyBlue;
+    case TaskType.listenChoice:
+      return AppColors.butterYellow;
+    case TaskType.matchChoice:
+      return AppColors.mintLeaf;
+    case TaskType.speakingPrompt:
+      return AppColors.skyBlue;
+    case TaskType.parentCoaching:
+      return AppColors.coralJam;
+  }
+}
+
+IconData _taskIcon(TaskType type) {
+  switch (type) {
+    case TaskType.flashcard:
+      return Icons.style_rounded;
+    case TaskType.listenChoice:
+      return Icons.headphones_rounded;
+    case TaskType.matchChoice:
+      return Icons.extension_rounded;
+    case TaskType.speakingPrompt:
+      return Icons.mic_rounded;
+    case TaskType.parentCoaching:
+      return Icons.favorite_rounded;
   }
 }
