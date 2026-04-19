@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 import jwt
+from jwt import ExpiredSignatureError, PyJWTError
 
 from app.core.settings import get_settings
 
@@ -46,7 +47,12 @@ def create_bind_token(payload: dict[str, Any]) -> tuple[str, datetime]:
 
 
 def decode_bind_token(token: str) -> dict[str, Any]:
-    payload = _decode(token)
+    try:
+        payload = _decode(token)
+    except ExpiredSignatureError as exc:
+        raise ValueError("Bind token expired") from exc
+    except PyJWTError as exc:
+        raise ValueError("Invalid bind token") from exc
     if payload.get("type") != "bind":
         raise ValueError("Invalid bind token")
     return payload
@@ -83,14 +89,24 @@ def create_refresh_token(parent_account_id: str, session_id: str) -> tuple[str, 
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
-    payload = _decode(token)
+    try:
+        payload = _decode(token)
+    except ExpiredSignatureError as exc:
+        raise ValueError("Access token expired") from exc
+    except PyJWTError as exc:
+        raise ValueError("Invalid access token") from exc
     if payload.get("type") != "access":
         raise ValueError("Invalid access token")
     return payload
 
 
 def decode_refresh_token(token: str) -> dict[str, Any]:
-    payload = _decode(token)
+    try:
+        payload = _decode(token)
+    except ExpiredSignatureError as exc:
+        raise ValueError("Refresh token expired") from exc
+    except PyJWTError as exc:
+        raise ValueError("Invalid refresh token") from exc
     if payload.get("type") != "refresh":
         raise ValueError("Invalid refresh token")
     return payload

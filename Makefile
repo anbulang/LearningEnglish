@@ -1,7 +1,15 @@
 PYTHON ?= python3
 FLUTTER ?= flutter
+IOS_SCHEME ?= Runner
+IOS_WORKSPACE ?= apps/mobile/ios/Runner.xcworkspace
+IOS_CONFIGURATION ?= Debug
+IOS_ARCHIVE_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/LearningEnglish-Debug.xcarchive
+IOS_EXPORT_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/export
+IOS_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.debug.plist
+IOS_API_BASE_URL ?= http://127.0.0.1:8000/v1
+IOS_DEVELOPMENT_TEAM ?= $(shell security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*(\([A-Z0-9]*\)).*/\1/p' | head -n 1)
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down mobile-bootstrap mobile-analyze mobile-apk
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down mobile-bootstrap mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-mvp-readiness
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -40,3 +48,33 @@ mobile-analyze:
 
 mobile-apk:
 	cd apps/mobile && $(FLUTTER) build apk --debug
+
+mobile-ios-prep:
+	mkdir -p /Users/chaucermini/Code/LearningEnglish/dist/ios
+	cd apps/mobile && $(FLUTTER) build ios --debug --no-codesign --dart-define=API_BASE_URL=$(IOS_API_BASE_URL)
+
+mobile-ios-archive: mobile-ios-prep
+	mkdir -p /Users/chaucermini/Code/LearningEnglish/dist/ios
+	xcodebuild \
+		-workspace $(IOS_WORKSPACE) \
+		-scheme $(IOS_SCHEME) \
+		-configuration $(IOS_CONFIGURATION) \
+		-sdk iphoneos \
+		-allowProvisioningUpdates \
+		-archivePath $(IOS_ARCHIVE_PATH) \
+		CODE_SIGN_STYLE=Automatic \
+		DEVELOPMENT_TEAM=$(IOS_DEVELOPMENT_TEAM) \
+		archive
+
+mobile-ios-ipa: mobile-ios-archive
+	rm -rf $(IOS_EXPORT_PATH)
+	mkdir -p $(IOS_EXPORT_PATH)
+	xcodebuild \
+		-exportArchive \
+		-allowProvisioningUpdates \
+		-archivePath $(IOS_ARCHIVE_PATH) \
+		-exportPath $(IOS_EXPORT_PATH) \
+		-exportOptionsPlist $(IOS_EXPORT_OPTIONS)
+
+harness-mvp-readiness:
+	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_mvp_readiness.sh

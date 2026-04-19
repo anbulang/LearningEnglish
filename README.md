@@ -89,6 +89,13 @@ Build a local Android test APK:
 make mobile-apk
 ```
 
+Build and export a local iOS Debug IPA:
+```bash
+make mobile-ios-ipa
+```
+
+If `make mobile-ios-ipa` fails with provisioning errors, the machine is missing a valid Xcode account for the configured Apple Development team. In that case, simulator verification can still proceed, but IPA export remains blocked until Xcode Accounts is fixed.
+
 To point the mobile app at a non-local API host:
 ```bash
 cd apps/mobile
@@ -131,3 +138,8 @@ Use this when preparing a demo or internal test package:
 - MVP defaults to stub providers so it can run without real WeChat, SMS, OCR, or LLM credentials.
 - In non-production environments, phone OTP responses include `debug_code`, currently `123456`.
 - Core demo path: 登录 -> 绑定手机号 -> 创建默认孩子 -> 上传讲义 -> AI 校对 -> 课程详情 -> 复习 -> 报告。
+
+## Harness Deliverables
+- Non-technical trial guide: `docs/harness/non-technical-pilot-guide.md`
+- MVP readiness checklist: `docs/harness/mvp-readiness-checklist.md`
+- iOS export options: `apps/mobile/ios/ExportOptions.debug.plist`
