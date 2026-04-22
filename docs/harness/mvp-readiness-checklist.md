@@ -70,7 +70,7 @@
 - 真实微信、真实短信、真实 OCR/LLM 仍未接入
 - 当前环境仍依赖 stub provider
 - iOS 安装到真机仍依赖本机 Apple Development 签名能力
-- 当前机器的钥匙串里存在 Apple Development identity，但 Xcode 未登录对应 Team `4PZWF88ND8`，导致 `xcodebuild archive` 无法自动生成 provisioning profile
+- 当前机器的钥匙串里存在 Apple Development identity，iOS 工程已统一为 Team `4PZWF88ND8` 与 Bundle ID `com.anbulang.learningenglish`，但 Xcode 未登录对应 Team，导致 `xcodebuild archive` 无法自动生成 provisioning profile
 - 因此本轮已验证到 `Runner.app` 构建成功和模拟器 UI 成功启动，尚未拿到可安装的 Debug IPA
 
 ### 交付判断
