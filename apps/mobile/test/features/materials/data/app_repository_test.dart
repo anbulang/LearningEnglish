@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_english_mobile/features/materials/data/app_repository.dart';
+
+import '../../../helpers/fake_dio_adapter.dart';
 
 void main() {
   group('AppRepository authorization recovery', () {
@@ -16,7 +17,7 @@ void main() {
         BaseOptions(
           baseUrl: 'http://localhost/v1',
         ),
-      )..httpClientAdapter = _SequenceAdapter([
+      )..httpClientAdapter = SequenceDioAdapter([
           (options) {
             seenAuthorizationHeaders
                 .add(options.headers['Authorization'] as String?);
@@ -82,7 +83,7 @@ void main() {
         BaseOptions(
           baseUrl: 'http://localhost/v1',
         ),
-      )..httpClientAdapter = _SequenceAdapter([
+      )..httpClientAdapter = SequenceDioAdapter([
           (_) => ResponseBody.fromString(
                 jsonEncode(<String, dynamic>{'detail': 'Invalid access token'}),
                 401,
@@ -114,28 +115,4 @@ void main() {
       expect(refreshCalls, 1);
     });
   });
-}
-
-class _SequenceAdapter implements HttpClientAdapter {
-  _SequenceAdapter(this._handlers);
-
-  final List<ResponseBody Function(RequestOptions options)> _handlers;
-  var _index = 0;
-
-  @override
-  void close({bool force = false}) {}
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    if (_index >= _handlers.length) {
-      throw StateError('No response configured for request #$_index');
-    }
-    final handler = _handlers[_index];
-    _index += 1;
-    return handler(options);
-  }
 }
