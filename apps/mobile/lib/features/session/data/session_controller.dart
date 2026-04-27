@@ -9,7 +9,8 @@ import '../../../core/storage/secure_storage.dart';
 import '../../auth/data/auth_repository.dart';
 import 'session_models.dart';
 
-final sessionControllerProvider = StateNotifierProvider<SessionController, SessionState>((ref) {
+final sessionControllerProvider =
+    StateNotifierProvider<SessionController, SessionState>((ref) {
   return SessionController(
     authRepository: ref.watch(authRepositoryProvider),
     storage: ref.watch(secureStorageProvider),
@@ -41,7 +42,8 @@ class SessionController extends StateNotifier<SessionState> {
     final accessToken = await _storage.read(_accessTokenKey);
     final refreshToken = await _storage.read(_refreshTokenKey);
     if (refreshToken == null) {
-      state = state.copyWith(stage: SessionStage.signedOut, clearError: true, clearTokens: true);
+      state = state.copyWith(
+          stage: SessionStage.signedOut, clearError: true, clearTokens: true);
       return;
     }
     try {
@@ -57,9 +59,11 @@ class SessionController extends StateNotifier<SessionState> {
         if (cachedParent != null && cachedChildren != null) {
           state = state.copyWith(
             stage: SessionStage.authenticated,
-            parent: ParentAccount.fromJson(jsonDecode(cachedParent) as Map<String, dynamic>),
+            parent: ParentAccount.fromJson(
+                jsonDecode(cachedParent) as Map<String, dynamic>),
             children: (jsonDecode(cachedChildren) as List<dynamic>)
-                .map((item) => ChildProfile.fromJson(item as Map<String, dynamic>))
+                .map((item) =>
+                    ChildProfile.fromJson(item as Map<String, dynamic>))
                 .toList(),
             currentChildId: currentChildId,
             accessToken: accessToken,
@@ -74,10 +78,31 @@ class SessionController extends StateNotifier<SessionState> {
     }
   }
 
+  Future<bool> refreshSession() async {
+    final refreshToken =
+        state.refreshToken ?? await _storage.read(_refreshTokenKey);
+    if (refreshToken == null) {
+      await clearSession();
+      return false;
+    }
+    try {
+      final result = await _authRepository.refresh(refreshToken);
+      await _persistAuthenticated(result);
+      return true;
+    } on DioException {
+      await clearSession();
+      return false;
+    } catch (_) {
+      await clearSession();
+      return false;
+    }
+  }
+
   Future<void> beginWechatLogin() async {
     state = state.copyWith(isBusy: true, clearError: true);
     try {
-      final result = await _authRepository.loginWithWechat('mobile-wechat-parent');
+      final result =
+          await _authRepository.loginWithWechat('mobile-wechat-parent');
       if (result.status == AuthFlowStatus.phoneBindingRequired) {
         state = state.copyWith(
           stage: SessionStage.phoneBindingRequired,
@@ -187,17 +212,20 @@ class SessionController extends StateNotifier<SessionState> {
 
   Future<void> _persistAuthenticated(AuthFlowResult result) async {
     final tokens = result.tokens;
-    final currentChildId = result.children.isEmpty ? null : result.children.first.id;
+    final currentChildId =
+        result.children.isEmpty ? null : result.children.first.id;
     if (tokens != null) {
       await _storage.write(_accessTokenKey, tokens.accessToken);
       await _storage.write(_refreshTokenKey, tokens.refreshToken);
     }
-    await _storage.write(_parentKey, jsonEncode(<String, dynamic>{
-      'id': result.parent.id,
-      'display_name': result.parent.displayName,
-      'avatar_url': result.parent.avatarUrl,
-      'phone_number': result.parent.phoneNumber,
-    }));
+    await _storage.write(
+        _parentKey,
+        jsonEncode(<String, dynamic>{
+          'id': result.parent.id,
+          'display_name': result.parent.displayName,
+          'avatar_url': result.parent.avatarUrl,
+          'phone_number': result.parent.phoneNumber,
+        }));
     await _storage.write(
       _childrenKey,
       jsonEncode(result.children.map((item) => item.toJson()).toList()),

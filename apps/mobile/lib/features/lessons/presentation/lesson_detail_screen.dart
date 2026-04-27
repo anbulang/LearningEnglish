@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
@@ -36,7 +37,11 @@ class LessonDetailScreen extends ConsumerWidget {
                   '${material.teacherName} · ${material.lessonDate.month}/${material.lessonDate.day} · ${material.topic}\n\n${knowledge.lessonSummary}',
               accent: _lessonAccent(material.topic),
               illustration: _lessonIcon(material.topic),
-              badge: const StickerBadge(label: '可开练', icon: Icons.check_circle_rounded, color: AppColors.mintLeaf),
+              assetPath: AppIllustrations.topicFor(material.topic),
+              badge: const StickerBadge(
+                  label: '可开练',
+                  icon: Icons.check_circle_rounded,
+                  color: AppColors.mintLeaf),
             ),
             const SizedBox(height: AppSpacing.md),
             AppCard(
@@ -47,7 +52,8 @@ class LessonDetailScreen extends ConsumerWidget {
                     children: <Widget>[
                       Text('核心单词', style: AppTextStyles.sectionTitle),
                       const SizedBox(width: AppSpacing.sm),
-                      const StickerBadge(label: '词卡包', color: AppColors.skyBlue),
+                      const StickerBadge(
+                          label: '词卡包', color: AppColors.skyBlue),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -63,12 +69,14 @@ class LessonDetailScreen extends ConsumerWidget {
                             ),
                             decoration: BoxDecoration(
                               color: Color.alphaBlend(
-                                _lessonAccent(material.topic).withValues(alpha: 0.12),
+                                _lessonAccent(material.topic)
+                                    .withValues(alpha: 0.12),
                                 AppColors.paperWhite,
                               ),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: Text('${item.word} · ${item.meaningCn}', style: AppTextStyles.body),
+                            child: Text('${item.word} · ${item.meaningCn}',
+                                style: AppTextStyles.body),
                           ),
                         )
                         .toList(),
@@ -85,7 +93,8 @@ class LessonDetailScreen extends ConsumerWidget {
                     children: <Widget>[
                       Text('重点句型', style: AppTextStyles.sectionTitle),
                       const SizedBox(width: AppSpacing.sm),
-                      const StickerBadge(label: '跟读句型', color: AppColors.butterYellow),
+                      const StickerBadge(
+                          label: '跟读句型', color: AppColors.butterYellow),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -115,17 +124,20 @@ class LessonDetailScreen extends ConsumerWidget {
                     runSpacing: AppSpacing.sm,
                     children: <Widget>[
                       FilledButton.icon(
-                        onPressed: () => context.go('/review/session/$materialId'),
+                        onPressed: () =>
+                            context.go('/review/session/$materialId'),
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: const Text('开始本课复习'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => context.go('/review/speaking/$materialId'),
+                        onPressed: () =>
+                            context.go('/review/speaking/$materialId'),
                         icon: const Icon(Icons.mic_none_rounded),
                         label: const Text('口语陪练'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => context.go('/review/coaching/$materialId'),
+                        onPressed: () =>
+                            context.go('/review/coaching/$materialId'),
                         icon: const Icon(Icons.favorite_border_rounded),
                         label: const Text('亲子陪练'),
                       ),
@@ -139,13 +151,16 @@ class LessonDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => StatePanel(
           title: '课程内容暂未就绪',
-          description: describeApiError(error, fallback: '知识包还没有准备好，请稍后刷新或回到资料库查看处理状态。'),
+          description:
+              describeApiError(error, fallback: '知识包还没有准备好，请稍后刷新或回到资料库查看处理状态。'),
+          assetPath: AppIllustrations.stateEmpty,
           action: Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: <Widget>[
               FilledButton(
-                onPressed: () => ref.invalidate(knowledgePackProvider(materialId)),
+                onPressed: () =>
+                    ref.invalidate(knowledgePackProvider(materialId)),
                 child: const Text('刷新'),
               ),
               OutlinedButton(
@@ -160,6 +175,7 @@ class LessonDetailScreen extends ConsumerWidget {
       error: (error, _) => StatePanel(
         title: '课程详情加载失败',
         description: describeApiError(error, fallback: '课程详情加载失败，请稍后重试。'),
+        assetPath: AppIllustrations.stateError,
         action: FilledButton(
           onPressed: () => ref.invalidate(materialProvider(materialId)),
           child: const Text('重新加载'),
@@ -168,7 +184,8 @@ class LessonDetailScreen extends ConsumerWidget {
     );
 
     if (!formFactor.isTablet) {
-      return Scaffold(appBar: AppBar(title: const Text('课程详情')), body: detailContent);
+      return Scaffold(
+          appBar: AppBar(title: const Text('课程详情')), body: detailContent);
     }
 
     return Scaffold(
@@ -195,7 +212,17 @@ class LessonDetailScreen extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const <Widget>[
-                              Icon(Icons.article_rounded, size: 48, color: AppColors.cocoaCoral),
+                              ClipRRect(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(28)),
+                                child: Image(
+                                  image:
+                                      AssetImage(AppIllustrations.heroLesson),
+                                  width: 148,
+                                  height: 148,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
                               SizedBox(height: AppSpacing.sm),
                               Text('Worksheet / PDF Preview'),
                             ],
@@ -217,13 +244,21 @@ class LessonDetailScreen extends ConsumerWidget {
 }
 
 Color _lessonAccent(String topic) {
-  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return AppColors.mintLeaf;
-  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return AppColors.butterYellow;
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) {
+    return AppColors.mintLeaf;
+  }
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) {
+    return AppColors.butterYellow;
+  }
   return AppColors.skyBlue;
 }
 
 IconData _lessonIcon(String topic) {
-  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return Icons.pets_rounded;
-  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return Icons.looks_one_rounded;
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) {
+    return Icons.pets_rounded;
+  }
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) {
+    return Icons.looks_one_rounded;
+  }
   return Icons.menu_book_rounded;
 }

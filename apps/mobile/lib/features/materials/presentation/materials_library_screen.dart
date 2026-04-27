@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
@@ -26,7 +27,9 @@ class MaterialsLibraryScreen extends ConsumerWidget {
           description: '先搜主题，再按状态筛选。每一课都带上更清楚的主题缩略图和复习状态。',
           accent: AppColors.skyBlue,
           illustration: Icons.collections_bookmark_rounded,
-          badge: const StickerBadge(label: '讲义宝', icon: Icons.auto_awesome_rounded),
+          assetPath: AppIllustrations.heroUpload,
+          badge: const StickerBadge(
+              label: '讲义宝', icon: Icons.auto_awesome_rounded),
         ),
         const SizedBox(height: AppSpacing.md),
         TextField(
@@ -58,6 +61,7 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                 StatePanel(
                   title: '还没有课程资料',
                   description: '上传第一份讲义后，这里会自动整理成课程卡片。',
+                  assetPath: AppIllustrations.stateEmpty,
                   action: FilledButton(
                     onPressed: () => context.go('/materials/scan'),
                     child: const Text('上传第一份讲义'),
@@ -80,6 +84,8 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                               subtitle: material.topic,
                               icon: _libraryIcon(material.topic),
                               accent: _libraryAccent(material.topic),
+                              assetPath:
+                                  AppIllustrations.topicFor(material.topic),
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
@@ -88,7 +94,9 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                                 children: <Widget>[
                                   Row(
                                     children: <Widget>[
-                                      Expanded(child: Text(material.title, style: AppTextStyles.cardTitle)),
+                                      Expanded(
+                                          child: Text(material.title,
+                                              style: AppTextStyles.cardTitle)),
                                       MaterialStatusChip(material.status),
                                     ],
                                   ),
@@ -97,7 +105,8 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                                     '${material.lessonDate.month}/${material.lessonDate.day} · ${material.teacherName}',
                                   ),
                                   const SizedBox(height: AppSpacing.xs),
-                                  Text('主题：${material.topic}', style: AppTextStyles.helper),
+                                  Text('主题：${material.topic}',
+                                      style: AppTextStyles.helper),
                                 ],
                               ),
                             ),
@@ -119,6 +128,7 @@ class MaterialsLibraryScreen extends ConsumerWidget {
             StatePanel(
               title: '资料库加载失败',
               description: '请检查网络或稍后重试。',
+              assetPath: AppIllustrations.stateNetwork,
               action: FilledButton(
                 onPressed: () => ref.invalidate(materialsProvider),
                 child: const Text('重新加载'),
@@ -147,7 +157,9 @@ class MaterialsLibraryScreen extends ConsumerWidget {
       );
     }
 
-    final selected = materials.valueOrNull?.isNotEmpty == true ? materials.valueOrNull!.first : null;
+    final selected = materials.valueOrNull?.isNotEmpty == true
+        ? materials.valueOrNull!.first
+        : null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('资料库'),
@@ -171,6 +183,7 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                   ? const StatePanel(
                       title: '选择一份课程资料',
                       description: '平板模式下会在右侧显示讲义摘要和详情入口。',
+                      assetPath: AppIllustrations.stateEmpty,
                     )
                   : AppCard(
                       child: Column(
@@ -182,7 +195,11 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                             description: '右侧保留摘要与 OCR 内容，帮助你在平板上更快决定先复习哪一课。',
                             accent: _libraryAccent(selected.topic),
                             illustration: _libraryIcon(selected.topic),
-                            badge: StickerBadge(label: selected.topic, color: _libraryAccent(selected.topic)),
+                            assetPath:
+                                AppIllustrations.topicFor(selected.topic),
+                            badge: StickerBadge(
+                                label: selected.topic,
+                                color: _libraryAccent(selected.topic)),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           const Text('OCR 摘要'),
@@ -192,7 +209,8 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                           Align(
                             alignment: Alignment.bottomLeft,
                             child: FilledButton(
-                              onPressed: () => context.go('/lessons/${selected.id}'),
+                              onPressed: () =>
+                                  context.go('/lessons/${selected.id}'),
                               child: const Text('查看课程详情'),
                             ),
                           ),
@@ -208,15 +226,27 @@ class MaterialsLibraryScreen extends ConsumerWidget {
 }
 
 Color _libraryAccent(String topic) {
-  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return AppColors.mintLeaf;
-  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return AppColors.butterYellow;
-  if (topic.contains('自然拼读') || topic.toLowerCase().contains('phonics')) return AppColors.skyBlue;
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) {
+    return AppColors.mintLeaf;
+  }
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) {
+    return AppColors.butterYellow;
+  }
+  if (topic.contains('自然拼读') || topic.toLowerCase().contains('phonics')) {
+    return AppColors.skyBlue;
+  }
   return AppColors.softSheet;
 }
 
 IconData _libraryIcon(String topic) {
-  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return Icons.pets_rounded;
-  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return Icons.pin_rounded;
-  if (topic.contains('自然拼读') || topic.toLowerCase().contains('phonics')) return Icons.record_voice_over_rounded;
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) {
+    return Icons.pets_rounded;
+  }
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) {
+    return Icons.pin_rounded;
+  }
+  if (topic.contains('自然拼读') || topic.toLowerCase().contains('phonics')) {
+    return Icons.record_voice_over_rounded;
+  }
   return Icons.menu_book_rounded;
 }

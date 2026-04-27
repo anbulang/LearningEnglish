@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
@@ -46,7 +47,11 @@ class _PhoneBindingScreenState extends ConsumerState<PhoneBindingScreen> {
                     description: '首次登录需要补一次手机号绑定。开发环境会直接返回验证码，方便完整体验整条复习流程。',
                     accent: AppColors.skyBlue,
                     illustration: Icons.phone_iphone_rounded,
-                    badge: StickerBadge(label: '开发模式', icon: Icons.sms_rounded, color: AppColors.butterYellow),
+                    assetPath: AppIllustrations.stateSuccess,
+                    badge: StickerBadge(
+                        label: '开发模式',
+                        icon: Icons.sms_rounded,
+                        color: AppColors.butterYellow),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppCard(
@@ -69,7 +74,8 @@ class _PhoneBindingScreenState extends ConsumerState<PhoneBindingScreen> {
                             Expanded(
                               child: TextField(
                                 controller: _otpController,
-                                decoration: const InputDecoration(labelText: '验证码'),
+                                decoration:
+                                    const InputDecoration(labelText: '验证码'),
                                 keyboardType: TextInputType.number,
                               ),
                             ),
@@ -79,8 +85,10 @@ class _PhoneBindingScreenState extends ConsumerState<PhoneBindingScreen> {
                                   ? null
                                   : () async {
                                       final otp = await ref
-                                          .read(sessionControllerProvider.notifier)
-                                          .requestOtp(_phoneController.text.trim());
+                                          .read(sessionControllerProvider
+                                              .notifier)
+                                          .requestOtp(
+                                              _phoneController.text.trim());
                                       if (!mounted) {
                                         return;
                                       }
@@ -100,10 +108,12 @@ class _PhoneBindingScreenState extends ConsumerState<PhoneBindingScreen> {
                           Container(
                             padding: const EdgeInsets.all(AppSpacing.sm),
                             decoration: BoxDecoration(
-                              color: AppColors.butterYellow.withValues(alpha: 0.32),
+                              color: AppColors.butterYellow
+                                  .withValues(alpha: 0.32),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Text('开发环境验证码：$_debugOtp', style: AppTextStyles.helper),
+                            child: Text('开发环境验证码：$_debugOtp',
+                                style: AppTextStyles.helper),
                           ),
                         ],
                         if (session.errorMessage != null) ...<Widget>[
@@ -112,13 +122,16 @@ class _PhoneBindingScreenState extends ConsumerState<PhoneBindingScreen> {
                             title: '绑定失败',
                             description: session.errorMessage!,
                             icon: Icons.error_outline_rounded,
+                            assetPath: AppIllustrations.stateError,
                           ),
                         ],
                         const SizedBox(height: AppSpacing.lg),
                         FilledButton(
                           onPressed: session.isBusy
                               ? null
-                              : () => ref.read(sessionControllerProvider.notifier).bindPhone(
+                              : () => ref
+                                  .read(sessionControllerProvider.notifier)
+                                  .bindPhone(
                                     phoneNumber: _phoneController.text.trim(),
                                     otpCode: _otpController.text.trim(),
                                   ),

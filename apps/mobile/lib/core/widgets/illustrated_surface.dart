@@ -9,12 +9,14 @@ class IllustratedHeroCard extends StatelessWidget {
     required this.accent,
     required this.illustration,
     super.key,
+    this.assetPath,
     this.badge,
     this.actions = const <Widget>[],
   });
 
   final Color accent;
   final List<Widget> actions;
+  final String? assetPath;
   final Widget? badge;
   final String description;
   final String eyebrow;
@@ -28,7 +30,8 @@ class IllustratedHeroCard extends StatelessWidget {
         gradient: LinearGradient(
           colors: <Color>[
             AppColors.paperWhite,
-            Color.alphaBlend(accent.withValues(alpha: 0.16), AppColors.softSheet),
+            Color.alphaBlend(
+                accent.withValues(alpha: 0.16), AppColors.softSheet),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -46,12 +49,18 @@ class IllustratedHeroCard extends StatelessWidget {
           Positioned(
             bottom: -28,
             right: 48,
-            child: _Blob(size: 92, color: AppColors.butterYellow.withValues(alpha: 0.24)),
+            child: _Blob(
+                size: 92,
+                color: AppColors.butterYellow.withValues(alpha: 0.24)),
           ),
           Positioned(
             top: 26,
             right: 18,
-            child: _IllustrationStamp(icon: illustration, accent: accent),
+            child: _IllustrationStamp(
+              icon: illustration,
+              accent: accent,
+              assetPath: assetPath,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -111,9 +120,11 @@ class LessonCoverThumbnail extends StatelessWidget {
     required this.icon,
     required this.accent,
     super.key,
+    this.assetPath,
   });
 
   final Color accent;
+  final String? assetPath;
   final IconData icon;
   final String subtitle;
   final String title;
@@ -126,7 +137,8 @@ class LessonCoverThumbnail extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: <Color>[
-            Color.alphaBlend(accent.withValues(alpha: 0.24), AppColors.paperWhite),
+            Color.alphaBlend(
+                accent.withValues(alpha: 0.24), AppColors.paperWhite),
             AppColors.paperWhite,
           ],
           begin: Alignment.topCenter,
@@ -139,19 +151,35 @@ class LessonCoverThumbnail extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Center(
-                child: Icon(icon, color: AppColors.cocoaCoral, size: 28),
-              ),
+              child: assetPath == null
+                  ? Center(
+                      child: Icon(icon, color: AppColors.cocoaCoral, size: 28),
+                    )
+                  : Image.asset(
+                      assetPath!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                        child:
+                            Icon(icon, color: AppColors.cocoaCoral, size: 28),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(title, style: AppTextStyles.cardTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(title,
+              style: AppTextStyles.cardTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
           const SizedBox(height: AppSpacing.xxs),
-          Text(subtitle, style: AppTextStyles.helper, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(subtitle,
+              style: AppTextStyles.helper,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -177,7 +205,8 @@ class StickerBadge extends StatelessWidget {
     return Transform.rotate(
       angle: -0.06,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -192,7 +221,8 @@ class StickerBadge extends StatelessWidget {
             ],
             Text(
               label,
-              style: AppTextStyles.helper.copyWith(color: textColor, fontWeight: FontWeight.w700),
+              style: AppTextStyles.helper
+                  .copyWith(color: textColor, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -205,9 +235,11 @@ class _IllustrationStamp extends StatelessWidget {
   const _IllustrationStamp({
     required this.icon,
     required this.accent,
+    this.assetPath,
   });
 
   final Color accent;
+  final String? assetPath;
   final IconData icon;
 
   @override
@@ -215,25 +247,50 @@ class _IllustrationStamp extends StatelessWidget {
     return Container(
       width: 112,
       height: 112,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.paperWhite.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(34),
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Positioned(
-            top: 18,
-            child: Icon(Icons.auto_awesome, color: AppColors.butterYellow, size: 18),
-          ),
-          Icon(icon, color: accent, size: 52),
-          Positioned(
-            bottom: 16,
-            right: 20,
-            child: Icon(Icons.star_rounded, color: AppColors.coralJam.withValues(alpha: 0.88), size: 16),
-          ),
-        ],
-      ),
+      child: assetPath == null
+          ? _FallbackStampIcon(icon: icon, accent: accent)
+          : Image.asset(
+              assetPath!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  _FallbackStampIcon(icon: icon, accent: accent),
+            ),
+    );
+  }
+}
+
+class _FallbackStampIcon extends StatelessWidget {
+  const _FallbackStampIcon({
+    required this.icon,
+    required this.accent,
+  });
+
+  final Color accent;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        Positioned(
+          top: 18,
+          child:
+              Icon(Icons.auto_awesome, color: AppColors.butterYellow, size: 18),
+        ),
+        Icon(icon, color: accent, size: 52),
+        Positioned(
+          bottom: 16,
+          right: 20,
+          child: Icon(Icons.star_rounded,
+              color: AppColors.coralJam.withValues(alpha: 0.88), size: 16),
+        ),
+      ],
     );
   }
 }

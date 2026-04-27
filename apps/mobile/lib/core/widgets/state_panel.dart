@@ -9,10 +9,12 @@ class StatePanel extends StatelessWidget {
     required this.description,
     super.key,
     this.icon = Icons.info_outline_rounded,
+    this.assetPath,
     this.action,
   });
 
   final Widget? action;
+  final String? assetPath;
   final String description;
   final IconData icon;
   final String title;
@@ -23,9 +25,10 @@ class StatePanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(icon, size: 40, color: AppColors.coralJam),
+          _StateVisual(icon: icon, assetPath: assetPath),
           const SizedBox(height: AppSpacing.sm),
-          Text(title, style: AppTextStyles.sectionTitle, textAlign: TextAlign.center),
+          Text(title,
+              style: AppTextStyles.sectionTitle, textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.xs),
           Text(description, textAlign: TextAlign.center),
           if (action != null) ...<Widget>[
@@ -33,6 +36,34 @@ class StatePanel extends StatelessWidget {
             action!,
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _StateVisual extends StatelessWidget {
+  const _StateVisual({
+    required this.icon,
+    this.assetPath,
+  });
+
+  final String? assetPath;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    if (assetPath == null) {
+      return Icon(icon, size: 40, color: AppColors.coralJam);
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: Image.asset(
+        assetPath!,
+        width: 112,
+        height: 112,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            Icon(icon, size: 40, color: AppColors.coralJam),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
@@ -23,7 +24,8 @@ class MaterialReviewScreen extends ConsumerStatefulWidget {
   final String materialId;
 
   @override
-  ConsumerState<MaterialReviewScreen> createState() => _MaterialReviewScreenState();
+  ConsumerState<MaterialReviewScreen> createState() =>
+      _MaterialReviewScreenState();
 }
 
 class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
@@ -73,7 +75,9 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
       _actionError = null;
     });
     try {
-      await ref.read(appRepositoryProvider).retryMaterialJob(jobId: widget.jobId);
+      await ref
+          .read(appRepositoryProvider)
+          .retryMaterialJob(jobId: widget.jobId);
       ref.invalidate(materialJobProvider(widget.jobId));
       ref.invalidate(materialsProvider);
     } catch (error) {
@@ -99,7 +103,8 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
 
     final extracted = jobAsync.when(
       data: (job) {
-        if (job.status == JobStatus.processing || job.status == JobStatus.queued) {
+        if (job.status == JobStatus.processing ||
+            job.status == JobStatus.queued) {
           return Column(
             children: <Widget>[
               const IllustratedHeroCard(
@@ -108,14 +113,21 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 description: '系统会先识别课题、单词和句型，再交给家长确认。这个阶段只需要稍后刷新看结果。',
                 accent: AppColors.skyBlue,
                 illustration: Icons.psychology_alt_rounded,
-                badge: StickerBadge(label: '处理中', icon: Icons.hourglass_top_rounded, color: AppColors.skyBlue),
+                assetPath: AppIllustrations.heroAiProcessing,
+                badge: StickerBadge(
+                    label: '处理中',
+                    icon: Icons.hourglass_top_rounded,
+                    color: AppColors.skyBlue),
               ),
               const SizedBox(height: AppSpacing.md),
               StatePanel(
                 title: 'AI 正在处理中',
                 description: '讲义已上传成功，正在提取单词和句型。稍后刷新即可查看结果。',
+                assetPath: AppIllustrations.heroAiProcessing,
                 action: FilledButton(
-                  onPressed: _submitting ? null : () => ref.invalidate(materialJobProvider(widget.jobId)),
+                  onPressed: _submitting
+                      ? null
+                      : () => ref.invalidate(materialJobProvider(widget.jobId)),
                   child: const Text('刷新结果'),
                 ),
               ),
@@ -131,12 +143,17 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 description: '本课知识包已经生成，接下来可以进入课程详情、词卡练习、口语陪练和亲子陪练。',
                 accent: AppColors.mintLeaf,
                 illustration: Icons.check_circle_rounded,
-                badge: StickerBadge(label: '可复习', icon: Icons.auto_awesome_rounded, color: AppColors.mintLeaf),
+                assetPath: AppIllustrations.heroAiReady,
+                badge: StickerBadge(
+                    label: '可复习',
+                    icon: Icons.auto_awesome_rounded,
+                    color: AppColors.mintLeaf),
               ),
               const SizedBox(height: AppSpacing.md),
               StatePanel(
                 title: '课程详情已生成',
                 description: '本课知识包已经准备好，可以直接进入课程详情开始复习。',
+                assetPath: AppIllustrations.stateSuccess,
                 action: FilledButton(
                   onPressed: () => context.go('/lessons/${widget.materialId}'),
                   child: const Text('查看课程详情'),
@@ -154,13 +171,18 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 description: '真实讲义有时会因为图片质量或排版复杂而失败。你可以直接重新处理。',
                 accent: AppColors.coralJam,
                 illustration: Icons.refresh_rounded,
-                badge: StickerBadge(label: '可重试', icon: Icons.replay_rounded, color: AppColors.errorSurface),
+                assetPath: AppIllustrations.heroAiRetry,
+                badge: StickerBadge(
+                    label: '可重试',
+                    icon: Icons.replay_rounded,
+                    color: AppColors.errorSurface),
               ),
               const SizedBox(height: AppSpacing.md),
               StatePanel(
                 title: 'AI 处理失败',
                 description: _actionError ?? job.confidenceSummary,
                 icon: Icons.error_outline_rounded,
+                assetPath: AppIllustrations.stateError,
                 action: FilledButton(
                   onPressed: _submitting ? null : _retryJob,
                   child: Text(_submitting ? '重试中...' : '重新处理'),
@@ -179,7 +201,9 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 description: '先确认标题、主题、词汇和句型。低置信度内容会用提醒样式突出显示。',
                 accent: AppColors.coralJam,
                 illustration: Icons.fact_check_rounded,
-                badge: StickerBadge(label: '审核确认', icon: Icons.edit_note_rounded),
+                assetPath: AppIllustrations.heroAiReady,
+                badge:
+                    StickerBadge(label: '审核确认', icon: Icons.edit_note_rounded),
               ),
               const SizedBox(height: AppSpacing.md),
               Text('AI 识别结果', style: AppTextStyles.sectionTitle),
@@ -240,7 +264,8 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                       ),
                       child: Row(
                         children: <Widget>[
-                          const Icon(Icons.subtitles_rounded, color: AppColors.cocoaCoral),
+                          const Icon(Icons.subtitles_rounded,
+                              color: AppColors.cocoaCoral),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(child: Text(sentence)),
                         ],
@@ -272,6 +297,7 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                   title: '操作失败',
                   description: _actionError!,
                   icon: Icons.error_outline_rounded,
+                  assetPath: AppIllustrations.stateError,
                 ),
               ],
               const SizedBox(height: AppSpacing.md),
@@ -297,6 +323,7 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
       error: (error, _) => StatePanel(
         title: 'AI 校对加载失败',
         description: describeApiError(error, fallback: '校对结果暂时不可用，请稍后重试。'),
+        assetPath: AppIllustrations.stateError,
         action: FilledButton(
           onPressed: () => ref.invalidate(materialJobProvider(widget.jobId)),
           child: const Text('重试'),
@@ -334,7 +361,15 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: const <Widget>[
-                          Icon(Icons.description_rounded, size: 52, color: AppColors.cocoaCoral),
+                          ClipRRect(
+                            borderRadius: BorderRadius.all(Radius.circular(28)),
+                            child: Image(
+                              image: AssetImage(AppIllustrations.heroUpload),
+                              width: 148,
+                              height: 148,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                           SizedBox(height: AppSpacing.sm),
                           Text('原始讲义预览'),
                         ],

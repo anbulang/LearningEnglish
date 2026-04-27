@@ -5,6 +5,7 @@ import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/analytics/app_analytics.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
@@ -39,7 +40,9 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
         padding: const EdgeInsets.all(AppSpacing.md),
         child: allTasks.when(
           data: (items) {
-            final tasks = items.where((task) => task.materialId == widget.materialId).toList();
+            final tasks = items
+                .where((task) => task.materialId == widget.materialId)
+                .toList();
             if (tasks.isEmpty || child == null) {
               return const Center(child: Text('当前没有可进行的复习任务'));
             }
@@ -51,16 +54,21 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
                     currentIndex: _currentIndex,
                     totalCount: tasks.length,
                     onNext: () async {
-                      if (_currentIndex + 1 == tasks.length && !_sessionRecorded) {
-                        await ref.read(appRepositoryProvider).createPracticeSession(
-                              childId: child.id,
-                              reviewTaskIds: tasks.map((task) => task.id).toList(),
-                              score: 92,
-                              weakPoints: const <String>['bird'],
-                            );
+                      if (_currentIndex + 1 == tasks.length &&
+                          !_sessionRecorded) {
+                        await ref
+                            .read(appRepositoryProvider)
+                            .createPracticeSession(
+                          childId: child.id,
+                          reviewTaskIds: tasks.map((task) => task.id).toList(),
+                          score: 92,
+                          weakPoints: const <String>['bird'],
+                        );
                         ref.invalidate(reviewTasksProvider);
                         ref.invalidate(weeklyReportProvider);
-                        ref.read(appAnalyticsProvider).track('review_session_completed', {
+                        ref
+                            .read(appAnalyticsProvider)
+                            .track('review_session_completed', {
                           'materialId': widget.materialId,
                           'taskCount': tasks.length,
                         });
@@ -78,6 +86,7 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
           error: (error, _) => StatePanel(
             title: '复习任务加载失败',
             description: describeApiError(error, fallback: '复习任务加载失败，请稍后重试。'),
+            assetPath: AppIllustrations.stateError,
             action: FilledButton(
               onPressed: () => ref.invalidate(reviewTasksProvider),
               child: const Text('重新加载'),
@@ -113,6 +122,7 @@ class _ReviewTaskStage extends StatelessWidget {
           description: '第 ${currentIndex + 1} 题，共 $totalCount 题。一步一步完成就好。',
           accent: _taskAccent(task.taskType),
           illustration: _taskIcon(task.taskType),
+          assetPath: _taskAsset(task),
           badge: StickerBadge(
             label: '任务 ${currentIndex + 1}/$totalCount',
             icon: Icons.flag_rounded,
@@ -124,7 +134,8 @@ class _ReviewTaskStage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('任务 ${currentIndex + 1} / $totalCount', style: AppTextStyles.helper),
+              Text('任务 ${currentIndex + 1} / $totalCount',
+                  style: AppTextStyles.helper),
               const SizedBox(height: AppSpacing.xs),
               LinearProgressIndicator(
                 value: (currentIndex + 1) / totalCount,
@@ -158,21 +169,34 @@ class _TaskSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (task.taskType) {
       case TaskType.flashcard:
+        final word = task.contentJson['word'] as String? ?? '';
+        final assetPath =
+            AppIllustrations.vocabularyFor(word) ?? AppIllustrations.heroLesson;
         return AppCard(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: <Widget>[
-              Container(
-                width: 148,
-                height: 148,
-                decoration: BoxDecoration(
-                  color: AppColors.skyBlue.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(40),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(40),
+                child: Image.asset(
+                  assetPath,
+                  width: 148,
+                  height: 148,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 148,
+                    height: 148,
+                    decoration: BoxDecoration(
+                      color: AppColors.skyBlue.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    child: const Icon(Icons.pets_rounded,
+                        size: 64, color: AppColors.cocoaCoral),
+                  ),
                 ),
-                child: const Icon(Icons.pets_rounded, size: 64, color: AppColors.cocoaCoral),
               ),
               const SizedBox(height: AppSpacing.md),
-              Text(task.contentJson['word'] as String? ?? '', style: AppTextStyles.pageTitle),
+              Text(word, style: AppTextStyles.pageTitle),
               const SizedBox(height: AppSpacing.sm),
               Text(task.contentJson['hint'] as String? ?? '点击播放音频并跟读'),
               const SizedBox(height: AppSpacing.md),
@@ -181,8 +205,8 @@ class _TaskSurface extends StatelessWidget {
           ),
         );
       case TaskType.listenChoice:
-        final choices =
-            List<String>.from(task.contentJson['choices'] as List<dynamic>? ?? const <String>[]);
+        final choices = List<String>.from(
+            task.contentJson['choices'] as List<dynamic>? ?? const <String>[]);
         return Column(
           children: choices
               .map(
@@ -198,7 +222,15 @@ class _TaskSurface extends StatelessWidget {
                           color: AppColors.skyBlue.withValues(alpha: 0.22),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.hearing_rounded, color: AppColors.cocoaCoral),
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.asset(
+                          AppIllustrations.vocabularyFor(choice) ??
+                              AppIllustrations.heroLesson,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.hearing_rounded,
+                              color: AppColors.cocoaCoral),
+                        ),
                       ),
                       title: Text(choice),
                     ),
@@ -208,10 +240,10 @@ class _TaskSurface extends StatelessWidget {
               .toList(),
         );
       case TaskType.matchChoice:
-        final left =
-            List<String>.from(task.contentJson['left'] as List<dynamic>? ?? const <String>[]);
-        final right =
-            List<String>.from(task.contentJson['right'] as List<dynamic>? ?? const <String>[]);
+        final left = List<String>.from(
+            task.contentJson['left'] as List<dynamic>? ?? const <String>[]);
+        final right = List<String>.from(
+            task.contentJson['right'] as List<dynamic>? ?? const <String>[]);
         return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +280,8 @@ class _TaskSurface extends StatelessWidget {
         );
       case TaskType.speakingPrompt:
       case TaskType.parentCoaching:
-        return AppCard(child: Text(task.contentJson['prompt'] as String? ?? '任务'));
+        return AppCard(
+            child: Text(task.contentJson['prompt'] as String? ?? '任务'));
     }
   }
 }
@@ -268,7 +301,9 @@ class _ReviewFinishedState extends StatelessWidget {
           description: '现在可以继续做口语问答，也可以切到亲子陪练，让家长跟着提示再陪孩子说一轮。',
           accent: AppColors.mintLeaf,
           illustration: Icons.workspace_premium_rounded,
-          badge: StickerBadge(label: 'Good job', icon: Icons.celebration_rounded),
+          assetPath: AppIllustrations.stateSuccess,
+          badge:
+              StickerBadge(label: 'Good job', icon: Icons.celebration_rounded),
         ),
         const SizedBox(height: AppSpacing.md),
         AppCard(
@@ -302,6 +337,25 @@ class _ReviewFinishedState extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+String _taskAsset(ReviewTask task) {
+  final word = task.contentJson['word'] as String?;
+  if (word != null) {
+    return AppIllustrations.vocabularyFor(word) ?? AppIllustrations.heroLesson;
+  }
+  switch (task.taskType) {
+    case TaskType.flashcard:
+      return AppIllustrations.heroLesson;
+    case TaskType.listenChoice:
+      return AppIllustrations.heroSpeakingPartner;
+    case TaskType.matchChoice:
+      return AppIllustrations.topicDialogue;
+    case TaskType.speakingPrompt:
+      return AppIllustrations.heroSpeakingPartner;
+    case TaskType.parentCoaching:
+      return AppIllustrations.heroParentCoaching;
   }
 }
 

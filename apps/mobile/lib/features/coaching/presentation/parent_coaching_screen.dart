@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
@@ -33,7 +34,9 @@ class ParentCoachingScreen extends ConsumerWidget {
               description: script.intro,
               accent: AppColors.coralJam,
               illustration: Icons.favorite_rounded,
-              badge: const StickerBadge(label: '家长跟着说', icon: Icons.record_voice_over_rounded),
+              assetPath: AppIllustrations.heroParentCoaching,
+              badge: const StickerBadge(
+                  label: '家长跟着说', icon: Icons.record_voice_over_rounded),
             ),
             const SizedBox(height: AppSpacing.md),
             ...script.steps.map(
@@ -47,7 +50,8 @@ class ParentCoachingScreen extends ConsumerWidget {
                         children: <Widget>[
                           Text(step.title, style: AppTextStyles.cardTitle),
                           const SizedBox(width: AppSpacing.sm),
-                          const StickerBadge(label: '陪练步骤', color: AppColors.butterYellow),
+                          const StickerBadge(
+                              label: '陪练步骤', color: AppColors.butterYellow),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -68,8 +72,10 @@ class ParentCoachingScreen extends ConsumerWidget {
       error: (error, _) => StatePanel(
         title: '亲子陪练脚本加载失败',
         description: describeApiError(error, fallback: '亲子陪练脚本暂时不可用，请稍后重试。'),
+        assetPath: AppIllustrations.stateError,
         action: FilledButton(
-          onPressed: () => ref.invalidate(parentCoachingScriptProvider(materialId)),
+          onPressed: () =>
+              ref.invalidate(parentCoachingScriptProvider(materialId)),
           child: const Text('刷新脚本'),
         ),
       ),

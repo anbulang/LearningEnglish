@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
@@ -31,17 +32,21 @@ class HomeScreen extends ConsumerWidget {
           child: StatePanel(
             title: '还没有孩子档案',
             description: '先创建一个孩子档案，再开始上传讲义和生成复习包。',
+            assetPath: AppIllustrations.stateEmpty,
             action: FilledButton(
               onPressed: () async {
-                final created = await ref.read(appRepositoryProvider).createChild(
-                      name: 'Mia',
-                      age: 6,
-                      level: 'starter',
-                      learningGoal: '课后复习更稳定',
-                      preferredReviewDurationMinutes: 10,
-                      parentNotes: '更喜欢看图认词',
-                    );
-                await ref.read(sessionControllerProvider.notifier).addChild(created);
+                final created =
+                    await ref.read(appRepositoryProvider).createChild(
+                          name: 'Mia',
+                          age: 6,
+                          level: 'starter',
+                          learningGoal: '课后复习更稳定',
+                          preferredReviewDurationMinutes: 10,
+                          parentNotes: '更喜欢看图认词',
+                        );
+                await ref
+                    .read(sessionControllerProvider.notifier)
+                    .addChild(created);
               },
               child: const Text('创建默认孩子档案'),
             ),
@@ -57,13 +62,16 @@ class HomeScreen extends ConsumerWidget {
           eyebrow: '今日陪学',
           title: '和 ${child.name} 一起把课堂讲义变成小课包',
           description: tasks.when(
-            data: (items) => '今天建议先完成 ${items.length} 个任务，控制在 ${child.preferredReviewDurationMinutes} 分钟内。',
+            data: (items) =>
+                '今天建议先完成 ${items.length} 个任务，控制在 ${child.preferredReviewDurationMinutes} 分钟内。',
             loading: () => '正在同步今天的复习任务...',
             error: (_, __) => '任务同步失败，请稍后重试。',
           ),
           accent: AppColors.coralJam,
           illustration: Icons.menu_book_rounded,
-          badge: const StickerBadge(label: '轻松 10 分钟', icon: Icons.auto_awesome_rounded),
+          assetPath: AppIllustrations.heroHome,
+          badge: const StickerBadge(
+              label: '轻松 10 分钟', icon: Icons.auto_awesome_rounded),
           actions: <Widget>[
             FilledButton.icon(
               onPressed: () => context.go('/materials/scan'),
@@ -74,7 +82,9 @@ class HomeScreen extends ConsumerWidget {
               onPressed: () {
                 final loadedMaterials = materials.valueOrNull;
                 final firstMaterial =
-                    loadedMaterials != null && loadedMaterials.isNotEmpty ? loadedMaterials.first : null;
+                    loadedMaterials != null && loadedMaterials.isNotEmpty
+                        ? loadedMaterials.first
+                        : null;
                 if (firstMaterial != null) {
                   context.go('/review/session/${firstMaterial.id}');
                 } else {
@@ -95,7 +105,10 @@ class HomeScreen extends ConsumerWidget {
                 children: <Widget>[
                   Text('今日待复习', style: AppTextStyles.sectionTitle),
                   const SizedBox(width: AppSpacing.sm),
-                  const StickerBadge(label: '鼓励模式', icon: Icons.favorite_rounded, color: AppColors.mintLeaf),
+                  const StickerBadge(
+                      label: '鼓励模式',
+                      icon: Icons.favorite_rounded,
+                      color: AppColors.mintLeaf),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -108,15 +121,19 @@ class HomeScreen extends ConsumerWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: _taskAccent(task.taskType.value).withValues(alpha: 0.18),
+                            color: _taskAccent(task.taskType.value)
+                                .withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Icon(_taskIcon(task.taskType.value), color: AppColors.cocoaCoral),
+                          child: Icon(_taskIcon(task.taskType.value),
+                              color: AppColors.cocoaCoral),
                         ),
-                        title: Text(task.contentJson['prompt'] as String? ?? '复习任务'),
+                        title: Text(
+                            task.contentJson['prompt'] as String? ?? '复习任务'),
                         subtitle: Text(task.taskType.value),
                         trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () => context.go('/review/session/${task.materialId}'),
+                        onTap: () =>
+                            context.go('/review/session/${task.materialId}'),
                       ),
                     )
                     .toList(),
@@ -155,13 +172,16 @@ class HomeScreen extends ConsumerWidget {
                                 subtitle: material.topic,
                                 icon: _topicIcon(material.topic),
                                 accent: _topicAccent(material.topic),
+                                assetPath:
+                                    AppIllustrations.topicFor(material.topic),
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    Text(material.title, style: AppTextStyles.cardTitle),
+                                    Text(material.title,
+                                        style: AppTextStyles.cardTitle),
                                     const SizedBox(height: AppSpacing.xs),
                                     Text(
                                       '${material.teacherName} · ${material.topic}',
@@ -209,60 +229,67 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
-                    children: <Widget>[
-                      AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text('本周进度', style: AppTextStyles.sectionTitle),
-                            const SizedBox(height: AppSpacing.sm),
-                            ...report.when(
-                              data: (value) => <Widget>[
-                                _metricRow('已完成复习', '${value.completedSessions} 次', Icons.bookmark_added_rounded),
-                                _metricRow('复习单词', '${value.reviewedWords} 个', Icons.style_rounded),
-                                _metricRow('口语尝试', '${value.speakingAttempts} 次', Icons.mic_rounded),
-                              ],
-                              loading: () => const <Widget>[CircularProgressIndicator()],
-                              error: (_, __) => const <Widget>[Text('报告加载失败')],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppCard(
+                children: <Widget>[
+                  AppCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text('本周薄弱点', style: AppTextStyles.sectionTitle),
-                          const SizedBox(height: AppSpacing.sm),
-                          ...report.when(
-                            data: (value) => value.weakItems
-                                .map(
-                                  (item) => Padding(
-                                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(AppSpacing.sm),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.softSheet,
-                                        borderRadius: BorderRadius.circular(18),
-                                      ),
-                                      child: Row(
-                                        children: <Widget>[
-                                          const Icon(Icons.push_pin_rounded, color: AppColors.coralJam),
-                                          const SizedBox(width: AppSpacing.sm),
-                                          Expanded(child: Text(item)),
-                                        ],
-                                      ),
+                      children: <Widget>[
+                        Text('本周进度', style: AppTextStyles.sectionTitle),
+                        const SizedBox(height: AppSpacing.sm),
+                        ...report.when(
+                          data: (value) => <Widget>[
+                            _metricRow('已完成复习', '${value.completedSessions} 次',
+                                Icons.bookmark_added_rounded),
+                            _metricRow('复习单词', '${value.reviewedWords} 个',
+                                Icons.style_rounded),
+                            _metricRow('口语尝试', '${value.speakingAttempts} 次',
+                                Icons.mic_rounded),
+                          ],
+                          loading: () =>
+                              const <Widget>[CircularProgressIndicator()],
+                          error: (_, __) => const <Widget>[Text('报告加载失败')],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('本周薄弱点', style: AppTextStyles.sectionTitle),
+                        const SizedBox(height: AppSpacing.sm),
+                        ...report.when(
+                          data: (value) => value.weakItems
+                              .map(
+                                (item) => Padding(
+                                  padding: const EdgeInsets.only(
+                                      bottom: AppSpacing.sm),
+                                  child: Container(
+                                    padding:
+                                        const EdgeInsets.all(AppSpacing.sm),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.softSheet,
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: Row(
+                                      children: <Widget>[
+                                        const Icon(Icons.push_pin_rounded,
+                                            color: AppColors.coralJam),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Expanded(child: Text(item)),
+                                      ],
                                     ),
                                   ),
-                                )
-                                .toList(),
-                            loading: () => const <Widget>[Text('正在汇总...')],
-                            error: (_, __) => const <Widget>[Text('暂无数据')],
-                          ),
-                        ],
-                      ),
+                                ),
+                              )
+                              .toList(),
+                          loading: () => const <Widget>[Text('正在汇总...')],
+                          error: (_, __) => const <Widget>[Text('暂无数据')],
+                        ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),
@@ -308,13 +335,21 @@ IconData _taskIcon(String taskType) {
 }
 
 Color _topicAccent(String topic) {
-  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return AppColors.mintLeaf;
-  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return AppColors.butterYellow;
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) {
+    return AppColors.mintLeaf;
+  }
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) {
+    return AppColors.butterYellow;
+  }
   return AppColors.skyBlue;
 }
 
 IconData _topicIcon(String topic) {
-  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) return Icons.pets_rounded;
-  if (topic.contains('数字') || topic.toLowerCase().contains('count')) return Icons.looks_one_rounded;
+  if (topic.contains('动物') || topic.toLowerCase().contains('zoo')) {
+    return Icons.pets_rounded;
+  }
+  if (topic.contains('数字') || topic.toLowerCase().contains('count')) {
+    return Icons.looks_one_rounded;
+  }
   return Icons.auto_stories_rounded;
 }

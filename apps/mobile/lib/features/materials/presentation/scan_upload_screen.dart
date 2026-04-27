@@ -6,6 +6,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
@@ -27,12 +28,15 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
   String? _errorMessage;
 
   Future<void> _pickPage() async {
-    final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
+    final image =
+        await _picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
     if (image == null) {
       return;
     }
     final draft = ref.read(scanDraftProvider);
-    ref.read(scanDraftProvider.notifier).setPages(<XFile>[...draft.pages, image]);
+    ref
+        .read(scanDraftProvider.notifier)
+        .setPages(<XFile>[...draft.pages, image]);
   }
 
   Future<void> _submit() async {
@@ -54,7 +58,9 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
             topic: draft.topic,
             files: draft.pages,
           );
-      ref.read(appAnalyticsProvider).track('material_upload_submitted', <String, Object?>{
+      ref
+          .read(appAnalyticsProvider)
+          .track('material_upload_submitted', <String, Object?>{
         'pages': draft.pages.length,
         'autoEnhance': draft.autoEnhance,
         'materialId': created.material.id,
@@ -64,7 +70,8 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
       if (!mounted) {
         return;
       }
-      context.go('/materials/review/${created.job.id}?materialId=${created.material.id}');
+      context.go(
+          '/materials/review/${created.job.id}?materialId=${created.material.id}');
     } catch (error) {
       setState(() {
         _errorMessage = describeApiError(error, fallback: '上传失败，请稍后重试。');
@@ -88,6 +95,7 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
           ? StatePanel(
               title: '还没有扫描页',
               description: '先从相册或拍照添加一页讲义，再继续上传。',
+              assetPath: AppIllustrations.stateEmpty,
               action: FilledButton(
                 onPressed: _pickPage,
                 child: const Text('添加第一页'),
@@ -103,11 +111,13 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    const Icon(Icons.document_scanner_rounded, size: 64, color: AppColors.cocoaCoral),
+                    const Icon(Icons.document_scanner_rounded,
+                        size: 64, color: AppColors.cocoaCoral),
                     const SizedBox(height: AppSpacing.sm),
                     Text('已选择 ${draft.pages.length} 页讲义'),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(draft.pages.map((item) => item.name).join('\n'), textAlign: TextAlign.center),
+                    Text(draft.pages.map((item) => item.name).join('\n'),
+                        textAlign: TextAlign.center),
                   ],
                 ),
               ),
@@ -159,6 +169,7 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
               title: '上传失败',
               description: _errorMessage!,
               icon: Icons.error_outline_rounded,
+              assetPath: AppIllustrations.stateError,
             ),
           ],
           const SizedBox(height: AppSpacing.md),
@@ -177,7 +188,9 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
                 label: const Text('继续加页'),
               ),
               TextButton.icon(
-                onPressed: _submitting ? null : ref.read(scanDraftProvider.notifier).clear,
+                onPressed: _submitting
+                    ? null
+                    : ref.read(scanDraftProvider.notifier).clear,
                 icon: const Icon(Icons.delete_outline_rounded),
                 label: const Text('清空草稿'),
               ),
@@ -200,10 +213,15 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
                         IllustratedHeroCard(
                           eyebrow: '上传讲义',
                           title: '拍一拍课堂讲义，下一步就能生成孩子的复习包',
-                          description: '上传页现在更像一个温和的扫描工作台，先整理讲义，再交给 AI 识别和家长校对。',
+                          description:
+                              '上传页现在更像一个温和的扫描工作台，先整理讲义，再交给 AI 识别和家长校对。',
                           accent: AppColors.skyBlue,
                           illustration: Icons.camera_alt_rounded,
-                          badge: StickerBadge(label: '多页支持', icon: Icons.layers_rounded, color: AppColors.butterYellow),
+                          assetPath: AppIllustrations.heroUpload,
+                          badge: StickerBadge(
+                              label: '多页支持',
+                              icon: Icons.layers_rounded,
+                              color: AppColors.butterYellow),
                         ),
                         SizedBox(height: AppSpacing.md),
                       ],
@@ -223,7 +241,9 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
                     description: '先选讲义页，再补课程标题和老师名，最后一键上传进入校对流程。',
                     accent: AppColors.skyBlue,
                     illustration: Icons.camera_alt_rounded,
-                    badge: StickerBadge(label: '轻松整理', icon: Icons.auto_awesome_rounded),
+                    assetPath: AppIllustrations.heroUpload,
+                    badge: StickerBadge(
+                        label: '轻松整理', icon: Icons.auto_awesome_rounded),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   preview,

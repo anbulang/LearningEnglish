@@ -4,6 +4,7 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
@@ -20,7 +21,8 @@ class SpeakingPartnerScreen extends ConsumerStatefulWidget {
   final String materialId;
 
   @override
-  ConsumerState<SpeakingPartnerScreen> createState() => _SpeakingPartnerScreenState();
+  ConsumerState<SpeakingPartnerScreen> createState() =>
+      _SpeakingPartnerScreenState();
 }
 
 class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
@@ -42,7 +44,11 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
             description: '先听提问，再提交一次回答。当前阶段还是 stub transcript，但会完整记录反馈和周报变化。',
             accent: AppColors.skyBlue,
             illustration: Icons.record_voice_over_rounded,
-            badge: StickerBadge(label: '开口说一说', icon: Icons.mic_rounded, color: AppColors.skyBlue),
+            assetPath: AppIllustrations.heroSpeakingPartner,
+            badge: StickerBadge(
+                label: '开口说一说',
+                icon: Icons.mic_rounded,
+                color: AppColors.skyBlue),
           ),
           const SizedBox(height: AppSpacing.md),
           const SizedBox(height: AppSpacing.sm),
@@ -54,8 +60,14 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
               color: AppColors.skyBlue.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(AppRadii.panel),
             ),
-            child: const Center(
-              child: Icon(Icons.record_voice_over_rounded, size: 72, color: AppColors.cocoaCoral),
+            clipBehavior: Clip.antiAlias,
+            child: Image.asset(
+              AppIllustrations.heroSpeakingPartner,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.record_voice_over_rounded,
+                    size: 72, color: AppColors.cocoaCoral),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -69,15 +81,20 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
                     return;
                   }
                   try {
-                    final created = await ref.read(appRepositoryProvider).createSpeakingAttempt(
+                    final created = await ref
+                        .read(appRepositoryProvider)
+                        .createSpeakingAttempt(
                           childId: child.id,
                           materialId: widget.materialId,
                           promptText: 'What is this?',
                           transcript: 'It is a cat.',
                         );
-                    ref.read(lastSpeakingAttemptProvider.notifier).state = created;
+                    ref.read(lastSpeakingAttemptProvider.notifier).state =
+                        created;
                     ref.invalidate(weeklyReportProvider);
-                    ref.read(appAnalyticsProvider).track('speaking_attempt_submitted', {
+                    ref
+                        .read(appAnalyticsProvider)
+                        .track('speaking_attempt_submitted', {
                       'materialId': widget.materialId,
                     });
                     setState(() {
@@ -86,7 +103,8 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
                     });
                   } catch (error) {
                     setState(() {
-                      _errorMessage = describeApiError(error, fallback: '口语提交失败，请稍后重试。');
+                      _errorMessage =
+                          describeApiError(error, fallback: '口语提交失败，请稍后重试。');
                     });
                   }
                 },
@@ -112,6 +130,7 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
               title: '提交失败',
               description: _errorMessage!,
               icon: Icons.error_outline_rounded,
+              assetPath: AppIllustrations.stateError,
             ),
           ],
         ],
@@ -143,23 +162,24 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
             ? const StatePanel(
                 title: '缺少孩子档案',
                 description: '请先完成家长账号初始化。',
+                assetPath: AppIllustrations.stateEmpty,
               )
             : formFactor.isTablet
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(child: stage),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(child: result),
-                ],
-              )
-            : ListView(
-                children: <Widget>[
-                  stage,
-                  const SizedBox(height: AppSpacing.md),
-                  result,
-                ],
-              ),
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(child: stage),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(child: result),
+                    ],
+                  )
+                : ListView(
+                    children: <Widget>[
+                      stage,
+                      const SizedBox(height: AppSpacing.md),
+                      result,
+                    ],
+                  ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../data/demo_data.dart';
@@ -28,14 +29,19 @@ class ProfileScreen extends ConsumerWidget {
                   description: '这里管理家长账号、孩子资料、学习目标和提醒偏好，保持整套课后复习节奏稳定。',
                   accent: AppColors.coralJam,
                   illustration: Icons.family_restroom_rounded,
-                  badge: StickerBadge(label: child.level, icon: Icons.star_rounded, color: AppColors.butterYellow),
+                  assetPath: AppIllustrations.topicFamily,
+                  badge: StickerBadge(
+                      label: child.level,
+                      icon: Icons.star_rounded,
+                      color: AppColors.butterYellow),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(parent?.displayName ?? '家长账号', style: AppTextStyles.sectionTitle),
+                      Text(parent?.displayName ?? '家长账号',
+                          style: AppTextStyles.sectionTitle),
                       const SizedBox(height: AppSpacing.xs),
                       Text(parent?.phoneNumber ?? '未绑定手机号'),
                     ],
@@ -74,7 +80,9 @@ class ProfileScreen extends ConsumerWidget {
                                 (item) => ChoiceChip(
                                   label: Text(item.name),
                                   selected: item.id == session.currentChildId,
-                                  onSelected: (_) => ref.read(sessionControllerProvider.notifier).selectChild(item.id),
+                                  onSelected: (_) => ref
+                                      .read(sessionControllerProvider.notifier)
+                                      .selectChild(item.id),
                                 ),
                               )
                               .toList(),
@@ -82,14 +90,16 @@ class ProfileScreen extends ConsumerWidget {
                       ],
                       const SizedBox(height: AppSpacing.md),
                       FilledButton(
-                        onPressed: () => ref.read(sessionControllerProvider.notifier).logout(),
+                        onPressed: () => ref
+                            .read(sessionControllerProvider.notifier)
+                            .logout(),
                         child: const Text('退出登录'),
                       ),
                     ],
                   ),
                 ),
               ],
-      ),
+            ),
     );
   }
 }

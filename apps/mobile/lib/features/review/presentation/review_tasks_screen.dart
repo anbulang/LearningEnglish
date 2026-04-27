@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
+import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
@@ -34,7 +35,9 @@ class ReviewTasksScreen extends ConsumerWidget {
                     '完成 ${value.completedSessions} 次复习，复习 ${value.reviewedWords} 个单词，口语练习 ${value.speakingAttempts} 次。',
                 accent: AppColors.mintLeaf,
                 illustration: Icons.park_rounded,
-                badge: const StickerBadge(label: '连续复习中', icon: Icons.workspace_premium_rounded),
+                assetPath: AppIllustrations.heroWeeklyGrowth,
+                badge: const StickerBadge(
+                    label: '连续复习中', icon: Icons.workspace_premium_rounded),
               ),
               const SizedBox(height: AppSpacing.md),
               AppCard(
@@ -47,9 +50,12 @@ class ReviewTasksScreen extends ConsumerWidget {
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
                       children: <Widget>[
-                        _metricTile('完成复习', '${value.completedSessions}', Icons.book_rounded, AppColors.skyBlue),
-                        _metricTile('单词复习', '${value.reviewedWords}', Icons.style_rounded, AppColors.butterYellow),
-                        _metricTile('口语练习', '${value.speakingAttempts}', Icons.mic_rounded, AppColors.mintLeaf),
+                        _metricTile('完成复习', '${value.completedSessions}',
+                            Icons.book_rounded, AppColors.skyBlue),
+                        _metricTile('单词复习', '${value.reviewedWords}',
+                            Icons.style_rounded, AppColors.butterYellow),
+                        _metricTile('口语练习', '${value.speakingAttempts}',
+                            Icons.mic_rounded, AppColors.mintLeaf),
                       ],
                     ),
                   ],
@@ -73,7 +79,8 @@ class ReviewTasksScreen extends ConsumerWidget {
                           ),
                           child: Row(
                             children: <Widget>[
-                              const Icon(Icons.auto_awesome_rounded, color: AppColors.coralJam, size: 18),
+                              const Icon(Icons.auto_awesome_rounded,
+                                  color: AppColors.coralJam, size: 18),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(child: Text(item)),
                             ],
@@ -92,6 +99,7 @@ class ReviewTasksScreen extends ConsumerWidget {
             child: StatePanel(
               title: '报告加载失败',
               description: describeApiError(error, fallback: '报告暂时不可用，请稍后重试。'),
+              assetPath: AppIllustrations.stateError,
               action: FilledButton(
                 onPressed: () => ref.invalidate(weeklyReportProvider),
                 child: const Text('刷新报告'),
@@ -113,6 +121,7 @@ class ReviewTasksScreen extends ConsumerWidget {
               child: StatePanel(
                 title: '今天没有待复习任务',
                 description: '可以去资料库上传新讲义，或者回到报告页查看本周进度。',
+                assetPath: AppIllustrations.stateEmpty,
               ),
             );
           }
@@ -130,10 +139,12 @@ class ReviewTasksScreen extends ConsumerWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: _taskAccent(task.taskType.value).withValues(alpha: 0.18),
+                            color: _taskAccent(task.taskType.value)
+                                .withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Icon(_taskIcon(task.taskType.value), color: AppColors.cocoaCoral),
+                          child: Icon(_taskIcon(task.taskType.value),
+                              color: AppColors.cocoaCoral),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
@@ -148,7 +159,8 @@ class ReviewTasksScreen extends ConsumerWidget {
                     Text('类型：${task.taskType.value} · 难度：${task.difficulty}'),
                     const SizedBox(height: AppSpacing.md),
                     FilledButton(
-                      onPressed: () => context.go('/review/session/${task.materialId}'),
+                      onPressed: () =>
+                          context.go('/review/session/${task.materialId}'),
                       child: const Text('开始任务'),
                     ),
                   ],
@@ -165,6 +177,7 @@ class ReviewTasksScreen extends ConsumerWidget {
           child: StatePanel(
             title: '复习任务加载失败',
             description: describeApiError(error, fallback: '复习任务暂时不可用，请稍后重试。'),
+            assetPath: AppIllustrations.stateError,
             action: FilledButton(
               onPressed: () => ref.invalidate(reviewTasksProvider),
               child: const Text('重新加载'),
@@ -181,7 +194,8 @@ Widget _metricTile(String label, String value, IconData icon, Color accent) {
     width: 150,
     padding: const EdgeInsets.all(AppSpacing.md),
     decoration: BoxDecoration(
-      color: Color.alphaBlend(accent.withValues(alpha: 0.18), AppColors.paperWhite),
+      color: Color.alphaBlend(
+          accent.withValues(alpha: 0.18), AppColors.paperWhite),
       borderRadius: BorderRadius.circular(AppRadii.card),
     ),
     child: Column(
