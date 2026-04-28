@@ -31,11 +31,9 @@ make infra-up
 make api-install
 make worker-install
 make api-migrate
-make api-dev
-make worker-dev
 ```
 
-另开一个终端：
+如果使用 Docker Compose 中的 API 和 worker，`make infra-up` 后服务会监听在 `http://127.0.0.1:8000`。另开一个终端启动模拟器 App：
 
 ```bash
 cd /Users/chaucermini/Code/LearningEnglish/apps/mobile
@@ -45,7 +43,9 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 如果你拿到的是 iOS IPA 文件，请让开发同学协助安装到测试设备。
 
 当前已知限制：
-- 如果开发同学的 Xcode 没登录有效 Apple 开发账号，可能暂时只能用模拟器运行，不能直接导出可安装的 IPA。
+- 当前机器尚未产出 iOS Debug IPA，因为 Xcode 没有登录 Team `4PZWF88ND8` 对应的有效 Apple 开发账号。
+- 当前机器尚未产出 Android debug APK，因为未配置 Android SDK / `ANDROID_HOME`。
+- 当前可试用方式是开发机上的 iOS 模拟器；真实测试包需要先补签名或 Android SDK 环境。
 
 ## 3. 登录方式
 当前是开发环境，登录规则固定：
@@ -122,6 +122,20 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 - 如果做了口语陪练，口语尝试次数增加
 
 ## 5. 常见问题
+### 一打开就是首页，不是登录页
+通常是模拟器里保留了上一次登录状态。
+
+处理办法：
+- 如果要重新测试首次登录，请让开发同学先清理模拟器 App 数据
+- 如果只是体验主流程，可以直接从首页开始上传讲义
+
+### 上传时报 `Invalid access token`
+通常是后端数据库被重置，但模拟器里还保存着旧 token。
+
+处理办法：
+- 进入“我的”页面退出登录后重新登录
+- 如果退出入口不可用，让开发同学卸载并重新安装模拟器 App
+
 ### 登录后一直回到登录页
 通常是后端没有启动，或本地 token 已失效。
 
@@ -168,3 +182,15 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 - 哪个按钮/入口最不明显
 
 如果可以，请附上截图。
+
+## 7. 当前交付状态
+截至 2026-04-29，自动化主链已通过：
+
+- API：登录、绑定、创建孩子、上传、进入 AI 校对
+- 移动端：上传成功后跳转 AI 校对页，AI 校对确认后跳转课程详情
+- Harness：`HARNESS_RESET=1 make harness-mvp-readiness` 可以完成到测试和模拟器构建阶段
+
+尚未满足“发给非开发人员安装”的条件：
+
+- iOS IPA 需要先补 Xcode Team 登录和 provisioning
+- Android APK 需要先安装 Android SDK

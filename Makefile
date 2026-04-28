@@ -8,14 +8,15 @@ IOS_EXPORT_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/export
 IOS_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.debug.plist
 IOS_API_BASE_URL ?= http://127.0.0.1:8000/v1
 IOS_DEVELOPMENT_TEAM ?= $(shell security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*(\([A-Z0-9]*\)).*/\1/p' | head -n 1)
+API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0.0.1:5432/learning_english
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down mobile-bootstrap mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-mvp-readiness
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
 
 api-migrate:
-	cd services/api && .venv/bin/alembic upgrade head
+	cd services/api && DATABASE_URL=$(API_DATABASE_URL) .venv/bin/alembic upgrade head
 
 api-dev:
 	cd services/api && .venv/bin/uvicorn app.main:app --reload
@@ -38,10 +39,16 @@ infra-up:
 infra-down:
 	docker compose -f infra/docker-compose.yml down
 
+infra-reset:
+	docker compose -f infra/docker-compose.yml down -v --remove-orphans
+
 mobile-bootstrap:
 	cd packages/contracts && $(FLUTTER) pub get
 	cd packages/design_tokens && $(FLUTTER) pub get
 	cd apps/mobile && $(FLUTTER) pub get
+
+mobile-test:
+	cd apps/mobile && $(FLUTTER) test
 
 mobile-analyze:
 	cd apps/mobile && $(FLUTTER) analyze
@@ -75,6 +82,9 @@ mobile-ios-ipa: mobile-ios-archive
 		-archivePath $(IOS_ARCHIVE_PATH) \
 		-exportPath $(IOS_EXPORT_PATH) \
 		-exportOptionsPlist $(IOS_EXPORT_OPTIONS)
+
+harness-main-chain-smoke:
+	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_main_chain_smoke.sh
 
 harness-mvp-readiness:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_mvp_readiness.sh
