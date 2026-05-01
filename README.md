@@ -89,12 +89,12 @@ Build a local Android test APK:
 make mobile-apk
 ```
 
-Build and export a local iOS Debug IPA:
+Build and export a local iOS internal/Profile IPA:
 ```bash
 make mobile-ios-ipa
 ```
 
-The iOS target uses bundle id `com.anbulang.learningenglish` with Apple Developer Team `95RDXKW54K`. The local signing identity is `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`. A successful export writes the Debug IPA to `dist/ios/export/learning_english_mobile.ipa`. If `make mobile-ios-ipa` fails with provisioning errors, confirm the Xcode account can manage Team `95RDXKW54K` and that the test device is included in the generated development provisioning profile.
+The iOS target uses bundle id `com.anbulang.learningenglish` with Apple Developer Team `95RDXKW54K`. The local signing identity is `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`. A successful export writes the internal Profile IPA to `dist/ios/export/learning_english_mobile.ipa`. Do not install a Flutter Debug archive for normal home-screen testing; Debug builds require Flutter tooling or Xcode to launch and will crash when opened directly on iOS 14+. If `make mobile-ios-ipa` fails with provisioning errors, confirm the Xcode account can manage Team `95RDXKW54K` and that the test device is included in the generated development provisioning profile.
 
 To point the mobile app at a non-local API host:
 ```bash
@@ -142,4 +142,4 @@ Use this when preparing a demo or internal test package:
 ## Harness Deliverables
 - Non-technical trial guide: `docs/harness/non-technical-pilot-guide.md`
 - MVP readiness checklist: `docs/harness/mvp-readiness-checklist.md`
-- iOS export options: `apps/mobile/ios/ExportOptions.debug.plist`
+- iOS export options: `apps/mobile/ios/ExportOptions.internal.plist`

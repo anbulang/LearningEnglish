@@ -2,10 +2,11 @@ PYTHON ?= python3
 FLUTTER ?= flutter
 IOS_SCHEME ?= Runner
 IOS_WORKSPACE ?= apps/mobile/ios/Runner.xcworkspace
-IOS_CONFIGURATION ?= Debug
-IOS_ARCHIVE_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/LearningEnglish-Debug.xcarchive
+IOS_CONFIGURATION ?= Profile
+IOS_FLUTTER_MODE ?= profile
+IOS_ARCHIVE_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/LearningEnglish-Internal.xcarchive
 IOS_EXPORT_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/export
-IOS_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.debug.plist
+IOS_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.internal.plist
 IOS_API_BASE_URL ?= http://127.0.0.1:8000/v1
 IOS_DEVELOPMENT_TEAM ?= 95RDXKW54K
 API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0.0.1:5432/learning_english
@@ -58,7 +59,7 @@ mobile-apk:
 
 mobile-ios-prep:
 	mkdir -p /Users/chaucermini/Code/LearningEnglish/dist/ios
-	cd apps/mobile && $(FLUTTER) build ios --debug --no-codesign --dart-define=API_BASE_URL=$(IOS_API_BASE_URL)
+	cd apps/mobile && $(FLUTTER) build ios --$(IOS_FLUTTER_MODE) --no-codesign --dart-define=API_BASE_URL=$(IOS_API_BASE_URL)
 
 mobile-ios-archive: mobile-ios-prep
 	mkdir -p /Users/chaucermini/Code/LearningEnglish/dist/ios

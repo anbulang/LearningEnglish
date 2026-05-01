@@ -23,7 +23,7 @@
 ### C. iOS 交付链
 - [x] `make mobile-ios-prep` 成功
 - [x] `make mobile-ios-archive` 成功
-- [x] `make mobile-ios-ipa` 成功
+- [x] `make mobile-ios-ipa` 成功，默认产出 Profile/Internal 包
 - [x] `dist/ios/` 下存在 archive 和导出产物
 - [x] 至少一台 iOS 模拟器跑通当前 UI
 - [x] iOS 真机安装并启动成功
@@ -62,7 +62,7 @@
 - [x] `make mobile-ios-prep`
 - [x] `make mobile-ios-archive`
 - [x] `make mobile-ios-ipa`
-- [x] `xcrun devicectl device install app --device Chaucer dist/ios/LearningEnglish-Debug.xcarchive/Products/Applications/Runner.app --timeout 120`
+- [x] `xcrun devicectl device install app --device Chaucer dist/ios/LearningEnglish-Internal.xcarchive/Products/Applications/Runner.app --timeout 120`
 - [x] `xcrun devicectl device process launch --device Chaucer --terminate-existing com.anbulang.learningenglish --timeout 60`
 - [ ] `make mobile-apk`
 
@@ -90,9 +90,10 @@
 ### 已知限制
 - 真实微信、真实短信、真实 OCR/LLM 仍未接入
 - 当前环境仍依赖 stub provider
-- iOS Debug IPA 已导出：`dist/ios/export/learning_english_mobile.ipa`
+- iOS Profile/Internal IPA 已导出：`dist/ios/export/learning_english_mobile.ipa`
 - iOS 工程使用 Team `95RDXKW54K` 与 Bundle ID `com.anbulang.learningenglish`，本机签名 identity 为 `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`
-- Debug IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；当前真机 `Chaucer` 已验证可安装并启动
+- Flutter Debug 包不能作为普通内测包从桌面直接启动；iOS 14+ 下会报 `Cannot create a FlutterEngine instance in debug mode without Flutter tooling or Xcode` 并闪退。因此 `make mobile-ios-ipa` 已改为默认产出 Profile/Internal 包
+- Profile/Internal IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；当前真机 `Chaucer` 已验证可安装并启动
 - 真机测试包使用局域网 API：`http://192.168.2.5:8000/v1`，对应后端健康检查 `http://192.168.2.5:8000/healthz` 返回 `{"status":"ok"}`
 - Android fallback 也未产出，当前机器未配置 Android SDK，`flutter build apk --debug` 返回 `No Android SDK found`
 - `api-migrate` 已修正为默认迁移 Docker Postgres；如果只想使用 SQLite，需要显式覆盖 `API_DATABASE_URL`
