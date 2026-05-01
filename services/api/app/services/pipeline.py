@@ -145,8 +145,8 @@ class DoubaoVisionOCRProvider:
             {
                 "type": "text",
                 "text": (
-                    "请识别这些低龄儿童英语课堂讲义图片，并只返回 JSON。"
-                    "JSON 字段必须包含：ocr_text, title, topic, vocabulary, sentences, warnings, confidence_summary。"
+                    "请识别这些低龄儿童英语课堂讲义图片，并只返回 json。"
+                    "json 字段必须包含：ocr_text, title, topic, vocabulary, sentences, warnings, confidence_summary。"
                     "vocabulary 只放英文单词或短语，sentences 只放英文句型或课堂对话句子。"
                     "如果不确定，请在 warnings 用中文说明。"
                 ),
@@ -162,7 +162,7 @@ class DoubaoVisionOCRProvider:
             messages=[
                 {
                     "role": "system",
-                    "content": "你是儿童英语讲义 OCR 和结构化抽取助手。只输出可解析 JSON，不要输出 Markdown。",
+                    "content": "你是儿童英语讲义 OCR 和结构化抽取助手。只输出可解析 json，不要输出 Markdown。",
                 },
                 {"role": "user", "content": content},
             ],
@@ -213,7 +213,7 @@ class DoubaoLanguageParsingProvider:
                 {
                     "role": "system",
                     "content": (
-                        "你是低龄儿童英语课后复习内容设计助手。只输出 JSON，字段包含："
+                        "你是低龄儿童英语课后复习内容设计助手。只输出 json，字段包含："
                         "topic, lesson_summary, review_recommendation, vocabulary_items, sentence_patterns。"
                         "vocabulary_items 每项包含 word, phonics, meaning_cn, example_sentence。"
                         "sentence_patterns 每项包含 sentence, meaning_cn, usage_type。中文解释要短。"

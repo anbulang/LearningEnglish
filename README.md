@@ -152,6 +152,14 @@ AI_REQUEST_TIMEOUT_SECONDS=60
 AI_MAX_IMAGE_COUNT=5
 ```
 
+This API key was verified locally against `doubao-seed-2-0-lite-260215` for both text and vision requests. If a different model returns `ModelNotOpen`, either activate that model in Ark Console or use an `ep-...` endpoint ID from Online Inference.
+
+Run the provider smoke test without printing secrets:
+
+```bash
+services/api/.venv/bin/python scripts/harness/smoke_doubao.py
+```
+
 The app contract does not change in Doubao mode: upload still creates `CourseMaterial -> MaterialParseJob`, polling moves the job to `needs_review`, parent confirmation creates `KnowledgePack` and three MVP review tasks. If the Doubao call fails, the job is marked `failed` with a readable `confidence_summary` and can be retried.
 
 For a manual smoke test, start API and worker with the variables above, upload a real worksheet photo from the mobile app, then verify the AI review page shows extracted words and sentences before confirming.
