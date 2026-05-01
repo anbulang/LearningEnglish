@@ -36,13 +36,13 @@ worker-test:
 	cd services/workers && .venv/bin/pytest
 
 infra-up:
-	docker compose -f infra/docker-compose.yml up -d
+	docker compose --env-file infra/.env -f infra/docker-compose.yml up -d
 
 infra-down:
-	docker compose -f infra/docker-compose.yml down
+	docker compose --env-file infra/.env -f infra/docker-compose.yml down
 
 infra-reset:
-	docker compose -f infra/docker-compose.yml down -v --remove-orphans
+	docker compose --env-file infra/.env -f infra/docker-compose.yml down -v --remove-orphans
 
 mobile-bootstrap:
 	cd packages/contracts && $(FLUTTER) pub get
