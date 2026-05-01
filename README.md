@@ -94,7 +94,7 @@ Build and export a local iOS Debug IPA:
 make mobile-ios-ipa
 ```
 
-The iOS target uses bundle id `com.anbulang.learningenglish` and Apple Development team `4PZWF88ND8`. If `make mobile-ios-ipa` fails with provisioning errors, the machine is missing a valid Xcode account for that team. In that case, simulator verification can still proceed, but IPA export remains blocked until Xcode Accounts is fixed.
+The iOS target uses bundle id `com.anbulang.learningenglish` with Apple Developer Team `95RDXKW54K`. The local signing identity is `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`. A successful export writes the Debug IPA to `dist/ios/export/learning_english_mobile.ipa`. If `make mobile-ios-ipa` fails with provisioning errors, confirm the Xcode account can manage Team `95RDXKW54K` and that the test device is included in the generated development provisioning profile.
 
 To point the mobile app at a non-local API host:
 ```bash

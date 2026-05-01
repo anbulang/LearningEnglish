@@ -43,9 +43,10 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 如果你拿到的是 iOS IPA 文件，请让开发同学协助安装到测试设备。
 
 当前已知限制：
-- 当前机器尚未产出 iOS Debug IPA，因为 Xcode 没有登录 Team `4PZWF88ND8` 对应的有效 Apple 开发账号。
+- 当前机器已产出 iOS Debug IPA：`dist/ios/export/learning_english_mobile.ipa`。
+- 这个 IPA 是 development provisioning 分发包，只能安装到已纳入 provisioning profile 的测试设备；如果你的设备未注册，需要开发同学先补设备授权或改用 TestFlight。
 - 当前机器尚未产出 Android debug APK，因为未配置 Android SDK / `ANDROID_HOME`。
-- 当前可试用方式是开发机上的 iOS 模拟器；真实测试包需要先补签名或 Android SDK 环境。
+- 当前最稳妥试用方式仍是开发机上的 iOS 模拟器；如需真机试用，先让开发同学确认设备是否可安装该 IPA。
 
 ## 3. 登录方式
 当前是开发环境，登录规则固定：
@@ -184,13 +185,14 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 如果可以，请附上截图。
 
 ## 7. 当前交付状态
-截至 2026-04-29，自动化主链已通过：
+截至 2026-05-01，自动化主链和 iOS IPA 导出已通过：
 
 - API：登录、绑定、创建孩子、上传、进入 AI 校对
 - 移动端：上传成功后跳转 AI 校对页，AI 校对确认后跳转课程详情
 - Harness：`HARNESS_RESET=1 make harness-mvp-readiness` 可以完成到测试和模拟器构建阶段
+- iOS：`make mobile-ios-ipa` 已成功导出 `dist/ios/export/learning_english_mobile.ipa`
 
-尚未满足“发给非开发人员安装”的条件：
+尚未完全满足“任意非开发设备直接安装”的条件：
 
-- iOS IPA 需要先补 Xcode Team 登录和 provisioning
+- iOS IPA 只能安装到已纳入 development provisioning 的设备；更多设备需要注册 UDID 或走 TestFlight
 - Android APK 需要先安装 Android SDK

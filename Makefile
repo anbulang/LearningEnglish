@@ -7,7 +7,7 @@ IOS_ARCHIVE_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/LearningEng
 IOS_EXPORT_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/export
 IOS_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.debug.plist
 IOS_API_BASE_URL ?= http://127.0.0.1:8000/v1
-IOS_DEVELOPMENT_TEAM ?= $(shell security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*(\([A-Z0-9]*\)).*/\1/p' | head -n 1)
+IOS_DEVELOPMENT_TEAM ?= 95RDXKW54K
 API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0.0.1:5432/learning_english
 
 .PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness
