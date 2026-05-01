@@ -10,14 +10,16 @@ class ApiClient {
       : _dio = dio ??
             Dio(
               BaseOptions(
-                baseUrl: const String.fromEnvironment(
-                  'API_BASE_URL',
-                  defaultValue: 'http://127.0.0.1:8000/v1',
-                ),
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 10),
+                baseUrl: defaultBaseUrl,
+                connectTimeout: const Duration(seconds: 30),
+                receiveTimeout: const Duration(seconds: 30),
               ),
             );
+
+  static const defaultBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://127.0.0.1:8000/v1',
+  );
 
   final Dio _dio;
 

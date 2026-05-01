@@ -14,6 +14,22 @@ class AuthRepository {
 
   final Dio _dio;
 
+  Future<void> preflightNetworkPermission() async {
+    final baseUri = Uri.parse(_dio.options.baseUrl);
+    final healthzUri = Uri(
+      scheme: baseUri.scheme,
+      host: baseUri.host,
+      port: baseUri.hasPort ? baseUri.port : 0,
+      path: '/healthz',
+    );
+    await _dio.getUri<Map<String, dynamic>>(
+      healthzUri,
+      options: Options(
+        validateStatus: (status) => status != null && status < 500,
+      ),
+    );
+  }
+
   Future<AuthFlowResult> loginWithWechat(String authCode) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/auth/wechat/login',

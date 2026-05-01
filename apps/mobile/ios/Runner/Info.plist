@@ -35,6 +35,12 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>LearningEnglish 需要连接本机开发环境中的 API 服务，用于内部测试登录、上传讲义和生成复习内容。</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+	</array>
+	<key>LearningEnglishPreflightURL</key>
+	<string>$(LEARNING_ENGLISH_PREFLIGHT_URL)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

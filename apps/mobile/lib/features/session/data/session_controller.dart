@@ -39,6 +39,16 @@ class SessionController extends StateNotifier<SessionState> {
   static const _currentChildKey = 'session.currentChildId';
 
   Future<void> bootstrap() async {
+    try {
+      // iOS shows the WLAN/cellular data prompt only after the app makes
+      // an actual network request. Run this before session restore so the
+      // permission is requested on cold start, not only after tapping login.
+      await _authRepository.preflightNetworkPermission();
+    } catch (_) {
+      // Continue bootstrapping. The login screen has the user-facing retry
+      // guidance, and refresh/login calls will surface concrete API errors.
+    }
+
     final accessToken = await _storage.read(_accessTokenKey);
     final refreshToken = await _storage.read(_refreshTokenKey);
     if (refreshToken == null) {
