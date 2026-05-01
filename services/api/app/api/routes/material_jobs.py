@@ -39,11 +39,21 @@ def get_material_job(
             )
         ).all()
         local_paths = [storage.resolve_local_path(asset) for asset in asset_rows]
-        prepared = pipeline.prepare_job(
-            course_material_from_model(material),
-            material_job_from_model(job),
-            local_paths=local_paths,
-        )
+        try:
+            prepared = pipeline.prepare_job(
+                course_material_from_model(material),
+                material_job_from_model(job),
+                local_paths=local_paths,
+            )
+        except Exception as exc:
+            job.status = JobStatus.failed.value
+            job.finished_at = None
+            job.confidence_summary = f"处理失败：{exc}"
+            job.warnings = [f"处理失败：{exc}", "请检查 AI provider 配置或稍后重试。"]
+            db.add(job)
+            db.commit()
+            db.refresh(job)
+            return material_job_from_model(job)
         job.status = prepared.status.value
         job.finished_at = prepared.finished_at
         job.draft_title = prepared.draft_title
@@ -73,6 +83,8 @@ def confirm_material_job(
     prepared = material_job_from_model(job)
     if job.status in {JobStatus.queued.value, JobStatus.processing.value}:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Job is still processing")
+    if job.status == JobStatus.failed.value:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Job failed; retry before confirming")
 
     prepared = prepared.model_copy(
         update={

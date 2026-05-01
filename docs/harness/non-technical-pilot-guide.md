@@ -13,7 +13,7 @@
 6. 开始复习
 7. 查看周报
 
-本次试用是开发环境，不需要真实微信账号、真实短信服务或真实 OCR 服务。
+本次试用是开发环境，不需要真实微信账号或真实短信服务。默认仍使用稳定 stub AI；如果开发同学开启 `AI_PROVIDER=doubao`，上传真实讲义后会进入豆包/火山方舟真实识别流程。
 
 ## 2. 准备工作
 请先让开发同学帮你准备好以下环境：
@@ -32,6 +32,17 @@ make api-install
 make worker-install
 make api-migrate
 ```
+
+如果要体验豆包真实识别，请让开发同学在 `infra/.env` 和 API/worker 启动环境中配置：
+
+```bash
+AI_PROVIDER=doubao
+ARK_API_KEY=<火山方舟 API Key>
+DOUBAO_VISION_MODEL_OR_ENDPOINT=<视觉理解 endpoint 或 model>
+DOUBAO_TEXT_MODEL_OR_ENDPOINT=<文本解析 endpoint 或 model>
+```
+
+没有这些配置时，请保持 `AI_PROVIDER=stub`，否则讲义处理会进入失败状态。
 
 如果使用 Docker Compose 中的 API 和 worker，`make infra-up` 后服务会监听在 `http://127.0.0.1:8000`。另开一个终端启动模拟器 App：
 
@@ -107,6 +118,7 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 检查点：
 - 页面跳到课程详情
 - 课程状态应为“可复习”或类似状态
+- 如果启用了豆包模式，词汇和句型应该来自你上传的真实讲义，而不是固定的 demo 内容。
 
 ### 步骤 6：开始复习
 - 在课程详情中点击进入复习
@@ -159,6 +171,14 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 处理办法：
 - 确认 worker 已启动
 - 在 AI 校对页点击“刷新结果”
+
+### AI 校对显示处理失败
+如果开启了豆包模式，通常是火山方舟配置不完整、API Key 无效、endpoint/model 名称错误或网络超时。
+
+处理办法：
+- 确认 `AI_PROVIDER=doubao`
+- 确认 `ARK_API_KEY`、`DOUBAO_VISION_MODEL_OR_ENDPOINT`、`DOUBAO_TEXT_MODEL_OR_ENDPOINT` 均已配置
+- 点击重试；如果仍失败，把页面上的失败文案发给开发同学
 
 ### 上传失败
 通常是图片未正确选择、后端未启动或对象存储不可用。

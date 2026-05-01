@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <rect width="1200" height="1600" fill="#fffaf1"/>
+  <rect x="90" y="90" width="1020" height="1420" rx="48" fill="#ffffff" stroke="#f1d8c7" stroke-width="8"/>
+  <text x="600" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" font-weight="700" fill="#2f2926">Animals Around Me</text>
+  <text x="600" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="38" fill="#8b6b58">Lesson 3 · Look, listen and say</text>
+
+  <g transform="translate(140 360)">
+    <rect width="280" height="260" rx="36" fill="#ffe3d7"/>
+    <circle cx="140" cy="105" r="56" fill="#f58f75"/>
+    <circle cx="119" cy="91" r="9" fill="#2f2926"/>
+    <circle cx="161" cy="91" r="9" fill="#2f2926"/>
+    <path d="M116 132 Q140 153 164 132" fill="none" stroke="#2f2926" stroke-width="9" stroke-linecap="round"/>
+    <path d="M92 42 L114 78 L72 78 Z" fill="#f58f75"/>
+    <path d="M188 42 L166 78 L208 78 Z" fill="#f58f75"/>
+    <text x="140" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#2f2926">cat</text>
+  </g>
+
+  <g transform="translate(460 360)">
+    <rect width="280" height="260" rx="36" fill="#e3f4ff"/>
+    <ellipse cx="140" cy="110" rx="70" ry="54" fill="#7bb8e8"/>
+    <circle cx="116" cy="100" r="8" fill="#2f2926"/>
+    <circle cx="164" cy="100" r="8" fill="#2f2926"/>
+    <path d="M120 133 Q140 146 160 133" fill="none" stroke="#2f2926" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="73" cy="98" rx="22" ry="50" fill="#7bb8e8"/>
+    <ellipse cx="207" cy="98" rx="22" ry="50" fill="#7bb8e8"/>
+    <text x="140" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#2f2926">dog</text>
+  </g>
+
+  <g transform="translate(780 360)">
+    <rect width="280" height="260" rx="36" fill="#e3f7e8"/>
+    <ellipse cx="132" cy="116" rx="58" ry="70" fill="#63c27d"/>
+    <circle cx="166" cy="92" r="34" fill="#63c27d"/>
+    <path d="M195 91 L242 75 L202 112 Z" fill="#f7c857"/>
+    <circle cx="173" cy="84" r="7" fill="#2f2926"/>
+    <path d="M132 184 L112 214" stroke="#2f2926" stroke-width="7" stroke-linecap="round"/>
+    <path d="M144 184 L166 214" stroke="#2f2926" stroke-width="7" stroke-linecap="round"/>
+    <text x="140" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#2f2926">bird</text>
+  </g>
+
+  <rect x="150" y="720" width="900" height="125" rx="28" fill="#fff0c5"/>
+  <text x="190" y="800" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#2f2926">What is this?</text>
+
+  <rect x="150" y="900" width="900" height="125" rx="28" fill="#dcf4ef"/>
+  <text x="190" y="980" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#2f2926">It is a cat.</text>
+
+  <rect x="150" y="1080" width="900" height="125" rx="28" fill="#fce1d8"/>
+  <text x="190" y="1160" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#2f2926">I can see a dog.</text>
+
+  <text x="150" y="1340" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#8b6b58">Parent tip:</text>
+  <text x="150" y="1400" font-family="Arial, sans-serif" font-size="36" fill="#8b6b58">Ask: What is this? Then help your child answer.</text>
+</svg>

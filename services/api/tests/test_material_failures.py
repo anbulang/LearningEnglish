@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from app.core.db import SessionLocal
 from app.db.models import MaterialParseJobModel
+from app.core.config import get_pipeline_service
+from app.models.contracts import JobStatus
+from app.main import app
 from conftest import auth_headers, configure_test_environment
 
 
@@ -134,3 +137,71 @@ def test_retry_failed_job_requeues_processing(api_client) -> None:
     response = api_client.post(f"/v1/material-jobs/{job_id}/retry", headers=headers)
     assert response.status_code == 200
     assert response.json()["status"] == "processing"
+
+
+def test_polling_job_marks_failed_when_pipeline_errors(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="pipeline-failure-parent")
+    child_response = api_client.post(
+        "/v1/children",
+        json={
+            "name": "Mia",
+            "age": 6,
+            "level": "starter",
+            "learning_goal": "稳定复习",
+            "preferred_review_duration_minutes": 10,
+            "parent_notes": "",
+        },
+        headers=headers,
+    )
+    child_id = child_response.json()["id"]
+    upload_response = api_client.post(
+        "/v1/materials",
+        data={
+            "child_id": child_id,
+            "teacher_name": "Emma",
+            "lesson_date": "2026-04-29",
+            "title": "Animals Around Me",
+            "topic": "动物",
+            "tags": "动物",
+        },
+        files=[("files", ("worksheet.jpg", b"fake image bytes", "image/jpeg"))],
+        headers=headers,
+    )
+    job_id = upload_response.json()["job"]["id"]
+
+    class FailingPipeline:
+        def prepare_job(self, *args, **kwargs):
+            raise RuntimeError("doubao provider returned 500")
+
+    app.dependency_overrides[get_pipeline_service] = lambda: FailingPipeline()
+    try:
+        response = api_client.get(f"/v1/material-jobs/{job_id}", headers=headers)
+    finally:
+        app.dependency_overrides.pop(get_pipeline_service, None)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == JobStatus.failed.value
+    assert "doubao provider returned 500" in payload["confidence_summary"]
+    assert "处理失败" in payload["warnings"][0]
+
+
+def test_confirm_failed_job_requires_retry(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="confirm-failed-parent")
+    child_id = _create_child(api_client, headers)
+    _, job_id = _create_material(api_client, headers, child_id)
+
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        job.status = JobStatus.failed.value
+        db.add(job)
+        db.commit()
+
+    response = api_client.post(
+        f"/v1/material-jobs/{job_id}/confirm",
+        json={"draft_topic": "动物"},
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Job failed; retry before confirming"

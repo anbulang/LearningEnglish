@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import base64
+import mimetypes
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 from uuid import uuid4
 
 import httpx
@@ -49,6 +51,10 @@ class LanguageParsingProvider(Protocol):
 
     def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
         ...
+
+
+class DoubaoProviderError(RuntimeError):
+    pass
 
 
 class StubOCRProvider:
@@ -111,6 +117,117 @@ class PaddleOCRProvider:
             warnings=warnings,
             confidence_summary=confidence_summary,
         )
+
+
+class DoubaoVisionOCRProvider:
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        model_or_endpoint: str,
+        timeout_seconds: int = 60,
+        max_image_count: int = 5,
+        client: Optional[httpx.Client] = None,
+    ) -> None:
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.model_or_endpoint = model_or_endpoint
+        self.timeout_seconds = timeout_seconds
+        self.max_image_count = max_image_count
+        self._client = client
+
+    def extract(self, material: CourseMaterial, local_paths: list[Path]) -> OCRDraft:
+        image_paths = local_paths[: self.max_image_count]
+        if not image_paths:
+            raise DoubaoProviderError("Doubao OCR requires at least one worksheet image")
+
+        content: list[dict[str, Any]] = [
+            {
+                "type": "text",
+                "text": (
+                    "请识别这些低龄儿童英语课堂讲义图片，并只返回 JSON。"
+                    "JSON 字段必须包含：ocr_text, title, topic, vocabulary, sentences, warnings, confidence_summary。"
+                    "vocabulary 只放英文单词或短语，sentences 只放英文句型或课堂对话句子。"
+                    "如果不确定，请在 warnings 用中文说明。"
+                ),
+            }
+        ]
+        for path in image_paths:
+            content.append({"type": "image_url", "image_url": {"url": _image_data_url(path)}})
+
+        payload = _post_chat_json(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            model_or_endpoint=self.model_or_endpoint,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "你是儿童英语讲义 OCR 和结构化抽取助手。只输出可解析 JSON，不要输出 Markdown。",
+                },
+                {"role": "user", "content": content},
+            ],
+            timeout_seconds=self.timeout_seconds,
+            client=self._client,
+        )
+        ocr_text = str(payload.get("ocr_text") or "").strip()
+        vocabulary = _clean_string_list(payload.get("vocabulary"))
+        sentences = _clean_string_list(payload.get("sentences"))
+        return OCRDraft(
+            ocr_text=ocr_text or " ".join(vocabulary + sentences),
+            title=str(payload.get("title") or material.title).strip(),
+            topic=str(payload.get("topic") or material.topic or _infer_topic(ocr_text)).strip(),
+            vocabulary=vocabulary or _extract_candidate_vocabulary(ocr_text)[:8],
+            sentences=sentences or _extract_candidate_sentences([ocr_text])[:6],
+            warnings=_clean_string_list(payload.get("warnings")),
+            confidence_summary=str(payload.get("confidence_summary") or "豆包已完成识别，请家长确认重点词句。").strip(),
+        )
+
+
+class DoubaoLanguageParsingProvider:
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        model_or_endpoint: str,
+        timeout_seconds: int = 60,
+        client: Optional[httpx.Client] = None,
+    ) -> None:
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.model_or_endpoint = model_or_endpoint
+        self.timeout_seconds = timeout_seconds
+        self._client = client
+
+    def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
+        prompt = {
+            "material_title": job.draft_title or material.title,
+            "topic": job.draft_topic or material.topic,
+            "vocabulary": job.draft_vocabulary,
+            "sentences": job.draft_sentences,
+        }
+        payload = _post_chat_json(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            model_or_endpoint=self.model_or_endpoint,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "你是低龄儿童英语课后复习内容设计助手。只输出 JSON，字段包含："
+                        "topic, lesson_summary, review_recommendation, vocabulary_items, sentence_patterns。"
+                        "vocabulary_items 每项包含 word, phonics, meaning_cn, example_sentence。"
+                        "sentence_patterns 每项包含 sentence, meaning_cn, usage_type。中文解释要短。"
+                    ),
+                },
+                {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
+            ],
+            timeout_seconds=self.timeout_seconds,
+            client=self._client,
+        )
+        return _knowledge_pack_from_payload(material, job, payload)
+
+    def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
+        return StubLanguageParsingProvider().generate_review_tasks(material, knowledge_pack)
 
 
 class StubLanguageParsingProvider:
@@ -341,19 +458,191 @@ class ProviderBackedPipelineService:
 
 def build_pipeline_service() -> ProviderBackedPipelineService:
     settings = get_settings()
-    ocr_provider: OCRProvider
-    try:
-        ocr_provider = PaddleOCRProvider()
-    except Exception:
-        ocr_provider = StubOCRProvider()
-    if settings.dashscope_api_key:
-        parsing_provider: LanguageParsingProvider = QwenLanguageParsingProvider(
+    provider_name = settings.ai_provider.lower().strip()
+    if provider_name == "doubao":
+        missing = [
+            name
+            for name, value in {
+                "ARK_API_KEY": settings.ark_api_key,
+                "DOUBAO_VISION_MODEL_OR_ENDPOINT": settings.doubao_vision_model_or_endpoint,
+                "DOUBAO_TEXT_MODEL_OR_ENDPOINT": settings.doubao_text_model_or_endpoint,
+            }.items()
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(f"Doubao provider is enabled but missing config: {', '.join(missing)}")
+        return ProviderBackedPipelineService(
+            ocr_provider=DoubaoVisionOCRProvider(
+                api_key=settings.ark_api_key,
+                base_url=settings.ark_base_url,
+                model_or_endpoint=settings.doubao_vision_model_or_endpoint,
+                timeout_seconds=settings.ai_request_timeout_seconds,
+                max_image_count=settings.ai_max_image_count,
+            ),
+            parsing_provider=DoubaoLanguageParsingProvider(
+                api_key=settings.ark_api_key,
+                base_url=settings.ark_base_url,
+                model_or_endpoint=settings.doubao_text_model_or_endpoint,
+                timeout_seconds=settings.ai_request_timeout_seconds,
+            ),
+        )
+
+    ocr_provider: OCRProvider = StubOCRProvider()
+    parsing_provider: LanguageParsingProvider = StubLanguageParsingProvider()
+    if provider_name == "qwen" and settings.dashscope_api_key:
+        parsing_provider = QwenLanguageParsingProvider(
             api_key=settings.dashscope_api_key,
             model=settings.qwen_model,
         )
-    else:
-        parsing_provider = StubLanguageParsingProvider()
     return ProviderBackedPipelineService(ocr_provider=ocr_provider, parsing_provider=parsing_provider)
+
+
+def _post_chat_json(
+    *,
+    api_key: str,
+    base_url: str,
+    model_or_endpoint: str,
+    messages: list[dict[str, Any]],
+    timeout_seconds: int,
+    client: Optional[httpx.Client],
+) -> dict[str, Any]:
+    if not api_key:
+        raise DoubaoProviderError("Doubao provider requires ARK_API_KEY")
+    if not model_or_endpoint:
+        raise DoubaoProviderError("Doubao provider requires model or endpoint config")
+    owns_client = client is None
+    active_client = client or httpx.Client(timeout=timeout_seconds)
+    try:
+        response = active_client.post(
+            f"{base_url.rstrip('/')}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model_or_endpoint,
+                "temperature": 0.2,
+                "messages": messages,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=timeout_seconds,
+        )
+    except httpx.TimeoutException as exc:
+        raise DoubaoProviderError(f"Doubao request timeout after {timeout_seconds}s") from exc
+    except httpx.HTTPError as exc:
+        raise DoubaoProviderError(f"Doubao request failed: {exc}") from exc
+    finally:
+        if owns_client:
+            active_client.close()
+
+    if response.status_code >= 400:
+        detail = _response_error_detail(response)
+        raise DoubaoProviderError(f"Doubao API returned HTTP {response.status_code}: {detail}")
+
+    try:
+        content = response.json()["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+        raise DoubaoProviderError("Doubao response did not contain chat message content") from exc
+    if not isinstance(content, str) or not content.strip():
+        raise DoubaoProviderError("Doubao response contained empty content")
+    try:
+        payload = json.loads(_strip_json_fence(content))
+    except json.JSONDecodeError as exc:
+        raise DoubaoProviderError("Doubao response content must be valid JSON") from exc
+    if not isinstance(payload, dict):
+        raise DoubaoProviderError("Doubao response JSON must be an object")
+    return payload
+
+
+def _response_error_detail(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except json.JSONDecodeError:
+        return response.text[:300]
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        if isinstance(error, dict):
+            message = error.get("message")
+            if message:
+                return str(message)
+        detail = payload.get("detail") or payload.get("message")
+        if detail:
+            return str(detail)
+    return str(payload)[:300]
+
+
+def _strip_json_fence(content: str) -> str:
+    stripped = content.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
+        stripped = re.sub(r"\s*```$", "", stripped)
+    return stripped.strip()
+
+
+def _image_data_url(path: Path) -> str:
+    mime_type = mimetypes.guess_type(path.name)[0] or "image/jpeg"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _clean_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    clean: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text and text not in clean:
+            clean.append(text)
+    return clean
+
+
+def _knowledge_pack_from_payload(material: CourseMaterial, job: MaterialParseJob, payload: dict[str, Any]) -> KnowledgePack:
+    knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
+    raw_vocabulary = payload.get("vocabulary_items")
+    vocabulary_items = []
+    if isinstance(raw_vocabulary, list):
+        for item in raw_vocabulary:
+            if not isinstance(item, dict) or not item.get("word"):
+                continue
+            vocabulary_items.append(
+                VocabularyItem(
+                    id=f"word_{uuid4().hex[:8]}",
+                    knowledge_pack_id=knowledge_pack_id,
+                    word=str(item["word"]).strip(),
+                    phonics=str(item.get("phonics", "")).strip(),
+                    meaning_cn=str(item.get("meaning_cn", "")).strip(),
+                    image_url=str(item.get("image_url", "")).strip(),
+                    audio_url=str(item.get("audio_url", "")).strip(),
+                    example_sentence=str(item.get("example_sentence", "")).strip(),
+                )
+            )
+    raw_sentences = payload.get("sentence_patterns")
+    sentence_patterns = []
+    if isinstance(raw_sentences, list):
+        for item in raw_sentences:
+            if not isinstance(item, dict) or not item.get("sentence"):
+                continue
+            sentence_patterns.append(
+                SentencePattern(
+                    id=f"sentence_{uuid4().hex[:8]}",
+                    knowledge_pack_id=knowledge_pack_id,
+                    sentence=str(item["sentence"]).strip(),
+                    meaning_cn=str(item.get("meaning_cn", "")).strip(),
+                    usage_type=str(item.get("usage_type", "")).strip(),
+                    audio_url=str(item.get("audio_url", "")).strip(),
+                )
+            )
+    fallback = StubLanguageParsingProvider().generate_knowledge_pack(material, job)
+    return KnowledgePack(
+        id=knowledge_pack_id,
+        material_id=material.id,
+        topic=str(payload.get("topic") or job.draft_topic or material.topic or "课堂主题").strip(),
+        difficulty_band=DifficultyBand.repeat,
+        lesson_summary=str(payload.get("lesson_summary") or fallback.lesson_summary).strip(),
+        review_recommendation=str(payload.get("review_recommendation") or fallback.review_recommendation).strip(),
+        vocabulary_items=vocabulary_items or fallback.vocabulary_items,
+        sentence_patterns=sentence_patterns or fallback.sentence_patterns,
+    )
 
 
 def _extract_candidate_vocabulary(text: str) -> list[str]:

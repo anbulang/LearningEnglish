@@ -139,6 +139,23 @@ Use this when preparing a demo or internal test package:
 - In non-production environments, phone OTP responses include `debug_code`, currently `123456`.
 - Core demo path: 登录 -> 绑定手机号 -> 创建默认孩子 -> 上传讲义 -> AI 校对 -> 课程详情 -> 复习 -> 报告。
 
+## Doubao Worksheet Recognition
+The AI pipeline defaults to `AI_PROVIDER=stub`. To run the first real worksheet-recognition slice with Doubao / Volcengine Ark, set these values in `infra/.env` and in the API/worker process environment:
+
+```bash
+AI_PROVIDER=doubao
+ARK_API_KEY=<your-volcengine-ark-api-key>
+ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+DOUBAO_VISION_MODEL_OR_ENDPOINT=<your-vision-model-or-endpoint>
+DOUBAO_TEXT_MODEL_OR_ENDPOINT=<your-text-model-or-endpoint>
+AI_REQUEST_TIMEOUT_SECONDS=60
+AI_MAX_IMAGE_COUNT=5
+```
+
+The app contract does not change in Doubao mode: upload still creates `CourseMaterial -> MaterialParseJob`, polling moves the job to `needs_review`, parent confirmation creates `KnowledgePack` and three MVP review tasks. If the Doubao call fails, the job is marked `failed` with a readable `confidence_summary` and can be retried.
+
+For a manual smoke test, start API and worker with the variables above, upload a real worksheet photo from the mobile app, then verify the AI review page shows extracted words and sentences before confirming.
+
 ## Harness Deliverables
 - Non-technical trial guide: `docs/harness/non-technical-pilot-guide.md`
 - MVP readiness checklist: `docs/harness/mvp-readiness-checklist.md`

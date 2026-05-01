@@ -43,11 +43,20 @@ def process_material_job(job_id: str) -> dict[str, str]:
             )
         ).all()
         local_paths = [storage.resolve_local_path(asset) for asset in asset_rows]
-        prepared = pipeline.prepare_job(
-            course_material_from_model(material),
-            material_job_from_model(job),
-            local_paths=local_paths,
-        )
+        try:
+            prepared = pipeline.prepare_job(
+                course_material_from_model(material),
+                material_job_from_model(job),
+                local_paths=local_paths,
+            )
+        except Exception as exc:
+            job.status = JobStatus.failed.value
+            job.finished_at = None
+            job.confidence_summary = f"处理失败：{exc}"
+            job.warnings = [f"处理失败：{exc}", "请检查 AI provider 配置或稍后重试。"]
+            db.add(job)
+            db.commit()
+            return {"job_id": job.id, "status": job.status}
         job.status = prepared.status.value
         job.finished_at = prepared.finished_at
         job.draft_title = prepared.draft_title

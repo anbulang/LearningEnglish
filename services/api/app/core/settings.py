@@ -26,6 +26,13 @@ class Settings:
     use_path_style_s3: bool
     wechat_app_id: str
     wechat_app_secret: str
+    ai_provider: str
+    ark_api_key: str
+    ark_base_url: str
+    doubao_vision_model_or_endpoint: str
+    doubao_text_model_or_endpoint: str
+    ai_request_timeout_seconds: int
+    ai_max_image_count: int
     dashscope_api_key: str
     qwen_model: str
     sentry_dsn: str
@@ -55,6 +62,13 @@ def get_settings() -> Settings:
         use_path_style_s3=os.getenv("OBJECT_STORAGE_USE_PATH_STYLE", "true").lower() == "true",
         wechat_app_id=os.getenv("WECHAT_APP_ID", ""),
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", ""),
+        ai_provider=os.getenv("AI_PROVIDER", os.getenv("PROVIDER_MODE", "stub")),
+        ark_api_key=os.getenv("ARK_API_KEY", ""),
+        ark_base_url=os.getenv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+        doubao_vision_model_or_endpoint=os.getenv("DOUBAO_VISION_MODEL_OR_ENDPOINT", ""),
+        doubao_text_model_or_endpoint=os.getenv("DOUBAO_TEXT_MODEL_OR_ENDPOINT", ""),
+        ai_request_timeout_seconds=int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "60")),
+        ai_max_image_count=int(os.getenv("AI_MAX_IMAGE_COUNT", "5")),
         dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", ""),
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
