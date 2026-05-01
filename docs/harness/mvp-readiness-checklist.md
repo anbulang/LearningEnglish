@@ -26,6 +26,7 @@
 - [x] `make mobile-ios-ipa` 成功
 - [x] `dist/ios/` 下存在 archive 和导出产物
 - [x] 至少一台 iOS 模拟器跑通当前 UI
+- [x] iOS 真机安装并启动成功
 - [ ] Android debug APK fallback 成功
 
 ### D. 主链复现
@@ -42,8 +43,8 @@
 
 ## 本次验收记录
 执行人：Codex  
-验收时间：2026-04-29，iOS IPA 补充验收：2026-05-01  
-验收环境：本机开发环境，stub providers，Docker Compose Postgres / Redis / MinIO / API / worker，iOS Simulator  
+验收时间：2026-04-29，iOS IPA 与真机补充验收：2026-05-01  
+验收环境：本机开发环境，stub providers，Docker Compose Postgres / Redis / MinIO / API / worker，iOS Simulator，iPhone 真机 `Chaucer`  
 
 ### 命令结果
 - [x] `HARNESS_RESET=1 make harness-mvp-readiness`
@@ -61,6 +62,8 @@
 - [x] `make mobile-ios-prep`
 - [x] `make mobile-ios-archive`
 - [x] `make mobile-ios-ipa`
+- [x] `xcrun devicectl device install app --device Chaucer dist/ios/LearningEnglish-Debug.xcarchive/Products/Applications/Runner.app --timeout 120`
+- [x] `xcrun devicectl device process launch --device Chaucer --terminate-existing com.anbulang.learningenglish --timeout 60`
 - [ ] `make mobile-apk`
 
 验收日志：
@@ -89,7 +92,8 @@
 - 当前环境仍依赖 stub provider
 - iOS Debug IPA 已导出：`dist/ios/export/learning_english_mobile.ipa`
 - iOS 工程使用 Team `95RDXKW54K` 与 Bundle ID `com.anbulang.learningenglish`，本机签名 identity 为 `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`
-- Debug IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；本轮未在真实 iPhone 上执行安装验证
+- Debug IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；当前真机 `Chaucer` 已验证可安装并启动
+- 真机测试包使用局域网 API：`http://192.168.2.5:8000/v1`，对应后端健康检查 `http://192.168.2.5:8000/healthz` 返回 `{"status":"ok"}`
 - Android fallback 也未产出，当前机器未配置 Android SDK，`flutter build apk --debug` 返回 `No Android SDK found`
 - `api-migrate` 已修正为默认迁移 Docker Postgres；如果只想使用 SQLite，需要显式覆盖 `API_DATABASE_URL`
 
@@ -98,8 +102,8 @@
 - [x] 仍需补充处理
 
 补充处理项：
-1. 如需安装到当前连接的 iPhone，先确认是否允许写入真实设备，再执行真机安装验证
-2. 如需发给更多内部测试人员，收集并注册测试设备 UDID，或改走 TestFlight
-3. 将真机安装结果和截图补回本 checklist
+1. 如需发给更多内部测试人员，收集并注册测试设备 UDID，或改走 TestFlight
+2. 将真机主链操作截图补回本 checklist
+3. 如 Mac 局域网 IP 变化，重新用新的 `IOS_API_BASE_URL` 导出测试包
 4. 如需 Android fallback，安装 Android SDK 并设置 `ANDROID_HOME` 后执行 `make mobile-apk`
 5. 如需补齐真实截图，先清理模拟器 App 数据，再从登录页完整走一遍主链

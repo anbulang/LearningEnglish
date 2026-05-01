@@ -46,7 +46,7 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 - 当前机器已产出 iOS Debug IPA：`dist/ios/export/learning_english_mobile.ipa`。
 - 这个 IPA 是 development provisioning 分发包，只能安装到已纳入 provisioning profile 的测试设备；如果你的设备未注册，需要开发同学先补设备授权或改用 TestFlight。
 - 当前机器尚未产出 Android debug APK，因为未配置 Android SDK / `ANDROID_HOME`。
-- 当前最稳妥试用方式仍是开发机上的 iOS 模拟器；如需真机试用，先让开发同学确认设备是否可安装该 IPA。
+- 当前真机 `Chaucer` 已验证可以安装并启动该 IPA。其他 iPhone 仍需先确认设备是否已纳入 development provisioning profile。
 
 ## 3. 登录方式
 当前是开发环境，登录规则固定：
@@ -191,6 +191,7 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 - 移动端：上传成功后跳转 AI 校对页，AI 校对确认后跳转课程详情
 - Harness：`HARNESS_RESET=1 make harness-mvp-readiness` 可以完成到测试和模拟器构建阶段
 - iOS：`make mobile-ios-ipa` 已成功导出 `dist/ios/export/learning_english_mobile.ipa`
+- 真机：`Chaucer` 已验证可以安装并启动 `com.anbulang.learningenglish`
 
 尚未完全满足“任意非开发设备直接安装”的条件：
 
