@@ -46,6 +46,7 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 - 当前机器已产出 iOS Internal/Profile IPA：`dist/ios/export/learning_english_mobile.ipa`。
 - 这个 IPA 是 development provisioning 分发包，只能安装到已纳入 provisioning profile 的测试设备；如果你的设备未注册，需要开发同学先补设备授权或改用 TestFlight。
 - 不要使用 Flutter Debug 包做普通真机试用；Debug 包必须通过 `flutter run` 或 Xcode 启动，否则从桌面打开会闪退。
+- 真机首次点击登录时，如果 iOS 弹出“允许访问本地网络”，必须选择“允许”，否则 App 无法连接本机开发 API。
 - 当前机器尚未产出 Android debug APK，因为未配置 Android SDK / `ANDROID_HOME`。
 - 当前真机 `Chaucer` 已验证可以安装并启动该 IPA。其他 iPhone 仍需先确认设备是否已纳入 development provisioning profile。
 
