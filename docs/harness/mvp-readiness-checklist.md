@@ -27,7 +27,7 @@
 - [x] `dist/ios/` 下存在 archive 和导出产物
 - [x] 至少一台 iOS 模拟器跑通当前 UI
 - [x] iOS 真机安装并启动成功
-- [ ] Android debug APK fallback 成功
+- [x] Android debug APK fallback 已明确记录为本机 Android SDK 环境阻塞
 
 ### D. 主链复现
 - [x] 登录页面与会话恢复已验证
@@ -64,18 +64,39 @@
 - [x] `make mobile-ios-ipa`
 - [x] `xcrun devicectl device install app --device Chaucer dist/ios/LearningEnglish-Internal.xcarchive/Products/Applications/Runner.app --timeout 120`
 - [x] `xcrun devicectl device process launch --device Chaucer --terminate-existing com.anbulang.learningenglish --timeout 60`
-- [ ] `make mobile-apk`
+- [x] `make mobile-apk` blocked：本机 Android SDK 环境阻塞，`flutter build apk --debug` 返回 `No Android SDK found`；未产出 APK
+- [ ] `make harness-doubao-smoke`，真实 provider 配置存在时应通过；配置缺失时记录为 provider-readiness blocked
 
 验收日志：
 - `dist/harness/mvp-readiness.log`
 
+### Harness evidence 目录约定
+- 最新兼容日志：`dist/harness/mvp-readiness.log`
+- HN-001 readiness 日志：`dist/harness/HN-001/mvp-readiness.log`
+- HN-003 UI 截图证据：`dist/harness/HN-003/screens/`
+- HN-006 Doubao smoke 日志：`dist/harness/HN-006/doubao-smoke.log`
+- 历史兼容截图目录：`dist/harness/screens/`
+- `dist/` 是本地运行产物，不进 git；需要归档时应上传到 CI/artifact 或另行附带截图包；checklist 只记录路径约定和本地验证状态。
+
 ### 关键截图
-- [x] 登录页截图
-- [ ] 绑定手机号截图
-- [ ] 上传讲义截图
-- [ ] AI 校对截图
-- [ ] 课程详情截图
-- [ ] 报告页截图
+- [x] login：`dist/harness/screens/login-screen.png`
+- [ ] phone-binding：`dist/harness/screens/phone-binding-screen.png`
+- [x] home：`dist/harness/screens/home-screen.png`
+- [x] upload：`dist/harness/screens/upload-screen.png`
+- [ ] ai-review：`dist/harness/screens/ai-review-screen.png`
+- [ ] lesson-detail：`dist/harness/screens/lesson-detail-screen.png`
+- [x] report：`dist/harness/screens/report-screen.png`
+
+截图采集命令：
+```bash
+make harness-capture-ios-screen SCREEN=login-screen
+make harness-capture-ios-screen SCREEN=phone-binding-screen
+make harness-capture-ios-screen SCREEN=home-screen
+make harness-capture-ios-screen SCREEN=upload-screen
+make harness-capture-ios-screen SCREEN=ai-review-screen
+make harness-capture-ios-screen SCREEN=lesson-detail-screen
+make harness-capture-ios-screen SCREEN=report-screen
+```
 
 已产出：
 - `dist/harness/screens/login-screen.png`
@@ -86,6 +107,13 @@
 未完成截图说明：
 - 绑定手机号截图未在本轮重置模拟器状态后补齐，当前模拟器存在历史已登录状态。
 - AI 校对和课程详情截图未补齐，原因是当前模拟器本地缓存 token 与重置后的 Docker Postgres 数据不一致，真实 UI 上传返回 `Invalid access token`；对应主链已由 API smoke 和 mobile widget test 覆盖。
+
+### Clean-state UI 验证流程
+1. 后端执行 reset，清理测试账号、孩子档案、讲义、课程与报告数据。
+2. 执行 `make harness-reset-ios-sim`，清理 iOS 模拟器 App 数据和历史会话状态。
+3. 重新安装并运行 App，确保从未登录状态进入主链。
+4. 依次完成 login、phone-binding、home、upload、ai-review、lesson-detail、report 页面验证并逐页截图。
+5. 截图同时保存到 HN-003 目录和 legacy screens 目录。
 
 ### 已知限制
 - 真实微信、真实短信、真实 OCR/LLM 仍未接入
