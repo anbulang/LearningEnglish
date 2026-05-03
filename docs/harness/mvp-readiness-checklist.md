@@ -27,7 +27,7 @@
 - [x] `dist/ios/` 下存在 archive 和导出产物
 - [x] 至少一台 iOS 模拟器跑通当前 UI
 - [x] iOS 真机安装并启动成功
-- [x] Android debug APK fallback 已明确记录为本机 Android SDK 环境阻塞
+- [x] Android debug APK fallback 已明确记录为本机 Flutter SDK cache 写入权限阻塞
 
 ### D. 主链复现
 - [x] 登录页面与会话恢复已验证
@@ -64,8 +64,8 @@
 - [x] `make mobile-ios-ipa`
 - [x] `xcrun devicectl device install app --device Chaucer dist/ios/LearningEnglish-Internal.xcarchive/Products/Applications/Runner.app --timeout 120`
 - [x] `xcrun devicectl device process launch --device Chaucer --terminate-existing com.anbulang.learningenglish --timeout 60`
-- [x] `make mobile-apk` blocked：本机 Android SDK 环境阻塞，`flutter build apk --debug` 返回 `No Android SDK found`；未产出 APK
-- [ ] `make harness-doubao-smoke`，真实 provider 配置存在时应通过；配置缺失时记录为 provider-readiness blocked
+- [x] `make mobile-apk` blocked：本机 Flutter SDK cache 写入权限阻塞，`flutter build apk --debug` 返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；未进入 Android SDK 检查，未产出 APK
+- [x] `make harness-doubao-smoke` blocked：真实 provider 配置存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，记录为 provider-readiness blocked；未验证 Doubao provider 可用性
 
 验收日志：
 - `dist/harness/mvp-readiness.log`
@@ -123,7 +123,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 - Flutter Debug 包不能作为普通内测包从桌面直接启动；iOS 14+ 下会报 `Cannot create a FlutterEngine instance in debug mode without Flutter tooling or Xcode` 并闪退。因此 `make mobile-ios-ipa` 已改为默认产出 Profile/Internal 包
 - Profile/Internal IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；当前真机 `Chaucer` 已验证可安装并启动
 - 真机测试包使用局域网 API：`http://192.168.2.5:8000/v1`，对应后端健康检查 `http://192.168.2.5:8000/healthz` 返回 `{"status":"ok"}`
-- Android fallback 也未产出，当前机器未配置 Android SDK，`flutter build apk --debug` 返回 `No Android SDK found`
+- Android fallback 也未产出，当前机器运行 `flutter build apk --debug` 先在 Flutter SDK cache 写入阶段失败：`/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；因此尚未进入 Android SDK 检查
+- Doubao provider smoke 未通过，配置项存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，已记录为 provider-readiness blocked
 - `api-migrate` 已修正为默认迁移 Docker Postgres；如果只想使用 SQLite，需要显式覆盖 `API_DATABASE_URL`
 
 ### 交付判断
@@ -134,5 +135,5 @@ make harness-capture-ios-screen SCREEN=report-screen
 1. 如需发给更多内部测试人员，收集并注册测试设备 UDID，或改走 TestFlight
 2. 将真机主链操作截图补回本 checklist
 3. 如 Mac 局域网 IP 变化，重新用新的 `IOS_API_BASE_URL` 导出测试包
-4. 如需 Android fallback，安装 Android SDK 并设置 `ANDROID_HOME` 后执行 `make mobile-apk`
+4. 如需 Android fallback，先修复 Flutter SDK cache 写入权限或改用当前用户可写的 Flutter SDK，再确认 Android SDK / `ANDROID_HOME` 后执行 `make mobile-apk`
 5. 如需补齐真实截图，先清理模拟器 App 数据，再从登录页完整走一遍主链

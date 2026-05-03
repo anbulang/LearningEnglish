@@ -29,6 +29,10 @@ case "$status" in
     log "BLOCKED: Doubao provider smoke missing required configuration"
     ;;
   *)
+    if grep -Eiq "ConnectError|nodename nor servname|Name or service not known|Temporary failure in name resolution|Could not resolve|Connection timed out|Network is unreachable" "$LOG_FILE"; then
+      log "BLOCKED: Doubao provider smoke network/DNS unavailable"
+      exit 2
+    fi
     log "FAIL: Doubao provider smoke exited with status $status"
     ;;
 esac

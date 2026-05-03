@@ -88,7 +88,7 @@ Build a local Android test APK:
 ```bash
 make mobile-apk
 ```
-成功时 APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`。如果返回 `No Android SDK found`，这是本机 Android SDK 环境阻塞，不代表 Flutter 代码或 MVP 主链失败。
+成功时 APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`。如果返回 `No Android SDK found`，这是本机 Android SDK 环境阻塞；如果返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`，这是本机 Flutter SDK cache 写入权限阻塞。两类问题都不代表 Flutter 代码或 MVP 主链失败。
 
 Build and export a local iOS internal/Profile IPA:
 ```bash
@@ -186,7 +186,7 @@ Run the provider smoke test without printing secrets:
 make harness-doubao-smoke
 ```
 
-该命令会写入 `dist/harness/HN-006/doubao-smoke.log`。缺配置时记录 `blocked`；配置完整且 provider 可用时会出现 `text_ok`、`vision_ok`、`PASS: Doubao provider smoke`。
+该命令会写入 `dist/harness/HN-006/doubao-smoke.log`。缺配置时记录 `BLOCKED: Doubao provider smoke missing required configuration`；DNS/网络不可达时记录 `BLOCKED: Doubao provider smoke network/DNS unavailable`；配置完整且 provider 可用时会出现 `text_ok`、`vision_ok`、`PASS: Doubao provider smoke`。
 
 The app contract does not change in Doubao mode: upload still creates `CourseMaterial -> MaterialParseJob`, polling moves the job to `needs_review`, parent confirmation creates `KnowledgePack` and three MVP review tasks. If the Doubao call fails, the job is marked `failed` with a readable `confidence_summary` and can be retried.
 

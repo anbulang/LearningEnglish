@@ -31,6 +31,18 @@
 
 先做脚本能力，再补文档，最后运行轻量验证。`HARNESS_RESET=1 make harness-mvp-readiness` 是重型验证，放到最后由执行者根据环境决定是否运行。
 
+## 执行状态
+
+截至 2026-05-03，Task 1、Task 2、Task 3、Task 4 的脚本能力、Task 5、Task 6 和 Task 7 的轻量验证均已执行并提交。仍未完成的只有两项：
+
+- Task 4 Step 5：未补齐真实主链截图，当前只验证了截图 helper 的参数校验和安全写入路径。
+- Task 7 Step 5：未运行完整 `HARNESS_RESET=1 make harness-mvp-readiness`，因为当前环境存在 provider DNS 和 Flutter SDK cache 权限 blocker。
+
+已补充记录的环境 blocker：
+
+- `make harness-doubao-smoke`：Doubao 配置存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，harness 记录为 provider-readiness blocked。
+- `make mobile-apk`：Flutter 在写入 `/opt/homebrew/share/flutter/bin/cache/engine.stamp` 时返回 `Operation not permitted`，尚未进入 Android SDK 检查。
+
 ### Task 1: 规范 MVP readiness harness 日志和可选步骤
 
 **需求覆盖：** `HN-001`、`HN-002`、`HN-005`、部分 `HN-007`
@@ -38,7 +50,7 @@
 **Files:**
 - Modify: `scripts/harness/run_mvp_readiness.sh`
 
-- [ ] **Step 1: 写入新的 harness shell 结构**
+- [x] **Step 1: 写入新的 harness shell 结构**
 
 用下面内容替换 `scripts/harness/run_mvp_readiness.sh` 的主体。保留 shebang 和 `set -euo pipefail`，其余内容按下面版本更新。
 
@@ -152,7 +164,7 @@ log "MVP readiness harness finished"
 sync_legacy_log
 ```
 
-- [ ] **Step 2: 运行 shell 语法检查**
+- [x] **Step 2: 运行 shell 语法检查**
 
 Run:
 
@@ -162,7 +174,7 @@ bash -n scripts/harness/run_mvp_readiness.sh
 
 Expected: 命令无输出，退出码为 `0`。
 
-- [ ] **Step 3: 验证不再出现误导性 iOS Debug 标签**
+- [x] **Step 3: 验证不再出现误导性 iOS Debug 标签**
 
 Run:
 
@@ -172,7 +184,7 @@ rg -n "iOS Debug IPA|Debug IPA" scripts/harness/run_mvp_readiness.sh
 
 Expected: 无匹配，`rg` 退出码为 `1`。
 
-- [ ] **Step 4: 提交本任务**
+- [x] **Step 4: 提交本任务**
 
 ```bash
 git add scripts/harness/run_mvp_readiness.sh
@@ -187,7 +199,7 @@ git commit -m "fix: normalize mvp readiness harness logging"
 - Create: `scripts/harness/run_doubao_smoke.sh`
 - Modify: `Makefile`
 
-- [ ] **Step 1: 新建 Doubao smoke wrapper**
+- [x] **Step 1: 新建 Doubao smoke wrapper**
 
 Create `scripts/harness/run_doubao_smoke.sh`:
 
@@ -230,7 +242,7 @@ esac
 exit "$status"
 ```
 
-- [ ] **Step 2: 让 wrapper 可执行**
+- [x] **Step 2: 让 wrapper 可执行**
 
 Run:
 
@@ -240,7 +252,7 @@ chmod +x scripts/harness/run_doubao_smoke.sh
 
 Expected: 命令无输出，退出码为 `0`。
 
-- [ ] **Step 3: 给 Makefile 增加 target**
+- [x] **Step 3: 给 Makefile 增加 target**
 
 在 `Makefile` 的 `.PHONY` 行末尾增加：
 
@@ -255,7 +267,7 @@ harness-doubao-smoke:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_doubao_smoke.sh
 ```
 
-- [ ] **Step 4: 验证缺失配置时不泄露 secrets**
+- [x] **Step 4: 验证缺失配置时不泄露 secrets**
 
 Run:
 
@@ -267,7 +279,7 @@ Expected when Doubao env is not configured: 输出包含 `BLOCKED: Doubao provid
 
 Expected when Doubao env is configured: 输出包含 `PASS: Doubao provider smoke`，退出码为 `0`，日志包含 `text_ok` 和 `vision_ok`。
 
-- [ ] **Step 5: 提交本任务**
+- [x] **Step 5: 提交本任务**
 
 ```bash
 git add Makefile scripts/harness/run_doubao_smoke.sh
@@ -282,7 +294,7 @@ git commit -m "chore: add doubao smoke harness wrapper"
 - Create: `scripts/harness/reset_ios_simulator_app.sh`
 - Modify: `Makefile`
 
-- [ ] **Step 1: 新建 clean-state helper**
+- [x] **Step 1: 新建 clean-state helper**
 
 Create `scripts/harness/reset_ios_simulator_app.sh`:
 
@@ -313,7 +325,7 @@ else
 fi
 ```
 
-- [ ] **Step 2: 让 helper 可执行**
+- [x] **Step 2: 让 helper 可执行**
 
 Run:
 
@@ -323,7 +335,7 @@ chmod +x scripts/harness/reset_ios_simulator_app.sh
 
 Expected: 命令无输出，退出码为 `0`。
 
-- [ ] **Step 3: 给 Makefile 增加 target**
+- [x] **Step 3: 给 Makefile 增加 target**
 
 在 `Makefile` 的 `.PHONY` 行末尾增加：
 
@@ -338,7 +350,7 @@ harness-reset-ios-sim:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/reset_ios_simulator_app.sh
 ```
 
-- [ ] **Step 4: 验证无 booted simulator 时的失败信息**
+- [x] **Step 4: 验证无 booted simulator 时的失败信息**
 
 Run when no iOS simulator is booted:
 
@@ -356,7 +368,7 @@ make harness-reset-ios-sim
 
 Expected: 输出 `PASS: uninstalled com.anbulang.learningenglish from booted` 或 `PASS: com.anbulang.learningenglish is not installed on booted`。
 
-- [ ] **Step 5: 提交本任务**
+- [x] **Step 5: 提交本任务**
 
 ```bash
 git add Makefile scripts/harness/reset_ios_simulator_app.sh
@@ -371,7 +383,7 @@ git commit -m "chore: add ios simulator reset harness"
 - Create: `scripts/harness/capture_ios_simulator_screen.sh`
 - Modify: `Makefile`
 
-- [ ] **Step 1: 新建截图 helper**
+- [x] **Step 1: 新建截图 helper**
 
 Create `scripts/harness/capture_ios_simulator_screen.sh`:
 
@@ -418,7 +430,7 @@ echo "PASS: captured $TARGET"
 echo "PASS: copied $LEGACY_TARGET"
 ```
 
-- [ ] **Step 2: 让 helper 可执行**
+- [x] **Step 2: 让 helper 可执行**
 
 Run:
 
@@ -428,7 +440,7 @@ chmod +x scripts/harness/capture_ios_simulator_screen.sh
 
 Expected: 命令无输出，退出码为 `0`。
 
-- [ ] **Step 3: 给 Makefile 增加 target**
+- [x] **Step 3: 给 Makefile 增加 target**
 
 在 `Makefile` 的 `.PHONY` 行末尾增加：
 
@@ -443,7 +455,7 @@ harness-capture-ios-screen:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/capture_ios_simulator_screen.sh "$(SCREEN)"
 ```
 
-- [ ] **Step 4: 验证缺少 SCREEN 时的失败信息**
+- [x] **Step 4: 验证缺少 SCREEN 时的失败信息**
 
 Run:
 
@@ -469,7 +481,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 
 Expected: 每个命令都输出 `PASS: captured ...` 和 `PASS: copied ...`，并生成 `dist/harness/HN-003/screens/*.png` 与 `dist/harness/screens/*.png`。
 
-- [ ] **Step 6: 提交本任务**
+- [x] **Step 6: 提交本任务**
 
 ```bash
 git add Makefile scripts/harness/capture_ios_simulator_screen.sh
@@ -483,7 +495,7 @@ git commit -m "chore: add ios screenshot evidence harness"
 **Files:**
 - Modify: `docs/harness/mvp-readiness-checklist.md`
 
-- [ ] **Step 1: 更新验收清单中的 Android fallback 状态描述**
+- [x] **Step 1: 更新验收清单中的 Android fallback 状态描述**
 
 将 `### C. iOS 交付链` 下的：
 
@@ -497,7 +509,7 @@ git commit -m "chore: add ios screenshot evidence harness"
 - [ ] Android debug APK fallback 成功，或明确记录为本机 Android SDK 环境阻塞
 ```
 
-- [ ] **Step 2: 更新命令结果列表**
+- [x] **Step 2: 更新命令结果列表**
 
 将命令结果中的：
 
@@ -512,7 +524,7 @@ git commit -m "chore: add ios screenshot evidence harness"
 - [ ] `make harness-doubao-smoke`，真实 provider 配置存在时应通过；配置缺失时记录为 provider-readiness blocked
 ```
 
-- [ ] **Step 3: 更新关键截图清单**
+- [x] **Step 3: 更新关键截图清单**
 
 将关键截图区改为：
 
@@ -538,7 +550,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 ```
 ```
 
-- [ ] **Step 4: 新增 clean-state 流程**
+- [x] **Step 4: 新增 clean-state 流程**
 
 在 `未完成截图说明` 后新增：
 
@@ -551,7 +563,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 5. 截图同时保存到 `dist/harness/HN-003/screens/` 和 `dist/harness/screens/`。
 ```
 
-- [ ] **Step 5: 新增证据目录约定**
+- [x] **Step 5: 新增证据目录约定**
 
 在 `验收日志` 后新增：
 
@@ -564,7 +576,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - 历史兼容截图目录：`dist/harness/screens/`
 ```
 
-- [ ] **Step 6: 提交本任务**
+- [x] **Step 6: 提交本任务**
 
 ```bash
 git add docs/harness/mvp-readiness-checklist.md
@@ -578,7 +590,7 @@ git commit -m "docs: update mvp readiness harness evidence checklist"
 **Files:**
 - Modify: `README.md`
 
-- [ ] **Step 1: 在 `## Short MVP Delivery Flow` 后新增中文 harness 说明**
+- [x] **Step 1: 在 `## Short MVP Delivery Flow` 后新增中文 harness 说明**
 
 在该章节的步骤列表之后新增：
 
@@ -609,7 +621,7 @@ Clean-state UI 验证建议顺序：
 5. 逐页执行 `make harness-capture-ios-screen SCREEN=<name>` 保存证据。
 ```
 
-- [ ] **Step 2: 更新 Android APK 说明**
+- [x] **Step 2: 更新 Android APK 说明**
 
 将：
 
@@ -631,7 +643,7 @@ make mobile-apk
 成功时 APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`。如果命令返回 `No Android SDK found`，这是本机 Android SDK 环境阻塞，不代表 Flutter 代码或 MVP 主链失败。
 ```
 
-- [ ] **Step 3: 更新 Doubao smoke 说明**
+- [x] **Step 3: 更新 Doubao smoke 说明**
 
 将 Doubao smoke 命令：
 
@@ -651,7 +663,7 @@ make harness-doubao-smoke
 该命令会把 provider smoke 证据写入 `dist/harness/HN-006/doubao-smoke.log`。缺少配置时会记录 blocked 状态；配置完整且 provider 可用时应出现 `text_ok`、`vision_ok` 和 `PASS: Doubao provider smoke`。
 ```
 
-- [ ] **Step 4: 提交本任务**
+- [x] **Step 4: 提交本任务**
 
 ```bash
 git add README.md
@@ -665,7 +677,7 @@ git commit -m "docs: document harness engineering verification flow"
 **Files:**
 - No source edits expected
 
-- [ ] **Step 1: shell 语法检查**
+- [x] **Step 1: shell 语法检查**
 
 Run:
 
@@ -678,7 +690,7 @@ bash -n scripts/harness/capture_ios_simulator_screen.sh
 
 Expected: 所有命令无输出，退出码为 `0`。
 
-- [ ] **Step 2: Makefile target 可发现性检查**
+- [x] **Step 2: Makefile target 可发现性检查**
 
 Run:
 
@@ -690,7 +702,7 @@ make -n harness-capture-ios-screen SCREEN=login-screen
 
 Expected: 每个命令输出对应 `bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/...` 调用，不实际执行脚本。
 
-- [ ] **Step 3: 缺少参数的截图 helper 检查**
+- [x] **Step 3: 缺少参数的截图 helper 检查**
 
 Run:
 
@@ -700,7 +712,7 @@ make harness-capture-ios-screen
 
 Expected: 输出包含 `FAIL: screen name is required`，退出码为 `1`。
 
-- [ ] **Step 4: 文档禁用词检查**
+- [x] **Step 4: 文档禁用词检查**
 
 Run:
 
@@ -725,7 +737,7 @@ Expected:
 - iOS 失败时，日志出现 `WARN optional: iOS Profile/Internal IPA export failed...`，随后尝试 Android fallback。
 - `dist/harness/HN-001/mvp-readiness.log` 和 `dist/harness/mvp-readiness.log` 都存在。
 
-- [ ] **Step 6: 提交验证记录文档更新**
+- [x] **Step 6: 提交验证记录文档更新**
 
 如果 Step 5 实际执行并产生新结果，更新 `docs/harness/mvp-readiness-checklist.md` 的“本次验收记录”。然后提交：
 
