@@ -12,7 +12,7 @@ IOS_PREFLIGHT_URL ?= $(subst /v1,,$(IOS_API_BASE_URL))/healthz
 IOS_DEVELOPMENT_TEAM ?= 95RDXKW54K
 API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0.0.1:5432/learning_english
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-reset-ios-sim harness-capture-ios-screen
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -91,3 +91,12 @@ harness-main-chain-smoke:
 
 harness-mvp-readiness:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_mvp_readiness.sh
+
+harness-doubao-smoke:
+	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_doubao_smoke.sh
+
+harness-reset-ios-sim:
+	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/reset_ios_simulator_app.sh
+
+harness-capture-ios-screen:
+	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/capture_ios_simulator_screen.sh "$(SCREEN)"

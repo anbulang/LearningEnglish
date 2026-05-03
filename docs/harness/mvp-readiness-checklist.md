@@ -27,7 +27,7 @@
 - [x] `dist/ios/` 下存在 archive 和导出产物
 - [x] 至少一台 iOS 模拟器跑通当前 UI
 - [x] iOS 真机安装并启动成功
-- [ ] Android debug APK fallback 成功
+- [x] Android debug APK fallback 已明确记录为本机 Flutter SDK cache 写入权限阻塞
 
 ### D. 主链复现
 - [x] 登录页面与会话恢复已验证
@@ -64,18 +64,39 @@
 - [x] `make mobile-ios-ipa`
 - [x] `xcrun devicectl device install app --device Chaucer dist/ios/LearningEnglish-Internal.xcarchive/Products/Applications/Runner.app --timeout 120`
 - [x] `xcrun devicectl device process launch --device Chaucer --terminate-existing com.anbulang.learningenglish --timeout 60`
-- [ ] `make mobile-apk`
+- [x] `make mobile-apk` blocked：本机 Flutter SDK cache 写入权限阻塞，`flutter build apk --debug` 返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；未进入 Android SDK 检查，未产出 APK
+- [x] `make harness-doubao-smoke` blocked：真实 provider 配置存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，记录为 provider-readiness blocked；未验证 Doubao provider 可用性
 
 验收日志：
 - `dist/harness/mvp-readiness.log`
 
+### Harness evidence 目录约定
+- 最新兼容日志：`dist/harness/mvp-readiness.log`
+- HN-001 readiness 日志：`dist/harness/HN-001/mvp-readiness.log`
+- HN-003 UI 截图证据：`dist/harness/HN-003/screens/`
+- HN-006 Doubao smoke 日志：`dist/harness/HN-006/doubao-smoke.log`
+- 历史兼容截图目录：`dist/harness/screens/`
+- `dist/` 是本地运行产物，不进 git；需要归档时应上传到 CI/artifact 或另行附带截图包；checklist 只记录路径约定和本地验证状态。
+
 ### 关键截图
-- [x] 登录页截图
-- [ ] 绑定手机号截图
-- [ ] 上传讲义截图
-- [ ] AI 校对截图
-- [ ] 课程详情截图
-- [ ] 报告页截图
+- [x] login：`dist/harness/screens/login-screen.png`
+- [ ] phone-binding：`dist/harness/screens/phone-binding-screen.png`
+- [x] home：`dist/harness/screens/home-screen.png`
+- [x] upload：`dist/harness/screens/upload-screen.png`
+- [ ] ai-review：`dist/harness/screens/ai-review-screen.png`
+- [ ] lesson-detail：`dist/harness/screens/lesson-detail-screen.png`
+- [x] report：`dist/harness/screens/report-screen.png`
+
+截图采集命令：
+```bash
+make harness-capture-ios-screen SCREEN=login-screen
+make harness-capture-ios-screen SCREEN=phone-binding-screen
+make harness-capture-ios-screen SCREEN=home-screen
+make harness-capture-ios-screen SCREEN=upload-screen
+make harness-capture-ios-screen SCREEN=ai-review-screen
+make harness-capture-ios-screen SCREEN=lesson-detail-screen
+make harness-capture-ios-screen SCREEN=report-screen
+```
 
 已产出：
 - `dist/harness/screens/login-screen.png`
@@ -87,6 +108,13 @@
 - 绑定手机号截图未在本轮重置模拟器状态后补齐，当前模拟器存在历史已登录状态。
 - AI 校对和课程详情截图未补齐，原因是当前模拟器本地缓存 token 与重置后的 Docker Postgres 数据不一致，真实 UI 上传返回 `Invalid access token`；对应主链已由 API smoke 和 mobile widget test 覆盖。
 
+### Clean-state UI 验证流程
+1. 后端执行 reset，清理测试账号、孩子档案、讲义、课程与报告数据。
+2. 执行 `make harness-reset-ios-sim`，清理 iOS 模拟器 App 数据和历史会话状态。
+3. 重新安装并运行 App，确保从未登录状态进入主链。
+4. 依次完成 login、phone-binding、home、upload、ai-review、lesson-detail、report 页面验证并逐页截图。
+5. 截图同时保存到 HN-003 目录和 legacy screens 目录。
+
 ### 已知限制
 - 真实微信、真实短信、真实 OCR/LLM 仍未接入
 - 当前环境仍依赖 stub provider
@@ -95,7 +123,8 @@
 - Flutter Debug 包不能作为普通内测包从桌面直接启动；iOS 14+ 下会报 `Cannot create a FlutterEngine instance in debug mode without Flutter tooling or Xcode` 并闪退。因此 `make mobile-ios-ipa` 已改为默认产出 Profile/Internal 包
 - Profile/Internal IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；当前真机 `Chaucer` 已验证可安装并启动
 - 真机测试包使用局域网 API：`http://192.168.2.5:8000/v1`，对应后端健康检查 `http://192.168.2.5:8000/healthz` 返回 `{"status":"ok"}`
-- Android fallback 也未产出，当前机器未配置 Android SDK，`flutter build apk --debug` 返回 `No Android SDK found`
+- Android fallback 也未产出，当前机器运行 `flutter build apk --debug` 先在 Flutter SDK cache 写入阶段失败：`/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；因此尚未进入 Android SDK 检查
+- Doubao provider smoke 未通过，配置项存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，已记录为 provider-readiness blocked
 - `api-migrate` 已修正为默认迁移 Docker Postgres；如果只想使用 SQLite，需要显式覆盖 `API_DATABASE_URL`
 
 ### 交付判断
@@ -106,5 +135,5 @@
 1. 如需发给更多内部测试人员，收集并注册测试设备 UDID，或改走 TestFlight
 2. 将真机主链操作截图补回本 checklist
 3. 如 Mac 局域网 IP 变化，重新用新的 `IOS_API_BASE_URL` 导出测试包
-4. 如需 Android fallback，安装 Android SDK 并设置 `ANDROID_HOME` 后执行 `make mobile-apk`
+4. 如需 Android fallback，先修复 Flutter SDK cache 写入权限或改用当前用户可写的 Flutter SDK，再确认 Android SDK / `ANDROID_HOME` 后执行 `make mobile-apk`
 5. 如需补齐真实截图，先清理模拟器 App 数据，再从登录页完整走一遍主链
