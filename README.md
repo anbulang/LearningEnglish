@@ -88,6 +88,7 @@ Build a local Android test APK:
 ```bash
 make mobile-apk
 ```
+成功时 APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`。如果返回 `No Android SDK found`，这是本机 Android SDK 环境阻塞，不代表 Flutter 代码或 MVP 主链失败。
 
 Build and export a local iOS internal/Profile IPA:
 ```bash
@@ -134,6 +135,31 @@ Use this when preparing a demo or internal test package:
 9. Run app locally: `cd apps/mobile && flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1`
 10. Build Android debug APK: `make mobile-apk`
 
+## Harness Engineering 验证入口
+后续需求默认使用中文文档和 Harness Engineering 验收方式。每条需求都要说明自动化命令、人工证据和证据目录。
+
+常用命令：
+
+```bash
+HARNESS_RESET=1 make harness-mvp-readiness
+make harness-main-chain-smoke
+make harness-doubao-smoke
+make harness-reset-ios-sim
+make harness-capture-ios-screen SCREEN=login-screen
+```
+
+证据目录：
+- `dist/harness/mvp-readiness.log`
+- `dist/harness/HN-*/`
+- `dist/harness/screens/`
+
+Clean-state UI 验证建议顺序：
+1. 重置后端并确认数据状态。
+2. 启动 iOS simulator。
+3. 运行 `make harness-reset-ios-sim`。
+4. 用当前 API URL 运行 App。
+5. 逐页运行 `make harness-capture-ios-screen SCREEN=<name>` 留存截图。
+
 ## Demo Login Notes
 - MVP defaults to stub providers so it can run without real WeChat, SMS, OCR, or LLM credentials.
 - In non-production environments, phone OTP responses include `debug_code`, currently `123456`.
@@ -157,8 +183,10 @@ This API key was verified locally against `doubao-seed-2-0-lite-260215` for both
 Run the provider smoke test without printing secrets:
 
 ```bash
-services/api/.venv/bin/python scripts/harness/smoke_doubao.py
+make harness-doubao-smoke
 ```
+
+该命令会写入 `dist/harness/HN-006/doubao-smoke.log`。缺配置时记录 `blocked`；配置完整且 provider 可用时会出现 `text_ok`、`vision_ok`、`PASS: Doubao provider smoke`。
 
 The app contract does not change in Doubao mode: upload still creates `CourseMaterial -> MaterialParseJob`, polling moves the job to `needs_review`, parent confirmation creates `KnowledgePack` and three MVP review tasks. If the Doubao call fails, the job is marked `failed` with a readable `confidence_summary` and can be retried.
 
