@@ -38,9 +38,11 @@ void main() {
     expect(find.text('课程标题'), findsNothing);
     expect(find.text('老师名'), findsNothing);
     expect(find.text('主题'), findsNothing);
-    expect(find.text('拍照'), findsWidgets);
-    expect(find.text('从相册选择'), findsWidgets);
-    expect(find.text('开始识别'), findsOneWidget);
+    expect(find.text('拍照'), findsOneWidget);
+    expect(find.text('从相册选择'), findsOneWidget);
+    expect(find.text('添加讲义页'), findsOneWidget);
+    expect(find.text('先添加讲义页'), findsOneWidget);
+    expect(find.text('拍照上传'), findsNothing);
   });
 
   testWidgets('upload success navigates from scan page to AI review page',
@@ -79,6 +81,9 @@ void main() {
       ],
     );
 
+    expect(find.text('已添加 1 页'), findsOneWidget);
+    expect(find.text('继续拍照'), findsOneWidget);
+    expect(find.text('继续选择'), findsOneWidget);
     final uploadButton = find.widgetWithText(FilledButton, '开始识别');
     await tester.ensureVisible(uploadButton);
     await tester.tap(uploadButton);

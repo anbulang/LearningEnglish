@@ -6,11 +6,8 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
-import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/illustrated_surface.dart';
-import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
 import '../data/scan_draft_controller.dart';
@@ -101,160 +98,403 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
   Widget build(BuildContext context) {
     final formFactor = formFactorOf(context);
     final draft = ref.watch(scanDraftProvider);
+    final hasPages = draft.pages.isNotEmpty;
 
-    final preview = AppCard(
-      child: draft.pages.isEmpty
-          ? StatePanel(
-              title: '还没有扫描页',
-              description: '直接拍照，或从相册选择已经拍好的讲义页。',
-              assetPath: AppIllustrations.stateEmpty,
-              action: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('上传讲义'),
+        centerTitle: false,
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            formFactor.isTablet ? AppSpacing.xl : 132,
+          ),
+          children: <Widget>[
+            const _UploadHeader(),
+            const SizedBox(height: AppSpacing.md),
+            if (hasPages)
+              _SelectedPagesPanel(
+                pages: draft.pages,
+                isSubmitting: _submitting,
+                onTakePhoto: _takePhoto,
+                onPickPage: _pickPage,
+                onClear: ref.read(scanDraftProvider.notifier).clear,
+              )
+            else
+              _EmptyUploadPanel(
+                onTakePhoto: _takePhoto,
+                onPickPage: _pickPage,
+              ),
+            if (_errorMessage != null) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              _InlineError(message: _errorMessage!),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            const _RecognitionSummary(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _RecognitionActionBar(
+        pageCount: draft.pages.length,
+        isSubmitting: _submitting,
+        onSubmit: _submit,
+      ),
+    );
+  }
+}
+
+class _UploadHeader extends StatelessWidget {
+  const _UploadHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('拍讲义，生成复习包', style: AppTextStyles.pageTitle),
+        SizedBox(height: AppSpacing.xs),
+        Text(
+          '把英语讲义拍下来，AI 会先整理标题、主题、词汇和句型，再交给你校对。',
+          style: AppTextStyles.body,
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyUploadPanel extends StatelessWidget {
+  const _EmptyUploadPanel({
+    required this.onTakePhoto,
+    required this.onPickPage,
+  });
+
+  final VoidCallback onPickPage;
+  final VoidCallback onTakePhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.softSheet.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          border: Border.all(
+            color: AppColors.coralJam.withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: <Widget>[
+              const _ScanIcon(),
+              const SizedBox(height: AppSpacing.md),
+              const Text('添加讲义页', style: AppTextStyles.sectionTitle),
+              const SizedBox(height: AppSpacing.xs),
+              const Text(
+                '拍摄纸质讲义，或选择已经拍好的图片。',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
                 children: <Widget>[
-                  FilledButton.icon(
-                    onPressed: _takePhoto,
-                    icon: const Icon(Icons.camera_alt_rounded),
-                    label: const Text('拍照'),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: onTakePhoto,
+                      icon: const Icon(Icons.camera_alt_rounded),
+                      label: const Text('拍照'),
+                    ),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _pickPage,
-                    icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('从相册选择'),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onPickPage,
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('从相册选择'),
+                    ),
                   ),
                 ],
               ),
-            )
-          : AspectRatio(
-              aspectRatio: formFactor.isTablet ? 4 / 3 : 3 / 4,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.softSheet,
-                  borderRadius: BorderRadius.circular(AppRadii.card),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const Icon(Icons.document_scanner_rounded,
-                        size: 64, color: AppColors.cocoaCoral),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text('已选择 ${draft.pages.length} 页讲义'),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(draft.pages.map((item) => item.name).join('\n'),
-                        textAlign: TextAlign.center),
-                  ],
-                ),
-              ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+}
 
-    final controls = AppCard(
+class _SelectedPagesPanel extends StatelessWidget {
+  const _SelectedPagesPanel({
+    required this.pages,
+    required this.isSubmitting,
+    required this.onTakePhoto,
+    required this.onPickPage,
+    required this.onClear,
+  });
+
+  final bool isSubmitting;
+  final VoidCallback onClear;
+  final VoidCallback onPickPage;
+  final VoidCallback onTakePhoto;
+  final List<XFile> pages;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
-            children: const <Widget>[
-              Text('拍照上传', style: AppTextStyles.sectionTitle),
-              SizedBox(width: AppSpacing.sm),
-              StickerBadge(label: '讲义变复习包', icon: Icons.auto_awesome_rounded),
+            children: <Widget>[
+              const _SmallScanIcon(),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('已添加 ${pages.length} 页',
+                        style: AppTextStyles.sectionTitle),
+                    const SizedBox(height: AppSpacing.xxs),
+                    const Text('确认页数后开始识别。', style: AppTextStyles.helper),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: isSubmitting ? null : onClear,
+                tooltip: '清空草稿',
+                icon: const Icon(Icons.delete_outline_rounded),
+              ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          const Text('拍下讲义后直接开始识别。课程标题、主题、词汇和句型会由 AI 先整理，再交给你校对。'),
-          if (_errorMessage != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            StatePanel(
-              title: '上传失败',
-              description: _errorMessage!,
-              icon: Icons.error_outline_rounded,
-              assetPath: AppIllustrations.stateError,
-            ),
-          ],
           const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+          ...pages.asMap().entries.map(
+                (entry) => _PageListItem(
+                  index: entry.key + 1,
+                  fileName: entry.value.name,
+                ),
+              ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
             children: <Widget>[
-              FilledButton.icon(
-                onPressed: _submitting || draft.pages.isEmpty ? null : _submit,
-                icon: const Icon(Icons.auto_awesome_rounded),
-                label: Text(_submitting ? '识别中...' : '开始识别'),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isSubmitting ? null : onTakePhoto,
+                  icon: const Icon(Icons.camera_alt_rounded),
+                  label: const Text('继续拍照'),
+                ),
               ),
-              OutlinedButton.icon(
-                onPressed: _submitting ? null : _takePhoto,
-                icon: const Icon(Icons.camera_alt_rounded),
-                label: const Text('拍照'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _submitting ? null : _pickPage,
-                icon: const Icon(Icons.photo_library_outlined),
-                label: const Text('从相册选择'),
-              ),
-              TextButton.icon(
-                onPressed: _submitting
-                    ? null
-                    : ref.read(scanDraftProvider.notifier).clear,
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('清空草稿'),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isSubmitting ? null : onPickPage,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('继续选择'),
+                ),
               ),
             ],
           ),
         ],
       ),
     );
+  }
+}
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('上传讲义')),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: formFactor.isTablet
-            ? Row(
-                children: <Widget>[
-                  Expanded(
-                    child: ListView(
-                      children: const <Widget>[
-                        IllustratedHeroCard(
-                          eyebrow: '上传讲义',
-                          title: '拍一拍课堂讲义，下一步就能生成孩子的复习包',
-                          description:
-                              '上传页现在更像一个温和的扫描工作台，先整理讲义，再交给 AI 识别和家长校对。',
-                          accent: AppColors.skyBlue,
-                          illustration: Icons.camera_alt_rounded,
-                          assetPath: AppIllustrations.heroUpload,
-                          badge: StickerBadge(
-                              label: '多页支持',
-                              icon: Icons.layers_rounded,
-                              color: AppColors.butterYellow),
-                        ),
-                        SizedBox(height: AppSpacing.md),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(child: preview),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(child: controls),
-                ],
-              )
-            : ListView(
-                children: <Widget>[
-                  const IllustratedHeroCard(
-                    eyebrow: '上传讲义',
-                    title: '把课堂纸张拍下来，交给 AI 帮你整理复习包',
-                    description: '先选讲义页，再补课程标题和老师名，最后一键上传进入校对流程。',
-                    accent: AppColors.skyBlue,
-                    illustration: Icons.camera_alt_rounded,
-                    assetPath: AppIllustrations.heroUpload,
-                    badge: StickerBadge(
-                        label: '轻松整理', icon: Icons.auto_awesome_rounded),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  preview,
-                  const SizedBox(height: AppSpacing.md),
-                  controls,
-                ],
+class _PageListItem extends StatelessWidget {
+  const _PageListItem({
+    required this.index,
+    required this.fileName,
+  });
+
+  final String fileName;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.softSheet.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppRadii.input),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Row(
+            children: <Widget>[
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.paperWhite,
+                child: Text('$index', style: AppTextStyles.helper),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _RecognitionSummary extends StatelessWidget {
+  const _RecognitionSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.butterYellow.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(AppRadii.input),
+            ),
+            child: const Icon(Icons.auto_awesome_rounded,
+                color: AppColors.inkCocoa, size: 20),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('识别后进入校对', style: AppTextStyles.cardTitle),
+                SizedBox(height: AppSpacing.xxs),
+                Text('AI 草稿会先进入校对页，不会直接生成最终课程。', style: AppTextStyles.helper),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineError extends StatelessWidget {
+  const _InlineError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.errorSurface,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Icon(Icons.error_outline_rounded,
+                color: AppColors.cocoaCoral),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Text(message, style: AppTextStyles.body)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecognitionActionBar extends StatelessWidget {
+  const _RecognitionActionBar({
+    required this.pageCount,
+    required this.isSubmitting,
+    required this.onSubmit,
+  });
+
+  final bool isSubmitting;
+  final VoidCallback onSubmit;
+  final int pageCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final canSubmit = pageCount > 0 && !isSubmitting;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.paperWhite,
+          border: Border(
+            top: BorderSide(
+                color: AppColors.outlineVariant.withValues(alpha: 0.45)),
+          ),
+        ),
+        child: FilledButton.icon(
+          onPressed: canSubmit ? onSubmit : null,
+          icon: Icon(isSubmitting
+              ? Icons.hourglass_top_rounded
+              : Icons.auto_awesome_rounded),
+          label: Text(
+            isSubmitting
+                ? '识别中...'
+                : pageCount == 0
+                    ? '先添加讲义页'
+                    : '开始识别',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanIcon extends StatelessWidget {
+  const _ScanIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: BoxDecoration(
+        color: AppColors.paperWhite,
+        borderRadius: BorderRadius.circular(AppRadii.panel),
+      ),
+      child: const Icon(Icons.document_scanner_rounded,
+          color: AppColors.cocoaCoral, size: 44),
+    );
+  }
+}
+
+class _SmallScanIcon extends StatelessWidget {
+  const _SmallScanIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.softSheet,
+        borderRadius: BorderRadius.circular(AppRadii.input),
+      ),
+      child: const Icon(Icons.document_scanner_rounded,
+          color: AppColors.cocoaCoral, size: 24),
     );
   }
 }
