@@ -180,3 +180,33 @@
 - 修复：`apps/mobile/ios/Runner/Info.plist` 已补充 `NSCameraUsageDescription`、`NSPhotoLibraryUsageDescription`、`NSPhotoLibraryAddUsageDescription`。
 - 证据：`dist/harness/HN-012/Runner-2026-05-05-154100.ips`。
 - 当前未完成：重新启动后 API 只记录到 `healthz`、`auth/refresh`、`materials`、`review-tasks`、`reports/weekly` 首页请求；尚未记录新的 `POST /v1/materials` 上传请求。
+
+### HN-013：图片级讲义记录与解析留存
+
+**目标：** 每次拍照或相册选择都要形成可追溯的图片页记录。图片除了参与 AI 解析之外，还要长期保留对应的标题、OCR 文本、单词、句子和细节说明。
+
+**当前状态：** 后端合约已增加 `MaterialImageRecord`；上传、AI 校对和课程详情链路可返回图片级记录。真机上传证据仍并入 `HN-012` 后续补测。
+
+**范围内：**
+- 上传时记录每张图片的 `page_index`、`source_type`、原始文件名、URL、object key、content type 和大小。
+- AI 解析后记录每张图片的 `image_title`、`ocr_text`、`vocabulary`、`sentences`、`details`。
+- 移动端上传页显示图片来源；AI 校对页和课程详情页展示图片级解析明细。
+
+**范围外：**
+- 图片级明细编辑。
+- 自动真机拍照。
+- 图片裁剪、去噪和手动排序。
+
+**验收标准：**
+- 上传两张图片后，`material.image_records` 有两条且来源分别可为 `camera`、`gallery`。
+- 轮询 job 后，`job.draft_image_records` 和 `material.image_records` 均包含图片标题、单词、句子和细节。
+- 确认 job 后，课程详情接口继续返回 `material.image_records`。
+- 移动端上传页、AI 校对页、课程详情页均展示图片级记录。
+
+**Harness：**
+- 自动化：`services/api/.venv/bin/python -m pytest services/api/tests/test_main_chain_smoke.py::test_upload_poll_confirm_preserves_image_level_records`
+- 自动化：`cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test test/features/materials/presentation/scan_review_navigation_test.dart`
+- 人工：真机上传后保存 material/job JSON 摘录和截图。
+
+**证据位置：**
+- `dist/harness/HN-013/`

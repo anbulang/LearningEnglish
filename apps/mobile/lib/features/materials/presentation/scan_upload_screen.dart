@@ -31,9 +31,10 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
       return;
     }
     final draft = ref.read(scanDraftProvider);
-    ref
-        .read(scanDraftProvider.notifier)
-        .setPages(<XFile>[...draft.pages, image]);
+    ref.read(scanDraftProvider.notifier).setPages(<ScanDraftPage>[
+      ...draft.pages,
+      ScanDraftPage(file: image, sourceType: 'gallery'),
+    ]);
   }
 
   Future<void> _takePhoto() async {
@@ -43,9 +44,10 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
       return;
     }
     final draft = ref.read(scanDraftProvider);
-    ref
-        .read(scanDraftProvider.notifier)
-        .setPages(<XFile>[...draft.pages, image]);
+    ref.read(scanDraftProvider.notifier).setPages(<ScanDraftPage>[
+      ...draft.pages,
+      ScanDraftPage(file: image, sourceType: 'camera'),
+    ]);
   }
 
   Future<void> _submit() async {
@@ -243,7 +245,7 @@ class _SelectedPagesPanel extends StatelessWidget {
   final VoidCallback onClear;
   final VoidCallback onPickPage;
   final VoidCallback onTakePhoto;
-  final List<XFile> pages;
+  final List<ScanDraftPage> pages;
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +279,8 @@ class _SelectedPagesPanel extends StatelessWidget {
           ...pages.asMap().entries.map(
                 (entry) => _PageListItem(
                   index: entry.key + 1,
-                  fileName: entry.value.name,
+                  fileName: entry.value.file.name,
+                  sourceLabel: entry.value.sourceLabel,
                 ),
               ),
           const SizedBox(height: AppSpacing.md),
@@ -310,10 +313,12 @@ class _PageListItem extends StatelessWidget {
   const _PageListItem({
     required this.index,
     required this.fileName,
+    required this.sourceLabel,
   });
 
   final String fileName;
   final int index;
+  final String sourceLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -335,11 +340,18 @@ class _PageListItem extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(
-                  fileName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.body,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(sourceLabel, style: AppTextStyles.helper),
+                  ],
                 ),
               ),
             ],

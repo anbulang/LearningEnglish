@@ -420,3 +420,33 @@ Expected: 真机可启动；拍照或相册上传后进入 AI 状态页；失败
 - 首次点击“拍照”出现真机闪退，crash report 为 TCC 隐私权限错误：缺少 `NSCameraUsageDescription`。
 - 已补充 iOS 相机/相册用途说明并重新安装启动。
 - 仍未观察到新的 `POST /v1/materials` 上传请求，完整上传识别证据未完成，因此本步骤保持未勾选。
+
+## Task 7: 图片级讲义记录与解析留存
+
+**Files:**
+- Modify: API contracts, DB models, material routes, material job routes, pipeline
+- Modify: Dart contracts, upload draft/repository, upload/review/detail screens
+- Modify: Harness docs
+
+- [x] **Step 1: 上传时创建图片级记录**
+
+`CourseMaterial` 增加 `image_records`，每张上传图片保留页码、来源、文件名、URL、object key、content type 和大小。移动端上传 multipart 同步提交 `file_sources`，来源只使用 `camera` 或 `gallery`。
+
+- [x] **Step 2: 解析后保留图片级草稿**
+
+`MaterialParseJob` 增加 `draft_image_records`。Doubao 提示词要求返回逐页 `image_records`；stub/fallback provider 在缺少逐页结果时生成非空图片级明细。
+
+- [x] **Step 3: 校对和课程详情展示图片级明细**
+
+上传页展示图片来源；AI 校对页展示每页标题、单词、句子和细节；课程详情页继续展示确认后的图片级记录。
+
+- [x] **Step 4: 自动化验证**
+
+Run:
+
+```bash
+services/api/.venv/bin/python -m pytest services/api/tests
+cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test
+```
+
+Expected: API `35 passed`，Flutter `10 passed`。

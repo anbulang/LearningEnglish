@@ -161,6 +161,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `HN-010`：识别失败时 material 和 job 状态一致。
 - `HN-011`：Doubao 超时和重试体验清晰化。
 - `HN-012`：真机上传识别 harness 记录。
+- `HN-013`：图片级讲义记录与解析留存。
 
 当前实施状态：
 - [x] `HN-008` 上传页已改为拍照/相册优先，不再要求用户填写标题、老师名、主题。
@@ -168,6 +169,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-010` job 失败时 material 同步为 `failed`；retry 后同步回 `processing`。
 - [x] `HN-011` timeout 失败在移动端显示中文重试说明。
 - [ ] `HN-012` 仍需重新构建 Profile 真机包并用真实手机补一次上传识别截图/日志证据。
+- [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.5:8000/v1` 构建、安装并启动成功。
@@ -177,5 +179,5 @@ make harness-capture-ios-screen SCREEN=report-screen
 - 仍缺少一次实际上传后的 `POST /v1/materials`、material/job 状态和真机截图证据，因此 `HN-012` 不标完成。
 
 本轮自动化验证：
-- `services/api/.venv/bin/python -m pytest services/api/tests`：`34 passed`
-- `cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test`：`9 passed`
+- `services/api/.venv/bin/python -m pytest services/api/tests`：`35 passed`
+- `cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test`：`10 passed`

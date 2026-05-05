@@ -121,6 +121,7 @@ class CourseMaterial(BaseModel):
     uploaded_at: Optional[datetime] = None
     ocr_text: str = ""
     tags: list[str] = Field(default_factory=list)
+    image_records: list["MaterialImageRecord"] = Field(default_factory=list)
 
 
 class CourseMaterialCreate(BaseModel):
@@ -145,6 +146,23 @@ class MaterialParseJob(BaseModel):
     draft_topic: str = ""
     draft_vocabulary: list[str] = Field(default_factory=list)
     draft_sentences: list[str] = Field(default_factory=list)
+    draft_image_records: list["MaterialImageRecord"] = Field(default_factory=list)
+
+
+class MaterialImageRecord(BaseModel):
+    id: str
+    page_index: int
+    source_type: str = "gallery"
+    original_filename: str = ""
+    url: str = ""
+    object_key: str = ""
+    content_type: str = ""
+    size_bytes: int = 0
+    image_title: str = ""
+    ocr_text: str = ""
+    vocabulary: list[str] = Field(default_factory=list)
+    sentences: list[str] = Field(default_factory=list)
+    details: list[str] = Field(default_factory=list)
 
 
 class MaterialParseConfirmRequest(BaseModel):

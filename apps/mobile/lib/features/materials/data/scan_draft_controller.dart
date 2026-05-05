@@ -18,13 +18,13 @@ class ScanDraftState {
 
   final bool autoEnhance;
   final DateTime lessonDate;
-  final List<XFile> pages;
+  final List<ScanDraftPage> pages;
   final String teacherName;
   final String title;
   final String topic;
 
   ScanDraftState copyWith({
-    List<XFile>? pages,
+    List<ScanDraftPage>? pages,
     bool? autoEnhance,
     String? title,
     String? teacherName,
@@ -46,7 +46,7 @@ class ScanDraftController extends StateNotifier<ScanDraftState> {
   ScanDraftController()
       : super(
           ScanDraftState(
-            pages: const <XFile>[],
+            pages: const <ScanDraftPage>[],
             autoEnhance: true,
             title: '',
             teacherName: '',
@@ -75,13 +75,13 @@ class ScanDraftController extends StateNotifier<ScanDraftState> {
     state = state.copyWith(lessonDate: value);
   }
 
-  void setPages(List<XFile> value) {
+  void setPages(List<ScanDraftPage> value) {
     state = state.copyWith(pages: value);
   }
 
   void clear() {
     state = ScanDraftState(
-      pages: const <XFile>[],
+      pages: const <ScanDraftPage>[],
       autoEnhance: true,
       title: '',
       teacherName: '',
@@ -89,4 +89,16 @@ class ScanDraftController extends StateNotifier<ScanDraftState> {
       lessonDate: DateTime.now(),
     );
   }
+}
+
+class ScanDraftPage {
+  const ScanDraftPage({
+    required this.file,
+    required this.sourceType,
+  });
+
+  final XFile file;
+  final String sourceType;
+
+  String get sourceLabel => sourceType == 'camera' ? '相机拍摄' : '相册选择';
 }

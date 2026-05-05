@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_mobile/features/materials/data/app_repository.dart';
+import 'package:learning_english_mobile/features/materials/data/scan_draft_controller.dart';
 
 import '../../../helpers/fake_dio_adapter.dart';
 
@@ -31,6 +32,13 @@ void main() {
           expect(
             options.contentType,
             startsWith(Headers.multipartFormDataContentType),
+          );
+          final formData = options.data as FormData;
+          expect(
+            formData.fields
+                .where((field) => field.key == 'file_sources')
+                .map((field) => field.value),
+            <String>['camera'],
           );
 
           return _jsonResponse(<String, dynamic>{
@@ -65,11 +73,14 @@ void main() {
         lessonDate: DateTime(2026, 4, 27),
         title: 'Animals Around Me',
         topic: '动物',
-        files: <XFile>[
-          XFile(
-            worksheet.path,
-            name: 'worksheet.jpg',
-            mimeType: 'image/jpeg',
+        files: <ScanDraftPage>[
+          ScanDraftPage(
+            sourceType: 'camera',
+            file: XFile(
+              worksheet.path,
+              name: 'worksheet.jpg',
+              mimeType: 'image/jpeg',
+            ),
           ),
         ],
       );
@@ -77,6 +88,7 @@ void main() {
 
       expect(created.material.id, 'material_1');
       expect(created.material.status, MaterialStatus.processing);
+      expect(created.material.imageRecords, isEmpty);
       expect(created.job.status, JobStatus.needsReview);
       expect(reviewJob.status, JobStatus.needsReview);
       expect(reviewJob.draftTitle, 'Animals Around Me');

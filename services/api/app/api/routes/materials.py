@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -13,6 +14,7 @@ from app.db.models import (
     CourseMaterialModel,
     MaterialParseJobModel,
     ParentAccountModel,
+    StoredAssetModel,
 )
 from app.models.contracts import CourseMaterial, JobStatus, MaterialCreateResponse, MaterialDetailResponse, MaterialStatus
 from app.services.mappers import course_material_from_model, material_job_from_model
@@ -58,6 +60,7 @@ def create_material(
     title: str = Form("待识别讲义"),
     topic: str = Form(""),
     tags: str = Form(""),
+    file_sources: Optional[list[str]] = Form(None),
     files: list[UploadFile] = File(...),
     current_parent: ParentAccountModel = Depends(get_current_parent),
     db: Session = Depends(get_db),
@@ -94,18 +97,41 @@ def create_material(
     db.flush()
 
     asset_rows: list[StoredAssetModel] = []
+    image_records: list[dict] = []
     total_size = 0
-    for upload in files:
+    sources = file_sources or []
+    for index, upload in enumerate(files):
         asset = storage.save_upload("material", material.id, upload)
         db.add(asset)
         db.flush()
         asset_rows.append(asset)
         total_size += asset.size_bytes
+        source_type = sources[index] if index < len(sources) else "gallery"
+        if source_type not in {"camera", "gallery"}:
+            source_type = "gallery"
+        image_records.append(
+            {
+                "id": f"image_{uuid4().hex[:12]}",
+                "page_index": index + 1,
+                "source_type": source_type,
+                "original_filename": upload.filename or f"page-{index + 1}",
+                "url": asset.url,
+                "object_key": asset.object_key,
+                "content_type": asset.content_type,
+                "size_bytes": asset.size_bytes,
+                "image_title": "",
+                "ocr_text": "",
+                "vocabulary": [],
+                "sentences": [],
+                "details": ["图片已上传，等待 AI 识别。"],
+            }
+        )
 
     material.source_images = [asset.url for asset in asset_rows]
     material.source_image_keys = [asset.object_key for asset in asset_rows]
     material.normalized_image_keys = [asset.object_key for asset in asset_rows]
     material.file_size_bytes = total_size
+    material.image_records = image_records
 
     job = MaterialParseJobModel(
         material_id=material.id,
@@ -117,6 +143,7 @@ def create_material(
         draft_topic=safe_topic,
         draft_vocabulary=[],
         draft_sentences=[],
+        draft_image_records=image_records,
     )
     db.add(job)
     db.commit()

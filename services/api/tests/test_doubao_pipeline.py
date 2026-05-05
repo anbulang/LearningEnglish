@@ -72,6 +72,16 @@ def test_doubao_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) ->
         "topic": "动物",
         "vocabulary": ["cat", "dog", "bird"],
         "sentences": ["What is this?", "It is a cat."],
+        "image_records": [
+            {
+                "page_index": 1,
+                "image_title": "Animals page",
+                "ocr_text": "cat dog bird",
+                "vocabulary": ["cat", "dog", "bird"],
+                "sentences": ["What is this?", "It is a cat."],
+                "details": ["图片中包含动物词汇和问答句型。"],
+            }
+        ],
         "warnings": ["图片略有倾斜，已提取主要内容。"],
         "confidence_summary": "识别结果较清晰，建议家长检查 bird。",
     }
@@ -91,6 +101,10 @@ def test_doubao_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) ->
     assert draft.topic == "动物"
     assert draft.vocabulary == ["cat", "dog", "bird"]
     assert draft.sentences == ["What is this?", "It is a cat."]
+    assert len(draft.image_records) == 1
+    assert draft.image_records[0].image_title == "Animals page"
+    assert draft.image_records[0].vocabulary == ["cat", "dog", "bird"]
+    assert draft.image_records[0].details == ["图片中包含动物词汇和问答句型。"]
     assert "bird" in draft.confidence_summary
 
 

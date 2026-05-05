@@ -103,6 +103,7 @@ class CourseMaterialModel(Base):
     uploaded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     ocr_text: Mapped[str] = mapped_column(Text, default="")
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    image_records: Mapped[list[dict]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -121,6 +122,7 @@ class MaterialParseJobModel(Base):
     draft_topic: Mapped[str] = mapped_column(String(255), default="")
     draft_vocabulary: Mapped[list[str]] = mapped_column(JSON, default=list)
     draft_sentences: Mapped[list[str]] = mapped_column(JSON, default=list)
+    draft_image_records: Mapped[list[dict]] = mapped_column(JSON, default=list)
 
 
 class KnowledgePackModel(Base):
