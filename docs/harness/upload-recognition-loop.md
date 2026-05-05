@@ -147,7 +147,7 @@
 
 **目标：** 真机验证不只记录“能安装启动”，还要记录上传识别链路的结果。
 
-**当前状态：** 已能构建 Profile 包、安装并启动真机；但真机上传识别结果没有稳定证据目录。
+**当前状态：** 已能构建 Profile 包、安装并启动真机；拍照入口曾因 iOS 隐私用途说明缺失直接闪退，已补齐权限配置并重新安装启动。真机上传识别结果仍缺少一次完整的 material/job 证据。
 
 **范围内：**
 - 记录真机 API base URL。
@@ -168,3 +168,15 @@
 
 **证据位置：**
 - `dist/harness/HN-012/`
+
+**2026-05-05 真机补测记录：**
+- 设备：`Chaucer`，`19586D29-7FF4-5289-8B83-30AA8C3F273D`。
+- API base URL：`http://192.168.2.5:8000/v1`。
+- 后端：API/worker 已用当前分支镜像重建；容器内确认 `MaterialStatus.failed` 和 `CourseMaterial.parse_job_id` 存在。
+- 构建：`/private/tmp/learningenglish-flutter/bin/flutter build ios --profile --dart-define=API_BASE_URL=http://192.168.2.5:8000/v1` 成功。
+- 安装：`xcrun devicectl device install app --device 19586D29-7FF4-5289-8B83-30AA8C3F273D apps/mobile/build/ios/iphoneos/Runner.app --timeout 120` 成功。
+- 启动：`xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F273D --terminate-existing com.anbulang.learningenglish --timeout 60` 成功。
+- 拍照闪退根因：真机 crash report 显示 `namespace: TCC`，原因是缺少 `NSCameraUsageDescription`。
+- 修复：`apps/mobile/ios/Runner/Info.plist` 已补充 `NSCameraUsageDescription`、`NSPhotoLibraryUsageDescription`、`NSPhotoLibraryAddUsageDescription`。
+- 证据：`dist/harness/HN-012/Runner-2026-05-05-154100.ips`。
+- 当前未完成：重新启动后 API 只记录到 `healthz`、`auth/refresh`、`materials`、`review-tasks`、`reports/weekly` 首页请求；尚未记录新的 `POST /v1/materials` 上传请求。

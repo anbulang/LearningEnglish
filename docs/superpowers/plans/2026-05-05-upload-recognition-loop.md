@@ -414,3 +414,9 @@ xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F2
 ```
 
 Expected: 真机可启动；拍照或相册上传后进入 AI 状态页；失败时显示可重试，成功时显示待校对。
+
+2026-05-05 执行记录：
+- Profile 构建、真机安装、真机启动均已通过。
+- 首次点击“拍照”出现真机闪退，crash report 为 TCC 隐私权限错误：缺少 `NSCameraUsageDescription`。
+- 已补充 iOS 相机/相册用途说明并重新安装启动。
+- 仍未观察到新的 `POST /v1/materials` 上传请求，完整上传识别证据未完成，因此本步骤保持未勾选。

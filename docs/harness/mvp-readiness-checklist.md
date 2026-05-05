@@ -169,6 +169,13 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-011` timeout 失败在移动端显示中文重试说明。
 - [ ] `HN-012` 仍需重新构建 Profile 真机包并用真实手机补一次上传识别截图/日志证据。
 
+`HN-012` 当前补测进展：
+- Profile 真机包已用 `API_BASE_URL=http://192.168.2.5:8000/v1` 构建、安装并启动成功。
+- API/worker 已重建到当前分支代码，确认后端合约包含 `failed` 状态和 `parse_job_id`。
+- 拍照入口首次真机测试直接闪退，crash report 显示 iOS TCC 因缺少 `NSCameraUsageDescription` 终止 App。
+- 已补齐相机/相册用途说明并重新安装启动；crash report 证据见 `dist/harness/HN-012/Runner-2026-05-05-154100.ips`。
+- 仍缺少一次实际上传后的 `POST /v1/materials`、material/job 状态和真机截图证据，因此 `HN-012` 不标完成。
+
 本轮自动化验证：
 - `services/api/.venv/bin/python -m pytest services/api/tests`：`34 passed`
 - `cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test`：`9 passed`
