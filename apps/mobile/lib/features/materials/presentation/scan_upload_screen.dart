@@ -39,6 +39,18 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
         .setPages(<XFile>[...draft.pages, image]);
   }
 
+  Future<void> _takePhoto() async {
+    final image =
+        await _picker.pickImage(source: ImageSource.camera, imageQuality: 90);
+    if (image == null) {
+      return;
+    }
+    final draft = ref.read(scanDraftProvider);
+    ref
+        .read(scanDraftProvider.notifier)
+        .setPages(<XFile>[...draft.pages, image]);
+  }
+
   Future<void> _submit() async {
     final child = ref.read(activeChildProvider);
     final draft = ref.read(scanDraftProvider);
@@ -94,11 +106,23 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
       child: draft.pages.isEmpty
           ? StatePanel(
               title: '还没有扫描页',
-              description: '先从相册或拍照添加一页讲义，再继续上传。',
+              description: '直接拍照，或从相册选择已经拍好的讲义页。',
               assetPath: AppIllustrations.stateEmpty,
-              action: FilledButton(
-                onPressed: _pickPage,
-                child: const Text('添加第一页'),
+              action: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: <Widget>[
+                  FilledButton.icon(
+                    onPressed: _takePhoto,
+                    icon: const Icon(Icons.camera_alt_rounded),
+                    label: const Text('拍照'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _pickPage,
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: const Text('从相册选择'),
+                  ),
+                ],
               ),
             )
           : AspectRatio(
@@ -136,33 +160,7 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          const Text('本阶段先接真实图片上传、AI 识别和家长校对链路。'),
-          const SizedBox(height: AppSpacing.md),
-          TextFormField(
-            initialValue: draft.title,
-            onChanged: ref.read(scanDraftProvider.notifier).setTitle,
-            decoration: const InputDecoration(labelText: '课程标题'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextFormField(
-            initialValue: draft.teacherName,
-            onChanged: ref.read(scanDraftProvider.notifier).setTeacherName,
-            decoration: const InputDecoration(labelText: '老师名'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextFormField(
-            initialValue: draft.topic,
-            onChanged: ref.read(scanDraftProvider.notifier).setTopic,
-            decoration: const InputDecoration(labelText: '主题'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SwitchListTile(
-            value: draft.autoEnhance,
-            contentPadding: EdgeInsets.zero,
-            title: const Text('自动增强'),
-            subtitle: const Text('保持清晰度与裁边效果'),
-            onChanged: ref.read(scanDraftProvider.notifier).toggleEnhance,
-          ),
+          const Text('拍下讲义后直接开始识别。课程标题、主题、词汇和句型会由 AI 先整理，再交给你校对。'),
           if (_errorMessage != null) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             StatePanel(
@@ -179,13 +177,18 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
             children: <Widget>[
               FilledButton.icon(
                 onPressed: _submitting || draft.pages.isEmpty ? null : _submit,
-                icon: const Icon(Icons.cloud_upload_rounded),
-                label: Text(_submitting ? '上传中...' : '完成上传'),
+                icon: const Icon(Icons.auto_awesome_rounded),
+                label: Text(_submitting ? '识别中...' : '开始识别'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _submitting ? null : _takePhoto,
+                icon: const Icon(Icons.camera_alt_rounded),
+                label: const Text('拍照'),
               ),
               OutlinedButton.icon(
                 onPressed: _submitting ? null : _pickPage,
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: const Text('继续加页'),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('从相册选择'),
               ),
               TextButton.icon(
                 onPressed: _submitting

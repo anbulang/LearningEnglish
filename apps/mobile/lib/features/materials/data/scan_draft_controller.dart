@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-final scanDraftProvider = StateNotifierProvider<ScanDraftController, ScanDraftState>((ref) {
+final scanDraftProvider =
+    StateNotifierProvider<ScanDraftController, ScanDraftState>((ref) {
   return ScanDraftController();
 });
 
@@ -47,9 +48,9 @@ class ScanDraftController extends StateNotifier<ScanDraftState> {
           ScanDraftState(
             pages: const <XFile>[],
             autoEnhance: true,
-            title: 'Animals Around Me',
-            teacherName: 'Emma',
-            topic: '动物',
+            title: '',
+            teacherName: '',
+            topic: '',
             lessonDate: DateTime.now(),
           ),
         );

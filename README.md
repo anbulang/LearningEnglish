@@ -88,7 +88,7 @@ Build a local Android test APK:
 ```bash
 make mobile-apk
 ```
-成功时 APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`。如果返回 `No Android SDK found`，这是本机 Android SDK 环境阻塞；如果返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`，这是本机 Flutter SDK cache 写入权限阻塞。两类问题都不代表 Flutter 代码或 MVP 主链失败。
+成功时 APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`。如果返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`，这是本机全局 Flutter SDK cache 写入权限阻塞；可临时复制一份用户可写 Flutter SDK 后用 `FLUTTER=/private/tmp/learningenglish-flutter/bin/flutter make mobile-apk` 继续验证。如果随后返回 `No Android SDK found`，说明下一层 blocker 是本机 Android SDK 未安装或未配置。这些环境问题不代表 Flutter 代码或 MVP 主链失败。
 
 Build and export a local iOS internal/Profile IPA:
 ```bash
@@ -166,7 +166,7 @@ Clean-state UI 验证建议顺序：
 - Core demo path: 登录 -> 绑定手机号 -> 创建默认孩子 -> 上传讲义 -> AI 校对 -> 课程详情 -> 复习 -> 报告。
 
 ## Doubao Worksheet Recognition
-The AI pipeline defaults to `AI_PROVIDER=stub`. To run the first real worksheet-recognition slice with Doubao / Volcengine Ark, set these values in `infra/.env` and in the API/worker process environment:
+AI pipeline 默认使用 `AI_PROVIDER=stub`。要运行第一条真实豆包 / 火山方舟讲义识别链路，需要在 `infra/.env` 以及 API/worker 进程环境中配置：
 
 ```bash
 AI_PROVIDER=doubao
@@ -178,21 +178,24 @@ AI_REQUEST_TIMEOUT_SECONDS=60
 AI_MAX_IMAGE_COUNT=5
 ```
 
-This API key was verified locally against `doubao-seed-2-0-lite-260215` for both text and vision requests. If a different model returns `ModelNotOpen`, either activate that model in Ark Console or use an `ep-...` endpoint ID from Online Inference.
+豆包调用方式已与 ReceiptLens 对齐：文本和视觉都请求 `ARK_BASE_URL/responses`，文本内容使用 `input_text`，图片使用 `input_image`。`doubao-seed-2-0-lite-260215` 可同时用于文本和视觉 smoke；如果其他模型返回 `ModelNotOpen`，需要先在火山方舟控制台开通该模型，或改用在线推理中的 `ep-...` endpoint ID。
 
-Run the provider smoke test without printing secrets:
+运行 provider smoke，不会打印密钥：
 
 ```bash
 make harness-doubao-smoke
 ```
 
-该命令会写入 `dist/harness/HN-006/doubao-smoke.log`。缺配置时记录 `BLOCKED: Doubao provider smoke missing required configuration`；DNS/网络不可达时记录 `BLOCKED: Doubao provider smoke network/DNS unavailable`；配置完整且 provider 可用时会出现 `text_ok`、`vision_ok`、`PASS: Doubao provider smoke`。
+该命令会写入 `dist/harness/HN-006/doubao-smoke.log`。缺配置时记录 `BLOCKED: Doubao provider smoke missing required configuration`；DNS/网络不可达时记录 `BLOCKED: Doubao provider smoke network/DNS unavailable`。配置完整且 provider 可用时会出现 `text_ok`、`vision_ok`、`PASS: Doubao provider smoke`。
+2026-05-04 08:12 已用当前配置完成一次真实 smoke，通过项包含 `text_ok`、`vision_ok` 和 `PASS: Doubao provider smoke`。
 
-The app contract does not change in Doubao mode: upload still creates `CourseMaterial -> MaterialParseJob`, polling moves the job to `needs_review`, parent confirmation creates `KnowledgePack` and three MVP review tasks. If the Doubao call fails, the job is marked `failed` with a readable `confidence_summary` and can be retried.
+Doubao 模式下 App 契约不变：上传仍创建 `CourseMaterial -> MaterialParseJob`，轮询后 job 进入 `needs_review`，家长确认后创建 `KnowledgePack` 和三类 MVP 复习任务。如果 Doubao 调用失败，job 会标记为 `failed`，并在 `confidence_summary` 中写入可读错误，后续可重试。
 
-For a manual smoke test, start API and worker with the variables above, upload a real worksheet photo from the mobile app, then verify the AI review page shows extracted words and sentences before confirming.
+手动 smoke 时，用上述环境变量启动 API 和 worker，从移动端上传真实讲义照片，再确认 AI 校对页展示了抽取出的单词和句型。
 
 ## Harness Deliverables
 - Non-technical trial guide: `docs/harness/non-technical-pilot-guide.md`
 - MVP readiness checklist: `docs/harness/mvp-readiness-checklist.md`
+- Upload recognition loop requirements: `docs/harness/upload-recognition-loop.md`
+- Upload recognition implementation plan: `docs/superpowers/plans/2026-05-05-upload-recognition-loop.md`
 - iOS export options: `apps/mobile/ios/ExportOptions.internal.plist`

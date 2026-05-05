@@ -50,7 +50,8 @@ def get_material_job(
             job.finished_at = None
             job.confidence_summary = f"处理失败：{exc}"
             job.warnings = [f"处理失败：{exc}", "请检查 AI provider 配置或稍后重试。"]
-            db.add(job)
+            material.status = MaterialStatus.failed.value
+            db.add_all([job, material])
             db.commit()
             db.refresh(job)
             return material_job_from_model(job)

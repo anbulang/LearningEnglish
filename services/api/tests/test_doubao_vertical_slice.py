@@ -15,14 +15,14 @@ configure_test_environment("learning-english-api-doubao-slice-")
 
 def _client_for_json_payload(payload: dict) -> httpx.Client:
     def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v3/responses"
         return httpx.Response(
             200,
             json={
-                "choices": [
+                "output": [
                     {
-                        "message": {
-                            "content": json.dumps(payload, ensure_ascii=False),
-                        }
+                        "type": "message",
+                        "content": [{"type": "output_text", "text": json.dumps(payload, ensure_ascii=False)}],
                     }
                 ]
             },

@@ -12,6 +12,7 @@ class MaterialStatus(str, Enum):
     processing = "processing"
     needs_review = "needs_review"
     ready = "ready"
+    failed = "failed"
     archived = "archived"
 
 
@@ -105,6 +106,7 @@ class ChildProfileCreate(BaseModel):
 class CourseMaterial(BaseModel):
     id: str
     child_id: str
+    parse_job_id: str = ""
     teacher_name: str
     lesson_date: date
     title: str

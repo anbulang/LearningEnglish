@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
@@ -75,8 +76,9 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: AppCard(
                       child: InkWell(
+                        key: ValueKey<String>('material-card-${material.id}'),
                         borderRadius: BorderRadius.circular(AppRadii.card),
-                        onTap: () => context.go('/lessons/${material.id}'),
+                        onTap: () => context.go(_materialDestination(material)),
                         child: Row(
                           children: <Widget>[
                             LessonCoverThumbnail(
@@ -249,4 +251,11 @@ IconData _libraryIcon(String topic) {
     return Icons.record_voice_over_rounded;
   }
   return Icons.menu_book_rounded;
+}
+
+String _materialDestination(CourseMaterial material) {
+  if (material.status == MaterialStatus.ready || material.parseJobId.isEmpty) {
+    return '/lessons/${material.id}';
+  }
+  return '/materials/review/${material.parseJobId}?materialId=${material.id}';
 }

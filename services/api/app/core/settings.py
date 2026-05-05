@@ -40,8 +40,9 @@ class Settings:
 
 @lru_cache
 def get_settings() -> Settings:
-    project_root = Path(__file__).resolve().parents[4]
-    service_root = Path(__file__).resolve().parents[2]
+    app_file = Path(__file__).resolve()
+    service_root = app_file.parents[2]
+    project_root = app_file.parents[4] if len(app_file.parents) > 4 else service_root
     default_storage = project_root / "tmp" / "uploads"
     return Settings(
         app_env=os.getenv("APP_ENV", "development"),

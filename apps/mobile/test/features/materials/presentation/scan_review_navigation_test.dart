@@ -12,6 +12,37 @@ import 'package:learning_english_mobile/features/materials/presentation/scan_upl
 import 'package:learning_english_mobile/features/profiles/data/demo_data.dart';
 
 void main() {
+  testWidgets('scan page is image-first and does not require metadata form',
+      (tester) async {
+    _useTallPhoneViewport(tester);
+    final repository = _FakeAppRepository();
+    final router = GoRouter(
+      initialLocation: '/materials/scan',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/materials/scan',
+          builder: (context, state) => const ScanUploadScreen(),
+        ),
+      ],
+    );
+
+    await _pumpTestApp(
+      tester,
+      router: router,
+      repository: repository,
+      overrides: <Override>[
+        activeChildProvider.overrideWithValue(_childProfile()),
+      ],
+    );
+
+    expect(find.text('课程标题'), findsNothing);
+    expect(find.text('老师名'), findsNothing);
+    expect(find.text('主题'), findsNothing);
+    expect(find.text('拍照'), findsWidgets);
+    expect(find.text('从相册选择'), findsWidgets);
+    expect(find.text('开始识别'), findsOneWidget);
+  });
+
   testWidgets('upload success navigates from scan page to AI review page',
       (tester) async {
     _useTallPhoneViewport(tester);
@@ -48,7 +79,7 @@ void main() {
       ],
     );
 
-    final uploadButton = find.widgetWithText(FilledButton, '完成上传');
+    final uploadButton = find.widgetWithText(FilledButton, '开始识别');
     await tester.ensureVisible(uploadButton);
     await tester.tap(uploadButton);
     await tester.pumpAndSettle();
@@ -182,6 +213,7 @@ CourseMaterial _courseMaterial({required MaterialStatus status}) {
   return CourseMaterial(
     id: 'material_1',
     childId: 'child_1',
+    parseJobId: 'job_1',
     teacherName: 'Emma',
     lessonDate: DateTime(2026, 4, 29),
     title: 'Animals Around Me',

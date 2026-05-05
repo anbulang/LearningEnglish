@@ -56,6 +56,7 @@ class CourseMaterial {
   const CourseMaterial({
     required this.id,
     required this.childId,
+    required this.parseJobId,
     required this.teacherName,
     required this.lessonDate,
     required this.title,
@@ -71,6 +72,7 @@ class CourseMaterial {
   final String id;
   final DateTime lessonDate;
   final String ocrText;
+  final String parseJobId;
   final String pdfUrl;
   final List<String> sourceImages;
   final MaterialStatus status;
@@ -83,6 +85,7 @@ class CourseMaterial {
     return CourseMaterial(
       id: json['id'] as String,
       childId: json['child_id'] as String,
+      parseJobId: json['parse_job_id'] as String? ?? '',
       teacherName: json['teacher_name'] as String? ?? '',
       lessonDate: dateTimeFromJson(json['lesson_date']) ?? DateTime.now(),
       title: json['title'] as String,
@@ -98,6 +101,7 @@ class CourseMaterial {
   JsonMap toJson() => {
         'id': id,
         'child_id': childId,
+        'parse_job_id': parseJobId,
         'teacher_name': teacherName,
         'lesson_date': lessonDate.toIso8601String(),
         'title': title,

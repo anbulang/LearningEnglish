@@ -183,13 +183,17 @@ class AppRepository implements MaterialsRepository {
     required List<XFile> files,
   }) async {
     Future<FormData> buildFormData() async {
+      final safeTitle = title.trim().isEmpty ? '待识别讲义' : title.trim();
+      final safeTeacherName =
+          teacherName.trim().isEmpty ? '外教课' : teacherName.trim();
+      final safeTopic = topic.trim();
       return FormData.fromMap(<String, dynamic>{
         'child_id': childId,
-        'teacher_name': teacherName,
+        'teacher_name': safeTeacherName,
         'lesson_date': lessonDate.toIso8601String().split('T').first,
-        'title': title,
-        'topic': topic,
-        'tags': topic,
+        'title': safeTitle,
+        'topic': safeTopic,
+        'tags': safeTopic,
         'files': [
           for (final file in files)
             await MultipartFile.fromFile(

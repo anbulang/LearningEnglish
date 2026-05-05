@@ -33,7 +33,8 @@ def list_materials(
     if child_id:
         stmt = stmt.where(CourseMaterialModel.child_id == child_id)
     items = db.scalars(stmt.order_by(CourseMaterialModel.lesson_date.desc())).all()
-    return [course_material_from_model(item) for item in items]
+    latest_job_ids = _latest_job_ids(db, [item.id for item in items])
+    return [course_material_from_model(item, parse_job_id=latest_job_ids.get(item.id, "")) for item in items]
 
 
 @router.get("/{material_id}", response_model=MaterialDetailResponse)
@@ -43,15 +44,18 @@ def get_material(
     db: Session = Depends(get_db),
 ) -> MaterialDetailResponse:
     material = _get_owned_material(db, current_parent.id, material_id)
-    return MaterialDetailResponse(material=course_material_from_model(material))
+    latest_job_ids = _latest_job_ids(db, [material.id])
+    return MaterialDetailResponse(
+        material=course_material_from_model(material, parse_job_id=latest_job_ids.get(material.id, ""))
+    )
 
 
 @router.post("", response_model=MaterialCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_material(
     child_id: str = Form(...),
-    teacher_name: str = Form(...),
+    teacher_name: str = Form("外教课"),
     lesson_date: date = Form(...),
-    title: str = Form(...),
+    title: str = Form("待识别讲义"),
     topic: str = Form(""),
     tags: str = Form(""),
     files: list[UploadFile] = File(...),
@@ -59,6 +63,9 @@ def create_material(
     db: Session = Depends(get_db),
     storage=Depends(get_storage),
 ) -> MaterialCreateResponse:
+    safe_teacher_name = teacher_name.strip() or "外教课"
+    safe_title = title.strip() or "待识别讲义"
+    safe_topic = topic.strip()
     child = db.scalar(
         select(ChildProfileModel).where(
             ChildProfileModel.id == child_id,
@@ -72,10 +79,10 @@ def create_material(
 
     material = CourseMaterialModel(
         child_id=child_id,
-        teacher_name=teacher_name,
+        teacher_name=safe_teacher_name,
         lesson_date=lesson_date,
-        title=title,
-        topic=topic,
+        title=safe_title,
+        topic=safe_topic,
         status=MaterialStatus.processing.value,
         source_images=[],
         source_image_keys=[],
@@ -106,8 +113,8 @@ def create_material(
         confidence_summary="上传完成，等待 OCR 与解析。",
         started_at=datetime.now(timezone.utc),
         warnings=[],
-        draft_title=title,
-        draft_topic=topic,
+        draft_title=safe_title,
+        draft_topic=safe_topic,
         draft_vocabulary=[],
         draft_sentences=[],
     )
@@ -131,3 +138,17 @@ def _get_owned_material(db: Session, parent_account_id: str, material_id: str) -
     if material is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
     return material
+
+
+def _latest_job_ids(db: Session, material_ids: list[str]) -> dict[str, str]:
+    if not material_ids:
+        return {}
+    rows = db.execute(
+        select(MaterialParseJobModel.material_id, MaterialParseJobModel.id)
+        .where(MaterialParseJobModel.material_id.in_(material_ids))
+        .order_by(MaterialParseJobModel.started_at.desc())
+    ).all()
+    result: dict[str, str] = {}
+    for material_id, job_id in rows:
+        result.setdefault(material_id, job_id)
+    return result

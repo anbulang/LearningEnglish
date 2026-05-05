@@ -36,12 +36,12 @@
 截至 2026-05-03，Task 1、Task 2、Task 3、Task 4 的脚本能力、Task 5、Task 6 和 Task 7 的轻量验证均已执行并提交。仍未完成的只有两项：
 
 - Task 4 Step 5：未补齐真实主链截图，当前只验证了截图 helper 的参数校验和安全写入路径。
-- Task 7 Step 5：未运行完整 `HARNESS_RESET=1 make harness-mvp-readiness`，因为当前环境存在 provider DNS 和 Flutter SDK cache 权限 blocker。
+- Task 7 Step 5：未运行完整 `HARNESS_RESET=1 make harness-mvp-readiness`，因为当前环境仍存在 Android 工具链 blocker，且主链截图证据未补齐。
 
-已补充记录的环境 blocker：
+已补充记录的环境状态：
 
-- `make harness-doubao-smoke`：Doubao 配置存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，harness 记录为 provider-readiness blocked。
-- `make mobile-apk`：Flutter 在写入 `/opt/homebrew/share/flutter/bin/cache/engine.stamp` 时返回 `Operation not permitted`，尚未进入 Android SDK 检查。
+- `make harness-doubao-smoke`：Doubao 调用已对齐 ReceiptLens 的 `/responses` 方式（文本 `input_text`，视觉 `input_image`）；2026-05-04 08:12 真实 provider smoke 已通过，日志包含 `text_ok`、`vision_ok` 和 `PASS: Doubao provider smoke`。
+- `make mobile-apk`：全局 Flutter 在写入 `/opt/homebrew/share/flutter/bin/cache/engine.stamp` 时返回 `Operation not permitted`；复制可写 Flutter SDK 到 `/private/tmp/learningenglish-flutter` 后，`FLUTTER=/private/tmp/learningenglish-flutter/bin/flutter make mobile-apk` 进入下一层 blocker：`No Android SDK found`。
 
 ### Task 1: 规范 MVP readiness harness 日志和可选步骤
 
@@ -521,7 +521,7 @@ git commit -m "chore: add ios screenshot evidence harness"
 
 ```markdown
 - [ ] `make mobile-apk`，成功时产物为 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`；失败时必须记录是否为 Android SDK 环境阻塞
-- [ ] `make harness-doubao-smoke`，真实 provider 配置存在时应通过；配置缺失时记录为 provider-readiness blocked
+- [x] `make harness-doubao-smoke`，真实 provider 配置存在时应通过；配置缺失时记录为 provider-readiness blocked
 ```
 
 - [x] **Step 3: 更新关键截图清单**

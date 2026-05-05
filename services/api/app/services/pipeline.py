@@ -174,12 +174,13 @@ class DoubaoVisionOCRProvider:
         sentences = _clean_string_list(payload.get("sentences"))
         return OCRDraft(
             ocr_text=ocr_text or " ".join(vocabulary + sentences),
-            title=str(payload.get("title") or material.title).strip(),
-            topic=str(payload.get("topic") or material.topic or _infer_topic(ocr_text)).strip(),
+            title=_clean_text_value(payload.get("title")) or material.title,
+            topic=_clean_text_value(payload.get("topic")) or material.topic or _infer_topic(ocr_text),
             vocabulary=vocabulary or _extract_candidate_vocabulary(ocr_text)[:8],
             sentences=sentences or _extract_candidate_sentences([ocr_text])[:6],
             warnings=_clean_string_list(payload.get("warnings")),
-            confidence_summary=str(payload.get("confidence_summary") or "豆包已完成识别，请家长确认重点词句。").strip(),
+            confidence_summary=_clean_text_value(payload.get("confidence_summary"))
+            or "豆包已完成识别，请家长确认重点词句。",
         )
 
 
@@ -514,16 +515,14 @@ def _post_chat_json(
     active_client = client or httpx.Client(timeout=timeout_seconds)
     try:
         response = active_client.post(
-            f"{base_url.rstrip('/')}/chat/completions",
+            f"{base_url.rstrip('/')}/responses",
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             json={
                 "model": model_or_endpoint,
-                "temperature": 0.2,
-                "messages": messages,
-                "response_format": {"type": "json_object"},
+                "input": [{"role": "user", "content": _responses_content_from_messages(messages)}],
             },
             timeout=timeout_seconds,
         )
@@ -539,10 +538,7 @@ def _post_chat_json(
         detail = _response_error_detail(response)
         raise DoubaoProviderError(f"Doubao API returned HTTP {response.status_code}: {detail}")
 
-    try:
-        content = response.json()["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-        raise DoubaoProviderError("Doubao response did not contain chat message content") from exc
+    content = _response_output_text(response)
     if not isinstance(content, str) or not content.strip():
         raise DoubaoProviderError("Doubao response contained empty content")
     try:
@@ -552,6 +548,64 @@ def _post_chat_json(
     if not isinstance(payload, dict):
         raise DoubaoProviderError("Doubao response JSON must be an object")
     return payload
+
+
+def _responses_content_from_messages(messages: list[dict[str, Any]]) -> list[dict[str, str]]:
+    text_parts: list[str] = []
+    image_parts: list[dict[str, str]] = []
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, str):
+            text_parts.append(content)
+            continue
+        if not isinstance(content, list):
+            continue
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            item_type = item.get("type")
+            if item_type == "text" and item.get("text"):
+                text_parts.append(str(item["text"]))
+            elif item_type == "image_url":
+                image_url = item.get("image_url")
+                if isinstance(image_url, dict) and image_url.get("url"):
+                    image_parts.append({"type": "input_image", "image_url": str(image_url["url"])})
+
+    merged_text = "\n\n".join(part.strip() for part in text_parts if part.strip())
+    output: list[dict[str, str]] = image_parts
+    if merged_text:
+        output.append({"type": "input_text", "text": merged_text})
+    return output
+
+
+def _response_output_text(response: httpx.Response) -> str:
+    try:
+        root = response.json()
+    except json.JSONDecodeError as exc:
+        raise DoubaoProviderError("Doubao response did not contain valid JSON") from exc
+
+    if isinstance(root.get("output_text"), str):
+        return root["output_text"].strip()
+
+    output = root.get("output")
+    if not isinstance(output, list):
+        raise DoubaoProviderError("Doubao response did not contain output text")
+
+    parts: list[str] = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        content = item.get("content")
+        if not isinstance(content, list):
+            continue
+        for entry in content:
+            if not isinstance(entry, dict):
+                continue
+            if isinstance(entry.get("text"), str):
+                parts.append(entry["text"])
+            elif isinstance(entry.get("output_text"), str):
+                parts.append(entry["output_text"])
+    return "".join(parts).strip()
 
 
 def _response_error_detail(response: httpx.Response) -> str:
@@ -590,10 +644,27 @@ def _clean_string_list(value: Any) -> list[str]:
         return []
     clean: list[str] = []
     for item in value:
-        text = str(item).strip()
+        text = _clean_text_value(item)
         if text and text not in clean:
             clean.append(text)
     return clean
+
+
+def _clean_text_value(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        parts: list[str] = []
+        for item in value:
+            text = _clean_text_value(item)
+            if text and text not in parts:
+                parts.append(text)
+        return " / ".join(parts)
+    if isinstance(value, dict):
+        return ""
+    return str(value).strip()
 
 
 def _knowledge_pack_from_payload(material: CourseMaterial, job: MaterialParseJob, payload: dict[str, Any]) -> KnowledgePack:
@@ -636,10 +707,10 @@ def _knowledge_pack_from_payload(material: CourseMaterial, job: MaterialParseJob
     return KnowledgePack(
         id=knowledge_pack_id,
         material_id=material.id,
-        topic=str(payload.get("topic") or job.draft_topic or material.topic or "课堂主题").strip(),
+        topic=_clean_text_value(payload.get("topic")) or job.draft_topic or material.topic or "课堂主题",
         difficulty_band=DifficultyBand.repeat,
-        lesson_summary=str(payload.get("lesson_summary") or fallback.lesson_summary).strip(),
-        review_recommendation=str(payload.get("review_recommendation") or fallback.review_recommendation).strip(),
+        lesson_summary=_clean_text_value(payload.get("lesson_summary")) or fallback.lesson_summary,
+        review_recommendation=_clean_text_value(payload.get("review_recommendation")) or fallback.review_recommendation,
         vocabulary_items=vocabulary_items or fallback.vocabulary_items,
         sentence_patterns=sentence_patterns or fallback.sentence_patterns,
     )

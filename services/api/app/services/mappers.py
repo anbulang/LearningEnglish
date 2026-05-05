@@ -78,10 +78,11 @@ def stored_asset_from_model(model: StoredAssetModel) -> StoredAsset:
     )
 
 
-def course_material_from_model(model: CourseMaterialModel) -> CourseMaterial:
+def course_material_from_model(model: CourseMaterialModel, parse_job_id: str = "") -> CourseMaterial:
     return CourseMaterial(
         id=model.id,
         child_id=model.child_id,
+        parse_job_id=parse_job_id,
         teacher_name=model.teacher_name,
         lesson_date=model.lesson_date,
         title=model.title,

@@ -180,12 +180,12 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
               const SizedBox(height: AppSpacing.md),
               StatePanel(
                 title: 'AI 处理失败',
-                description: _actionError ?? job.confidenceSummary,
+                description: _recognitionFailureMessage(job, _actionError),
                 icon: Icons.error_outline_rounded,
                 assetPath: AppIllustrations.stateError,
                 action: FilledButton(
                   onPressed: _submitting ? null : _retryJob,
-                  child: Text(_submitting ? '重试中...' : '重新处理'),
+                  child: Text(_submitting ? '重试中...' : '重新识别'),
                 ),
               ),
             ],
@@ -386,4 +386,15 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
       ),
     );
   }
+}
+
+String _recognitionFailureMessage(MaterialParseJob job, String? actionError) {
+  final message = actionError ?? job.confidenceSummary;
+  if (message.toLowerCase().contains('timeout')) {
+    return '识别超时，请确认网络稳定后重新识别。原始讲义已经保留，不需要重新上传。';
+  }
+  if (message.trim().isEmpty) {
+    return '识别失败，请重新识别。原始讲义已经保留，不需要重新上传。';
+  }
+  return message;
 }

@@ -27,38 +27,35 @@ def main() -> int:
 
     client = httpx.Client(timeout=60, trust_env=False)
     try:
-        text_content = _chat(
+        text_content = _responses(
             client,
             api_key=api_key,
             base_url=base_url,
             model=text_model,
-            messages=[
-                {"role": "system", "content": "只输出 json。"},
-                {"role": "user", "content": '请返回 {"ok": true, "provider": "doubao"}'},
+            content=[
+                {
+                    "type": "input_text",
+                    "text": '只输出 json。\n请返回 {"ok": true, "provider": "doubao"}',
+                },
             ],
         )
         print("text_ok")
         print(_short(text_content))
 
-        vision_content = _chat(
+        vision_content = _responses(
             client,
             api_key=api_key,
             base_url=base_url,
             model=vision_model,
-            messages=[
+            content=[
                 {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": '请判断图片是否可见，只输出 json：{"image_visible": true} 或 {"image_visible": false}',
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{_sample_png_base64()}"},
-                        },
-                    ],
-                }
+                    "type": "input_image",
+                    "image_url": f"data:image/png;base64,{_sample_png_base64()}",
+                },
+                {
+                    "type": "input_text",
+                    "text": '请判断图片是否可见，只输出 json：{"image_visible": true} 或 {"image_visible": false}',
+                },
             ],
         )
         print("vision_ok")
@@ -68,18 +65,18 @@ def main() -> int:
     return 0
 
 
-def _chat(
+def _responses(
     client: httpx.Client,
     *,
     api_key: str,
     base_url: str,
     model: str,
-    messages: list[dict],
+    content: list[dict],
 ) -> str:
     response = client.post(
-        f"{base_url}/chat/completions",
+        f"{base_url}/responses",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={"model": model, "messages": messages, "temperature": 0.1, "response_format": {"type": "json_object"}},
+        json={"model": model, "input": [{"role": "user", "content": content}]},
     )
     try:
         response.raise_for_status()
@@ -87,8 +84,33 @@ def _chat(
         print(f"request_failed status={response.status_code} model={model}")
         print(_short(response.text))
         raise exc
-    payload = response.json()
-    return payload["choices"][0]["message"]["content"]
+    return _response_output_text(response.json())
+
+
+def _response_output_text(payload: dict) -> str:
+    if isinstance(payload.get("output_text"), str):
+        return payload["output_text"].strip()
+    output = payload.get("output")
+    if not isinstance(output, list):
+        raise RuntimeError("Doubao response did not contain output text")
+    parts = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        content = item.get("content")
+        if not isinstance(content, list):
+            continue
+        for entry in content:
+            if not isinstance(entry, dict):
+                continue
+            if isinstance(entry.get("text"), str):
+                parts.append(entry["text"])
+            elif isinstance(entry.get("output_text"), str):
+                parts.append(entry["output_text"])
+    merged = "".join(parts).strip()
+    if not merged:
+        raise RuntimeError("Doubao response contained empty output text")
+    return merged
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
