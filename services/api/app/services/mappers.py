@@ -19,6 +19,7 @@ from app.models.contracts import (
     DifficultyBand,
     JobStatus,
     KnowledgePack,
+    MaterialImageRecord,
     MaterialParseJob,
     ParentAccount,
     ParentCoachingScript,
@@ -78,10 +79,11 @@ def stored_asset_from_model(model: StoredAssetModel) -> StoredAsset:
     )
 
 
-def course_material_from_model(model: CourseMaterialModel) -> CourseMaterial:
+def course_material_from_model(model: CourseMaterialModel, parse_job_id: str = "") -> CourseMaterial:
     return CourseMaterial(
         id=model.id,
         child_id=model.child_id,
+        parse_job_id=parse_job_id,
         teacher_name=model.teacher_name,
         lesson_date=model.lesson_date,
         title=model.title,
@@ -96,6 +98,7 @@ def course_material_from_model(model: CourseMaterialModel) -> CourseMaterial:
         uploaded_at=model.uploaded_at,
         ocr_text=model.ocr_text,
         tags=model.tags or [],
+        image_records=[MaterialImageRecord(**item) for item in (model.image_records or [])],
     )
 
 
@@ -112,6 +115,7 @@ def material_job_from_model(model: MaterialParseJobModel) -> MaterialParseJob:
         draft_topic=model.draft_topic,
         draft_vocabulary=model.draft_vocabulary or [],
         draft_sentences=model.draft_sentences or [],
+        draft_image_records=[MaterialImageRecord(**item) for item in (model.draft_image_records or [])],
     )
 
 

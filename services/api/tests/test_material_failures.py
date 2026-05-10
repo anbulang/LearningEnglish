@@ -126,7 +126,7 @@ def test_retry_missing_job_returns_not_found(api_client) -> None:
 def test_retry_failed_job_requeues_processing(api_client) -> None:
     headers, _ = auth_headers(api_client, auth_code="retry-failed-parent")
     child_id = _create_child(api_client, headers)
-    _, job_id = _create_material(api_client, headers, child_id)
+    material_id, job_id = _create_material(api_client, headers, child_id)
 
     with SessionLocal() as db:
         job = db.get(MaterialParseJobModel, job_id)
@@ -137,6 +137,11 @@ def test_retry_failed_job_requeues_processing(api_client) -> None:
     response = api_client.post(f"/v1/material-jobs/{job_id}/retry", headers=headers)
     assert response.status_code == 200
     assert response.json()["status"] == "processing"
+
+    material_response = api_client.get(f"/v1/materials/{material_id}", headers=headers)
+    assert material_response.status_code == 200
+    assert material_response.json()["material"]["status"] == "processing"
+    assert material_response.json()["material"]["parse_job_id"] == job_id
 
 
 def test_polling_job_marks_failed_when_pipeline_errors(api_client) -> None:
@@ -184,6 +189,11 @@ def test_polling_job_marks_failed_when_pipeline_errors(api_client) -> None:
     assert payload["status"] == JobStatus.failed.value
     assert "doubao provider returned 500" in payload["confidence_summary"]
     assert "处理失败" in payload["warnings"][0]
+
+    material_response = api_client.get(f"/v1/materials/{upload_response.json()['material']['id']}", headers=headers)
+    assert material_response.status_code == 200
+    assert material_response.json()["material"]["status"] == "failed"
+    assert material_response.json()["material"]["parse_job_id"] == job_id
 
 
 def test_confirm_failed_job_requires_retry(api_client) -> None:

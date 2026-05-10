@@ -27,7 +27,7 @@
 - [x] `dist/ios/` 下存在 archive 和导出产物
 - [x] 至少一台 iOS 模拟器跑通当前 UI
 - [x] iOS 真机安装并启动成功
-- [x] Android debug APK fallback 已明确记录为本机 Flutter SDK cache 写入权限阻塞
+- [x] Android debug APK fallback 已明确记录为本机 Flutter/Android 工具链环境阻塞
 
 ### D. 主链复现
 - [x] 登录页面与会话恢复已验证
@@ -64,8 +64,8 @@
 - [x] `make mobile-ios-ipa`
 - [x] `xcrun devicectl device install app --device Chaucer dist/ios/LearningEnglish-Internal.xcarchive/Products/Applications/Runner.app --timeout 120`
 - [x] `xcrun devicectl device process launch --device Chaucer --terminate-existing com.anbulang.learningenglish --timeout 60`
-- [x] `make mobile-apk` blocked：本机 Flutter SDK cache 写入权限阻塞，`flutter build apk --debug` 返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；未进入 Android SDK 检查，未产出 APK
-- [x] `make harness-doubao-smoke` blocked：真实 provider 配置存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，记录为 provider-readiness blocked；未验证 Doubao provider 可用性
+- [x] `make mobile-apk` blocked：全局 Flutter SDK cache 写入受限，`flutter build apk --debug` 返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；改用 `/private/tmp/learningenglish-flutter/bin/flutter` 后进入下一层 blocker：`No Android SDK found`；未产出 APK
+- [x] `make harness-doubao-smoke` pass：Doubao 调用已对齐 ReceiptLens 的 `/responses` 方式（文本 `input_text`，视觉 `input_image`）；2026-05-04 08:12 真实 provider smoke 已通过，日志包含 `text_ok`、`vision_ok` 和 `PASS: Doubao provider smoke`
 
 验收日志：
 - `dist/harness/mvp-readiness.log`
@@ -123,8 +123,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 - Flutter Debug 包不能作为普通内测包从桌面直接启动；iOS 14+ 下会报 `Cannot create a FlutterEngine instance in debug mode without Flutter tooling or Xcode` 并闪退。因此 `make mobile-ios-ipa` 已改为默认产出 Profile/Internal 包
 - Profile/Internal IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；当前真机 `Chaucer` 已验证可安装并启动
 - 真机测试包使用局域网 API：`http://192.168.2.5:8000/v1`，对应后端健康检查 `http://192.168.2.5:8000/healthz` 返回 `{"status":"ok"}`
-- Android fallback 也未产出，当前机器运行 `flutter build apk --debug` 先在 Flutter SDK cache 写入阶段失败：`/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；因此尚未进入 Android SDK 检查
-- Doubao provider smoke 未通过，配置项存在，但当前机器 DNS 无法解析 `ark.cn-beijing.volces.com`，已记录为 provider-readiness blocked
+- Android fallback 也未产出，当前机器运行全局 Flutter 会在 cache 写入阶段失败：`/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；复制一份可写 Flutter SDK 到 `/private/tmp/learningenglish-flutter` 后，`FLUTTER=/private/tmp/learningenglish-flutter/bin/flutter make mobile-apk` 进入下一层 blocker：`No Android SDK found`
+- Doubao provider smoke 未通过，配置项存在，但当前机器无法直连解析 `ark.cn-beijing.volces.com`；代理变量存在，但本地 `127.0.0.1:1081` / `127.0.0.1:8888` 代理不可连接，已记录为 provider-readiness blocked
 - `api-migrate` 已修正为默认迁移 Docker Postgres；如果只想使用 SQLite，需要显式覆盖 `API_DATABASE_URL`
 
 ### 交付判断
@@ -135,5 +135,49 @@ make harness-capture-ios-screen SCREEN=report-screen
 1. 如需发给更多内部测试人员，收集并注册测试设备 UDID，或改走 TestFlight
 2. 将真机主链操作截图补回本 checklist
 3. 如 Mac 局域网 IP 变化，重新用新的 `IOS_API_BASE_URL` 导出测试包
-4. 如需 Android fallback，先修复 Flutter SDK cache 写入权限或改用当前用户可写的 Flutter SDK，再确认 Android SDK / `ANDROID_HOME` 后执行 `make mobile-apk`
+4. 如需 Android fallback，先修复 Flutter SDK cache 写入权限或改用当前用户可写的 Flutter SDK，再安装/配置 Android SDK / `ANDROID_HOME` 后执行 `make mobile-apk`
 5. 如需补齐真实截图，先清理模拟器 App 数据，再从登录页完整走一遍主链
+
+## 下一批需求：讲义上传识别链路
+
+需求来源：2026-05-05 真机上传测试。用户反馈“上传讲义图片并不能识别”，并指出上传页表单逻辑不符合“拍照后自动识别”的预期。
+
+需求文档：
+- `docs/harness/upload-recognition-loop.md`
+
+实施计划：
+- `docs/superpowers/plans/2026-05-05-upload-recognition-loop.md`
+
+当前根因记录：
+- 真机上传成功创建 `material_5adf552647dd` 和 `job_18ded7aa35de`。
+- job 进入 `failed`，错误为 `Doubao request timeout after 60s`。
+- material 仍停在 `processing`，资料库状态不清晰。
+- 当前识别是在前端请求 `/material-jobs/{jobId}` 时同步触发，不是上传成功后后台自动完成。
+- 未 ready 的材料从资料库进入课程详情会请求 `/knowledge-packs/{materialId}` 并得到 `404`，用户会误以为没有识别。
+
+下一批需求编号：
+- `HN-008`：上传页改为拍照优先的无表单识别入口。
+- `HN-009`：上传后必须进入识别轮询页。
+- `HN-010`：识别失败时 material 和 job 状态一致。
+- `HN-011`：Doubao 超时和重试体验清晰化。
+- `HN-012`：真机上传识别 harness 记录。
+- `HN-013`：图片级讲义记录与解析留存。
+
+当前实施状态：
+- [x] `HN-008` 上传页已改为拍照/相册优先，不再要求用户填写标题、老师名、主题。
+- [x] `HN-009` API 材料响应已包含 `parse_job_id`，移动端资料库未就绪材料会进入 AI 状态页。
+- [x] `HN-010` job 失败时 material 同步为 `failed`；retry 后同步回 `processing`。
+- [x] `HN-011` timeout 失败在移动端显示中文重试说明。
+- [ ] `HN-012` 仍需重新构建 Profile 真机包并用真实手机补一次上传识别截图/日志证据。
+- [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
+
+`HN-012` 当前补测进展：
+- Profile 真机包已用 `API_BASE_URL=http://192.168.2.5:8000/v1` 构建、安装并启动成功。
+- API/worker 已重建到当前分支代码，确认后端合约包含 `failed` 状态和 `parse_job_id`。
+- 拍照入口首次真机测试直接闪退，crash report 显示 iOS TCC 因缺少 `NSCameraUsageDescription` 终止 App。
+- 已补齐相机/相册用途说明并重新安装启动；crash report 证据见 `dist/harness/HN-012/Runner-2026-05-05-154100.ips`。
+- 仍缺少一次实际上传后的 `POST /v1/materials`、material/job 状态和真机截图证据，因此 `HN-012` 不标完成。
+
+本轮自动化验证：
+- `services/api/.venv/bin/python -m pytest services/api/tests`：`35 passed`
+- `cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test`：`10 passed`

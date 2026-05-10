@@ -56,6 +56,7 @@ class CourseMaterial {
   const CourseMaterial({
     required this.id,
     required this.childId,
+    required this.parseJobId,
     required this.teacherName,
     required this.lessonDate,
     required this.title,
@@ -65,12 +66,15 @@ class CourseMaterial {
     required this.pdfUrl,
     required this.ocrText,
     required this.tags,
+    this.imageRecords = const <MaterialImageRecord>[],
   });
 
   final String childId;
   final String id;
+  final List<MaterialImageRecord> imageRecords;
   final DateTime lessonDate;
   final String ocrText;
+  final String parseJobId;
   final String pdfUrl;
   final List<String> sourceImages;
   final MaterialStatus status;
@@ -83,6 +87,7 @@ class CourseMaterial {
     return CourseMaterial(
       id: json['id'] as String,
       childId: json['child_id'] as String,
+      parseJobId: json['parse_job_id'] as String? ?? '',
       teacherName: json['teacher_name'] as String? ?? '',
       lessonDate: dateTimeFromJson(json['lesson_date']) ?? DateTime.now(),
       title: json['title'] as String,
@@ -92,12 +97,14 @@ class CourseMaterial {
       pdfUrl: json['pdf_url'] as String? ?? '',
       ocrText: json['ocr_text'] as String? ?? '',
       tags: stringListFromJson(json['tags']),
+      imageRecords: materialImageRecordsFromJson(json['image_records']),
     );
   }
 
   JsonMap toJson() => {
         'id': id,
         'child_id': childId,
+        'parse_job_id': parseJobId,
         'teacher_name': teacherName,
         'lesson_date': lessonDate.toIso8601String(),
         'title': title,
@@ -107,7 +114,85 @@ class CourseMaterial {
         'pdf_url': pdfUrl,
         'ocr_text': ocrText,
         'tags': tags,
+        'image_records': imageRecords.map((item) => item.toJson()).toList(),
       };
+}
+
+@immutable
+class MaterialImageRecord {
+  const MaterialImageRecord({
+    required this.id,
+    required this.pageIndex,
+    required this.sourceType,
+    required this.originalFilename,
+    required this.url,
+    required this.objectKey,
+    required this.contentType,
+    required this.sizeBytes,
+    required this.imageTitle,
+    required this.ocrText,
+    required this.vocabulary,
+    required this.sentences,
+    required this.details,
+  });
+
+  final String contentType;
+  final List<String> details;
+  final String id;
+  final String imageTitle;
+  final String objectKey;
+  final String ocrText;
+  final String originalFilename;
+  final int pageIndex;
+  final List<String> sentences;
+  final int sizeBytes;
+  final String sourceType;
+  final String url;
+  final List<String> vocabulary;
+
+  factory MaterialImageRecord.fromJson(JsonMap json) {
+    return MaterialImageRecord(
+      id: json['id'] as String? ?? '',
+      pageIndex: json['page_index'] as int? ?? 0,
+      sourceType: json['source_type'] as String? ?? 'gallery',
+      originalFilename: json['original_filename'] as String? ?? '',
+      url: json['url'] as String? ?? '',
+      objectKey: json['object_key'] as String? ?? '',
+      contentType: json['content_type'] as String? ?? '',
+      sizeBytes: json['size_bytes'] as int? ?? 0,
+      imageTitle: json['image_title'] as String? ?? '',
+      ocrText: json['ocr_text'] as String? ?? '',
+      vocabulary: stringListFromJson(json['vocabulary']),
+      sentences: stringListFromJson(json['sentences']),
+      details: stringListFromJson(json['details']),
+    );
+  }
+
+  JsonMap toJson() => {
+        'id': id,
+        'page_index': pageIndex,
+        'source_type': sourceType,
+        'original_filename': originalFilename,
+        'url': url,
+        'object_key': objectKey,
+        'content_type': contentType,
+        'size_bytes': sizeBytes,
+        'image_title': imageTitle,
+        'ocr_text': ocrText,
+        'vocabulary': vocabulary,
+        'sentences': sentences,
+        'details': details,
+      };
+}
+
+List<MaterialImageRecord> materialImageRecordsFromJson(dynamic value) {
+  if (value is! List) {
+    return const <MaterialImageRecord>[];
+  }
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map((item) => MaterialImageRecord.fromJson(item))
+      .toList();
 }
 
 @immutable
@@ -124,9 +209,11 @@ class MaterialParseJob {
     required this.draftTopic,
     required this.draftVocabulary,
     required this.draftSentences,
+    this.draftImageRecords = const <MaterialImageRecord>[],
   });
 
   final String confidenceSummary;
+  final List<MaterialImageRecord> draftImageRecords;
   final List<String> draftSentences;
   final String draftTitle;
   final String draftTopic;
@@ -151,6 +238,8 @@ class MaterialParseJob {
       draftTopic: json['draft_topic'] as String? ?? '',
       draftVocabulary: stringListFromJson(json['draft_vocabulary']),
       draftSentences: stringListFromJson(json['draft_sentences']),
+      draftImageRecords:
+          materialImageRecordsFromJson(json['draft_image_records']),
     );
   }
 
@@ -166,6 +255,8 @@ class MaterialParseJob {
         'draft_topic': draftTopic,
         'draft_vocabulary': draftVocabulary,
         'draft_sentences': draftSentences,
+        'draft_image_records':
+            draftImageRecords.map((item) => item.toJson()).toList(),
       };
 }
 
@@ -303,7 +394,8 @@ class KnowledgePack {
         'difficulty_band': difficultyBand.value,
         'lesson_summary': lessonSummary,
         'review_recommendation': reviewRecommendation,
-        'vocabulary_items': vocabularyItems.map((item) => item.toJson()).toList(),
+        'vocabulary_items':
+            vocabularyItems.map((item) => item.toJson()).toList(),
         'sentence_patterns':
             sentencePatterns.map((item) => item.toJson()).toList(),
       };

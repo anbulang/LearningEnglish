@@ -131,56 +131,62 @@ class LessonCoverThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 92,
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[
-            Color.alphaBlend(
-                accent.withValues(alpha: 0.24), AppColors.paperWhite),
-            AppColors.paperWhite,
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+      height: 136,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: <Color>[
+              Color.alphaBlend(
+                  accent.withValues(alpha: 0.24), AppColors.paperWhite),
+              AppColors.paperWhite,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          borderRadius: BorderRadius.circular(AppRadii.card),
         ),
-        borderRadius: BorderRadius.circular(AppRadii.card),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: assetPath == null
-                  ? Center(
-                      child: Icon(icon, color: AppColors.cocoaCoral, size: 28),
-                    )
-                  : Image.asset(
-                      assetPath!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Center(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            SizedBox(
+              height: 54,
+              width: double.infinity,
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: assetPath == null
+                    ? Center(
                         child:
                             Icon(icon, color: AppColors.cocoaCoral, size: 28),
+                      )
+                    : Image.asset(
+                        assetPath!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                          child:
+                              Icon(icon, color: AppColors.cocoaCoral, size: 28),
+                        ),
                       ),
-                    ),
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(title,
-              style: AppTextStyles.cardTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(subtitle,
-              style: AppTextStyles.helper,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            Text(title,
+                style: AppTextStyles.cardTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(subtitle,
+                style: AppTextStyles.helper,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ],
+        ),
       ),
     );
   }

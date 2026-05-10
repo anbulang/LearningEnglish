@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -13,6 +14,7 @@ from app.db.models import (
     CourseMaterialModel,
     MaterialParseJobModel,
     ParentAccountModel,
+    StoredAssetModel,
 )
 from app.models.contracts import CourseMaterial, JobStatus, MaterialCreateResponse, MaterialDetailResponse, MaterialStatus
 from app.services.mappers import course_material_from_model, material_job_from_model
@@ -33,7 +35,8 @@ def list_materials(
     if child_id:
         stmt = stmt.where(CourseMaterialModel.child_id == child_id)
     items = db.scalars(stmt.order_by(CourseMaterialModel.lesson_date.desc())).all()
-    return [course_material_from_model(item) for item in items]
+    latest_job_ids = _latest_job_ids(db, [item.id for item in items])
+    return [course_material_from_model(item, parse_job_id=latest_job_ids.get(item.id, "")) for item in items]
 
 
 @router.get("/{material_id}", response_model=MaterialDetailResponse)
@@ -43,22 +46,29 @@ def get_material(
     db: Session = Depends(get_db),
 ) -> MaterialDetailResponse:
     material = _get_owned_material(db, current_parent.id, material_id)
-    return MaterialDetailResponse(material=course_material_from_model(material))
+    latest_job_ids = _latest_job_ids(db, [material.id])
+    return MaterialDetailResponse(
+        material=course_material_from_model(material, parse_job_id=latest_job_ids.get(material.id, ""))
+    )
 
 
 @router.post("", response_model=MaterialCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_material(
     child_id: str = Form(...),
-    teacher_name: str = Form(...),
+    teacher_name: str = Form("外教课"),
     lesson_date: date = Form(...),
-    title: str = Form(...),
+    title: str = Form("待识别讲义"),
     topic: str = Form(""),
     tags: str = Form(""),
+    file_sources: Optional[list[str]] = Form(None),
     files: list[UploadFile] = File(...),
     current_parent: ParentAccountModel = Depends(get_current_parent),
     db: Session = Depends(get_db),
     storage=Depends(get_storage),
 ) -> MaterialCreateResponse:
+    safe_teacher_name = teacher_name.strip() or "外教课"
+    safe_title = title.strip() or "待识别讲义"
+    safe_topic = topic.strip()
     child = db.scalar(
         select(ChildProfileModel).where(
             ChildProfileModel.id == child_id,
@@ -72,10 +82,10 @@ def create_material(
 
     material = CourseMaterialModel(
         child_id=child_id,
-        teacher_name=teacher_name,
+        teacher_name=safe_teacher_name,
         lesson_date=lesson_date,
-        title=title,
-        topic=topic,
+        title=safe_title,
+        topic=safe_topic,
         status=MaterialStatus.processing.value,
         source_images=[],
         source_image_keys=[],
@@ -87,18 +97,41 @@ def create_material(
     db.flush()
 
     asset_rows: list[StoredAssetModel] = []
+    image_records: list[dict] = []
     total_size = 0
-    for upload in files:
+    sources = file_sources or []
+    for index, upload in enumerate(files):
         asset = storage.save_upload("material", material.id, upload)
         db.add(asset)
         db.flush()
         asset_rows.append(asset)
         total_size += asset.size_bytes
+        source_type = sources[index] if index < len(sources) else "gallery"
+        if source_type not in {"camera", "gallery"}:
+            source_type = "gallery"
+        image_records.append(
+            {
+                "id": f"image_{uuid4().hex[:12]}",
+                "page_index": index + 1,
+                "source_type": source_type,
+                "original_filename": upload.filename or f"page-{index + 1}",
+                "url": asset.url,
+                "object_key": asset.object_key,
+                "content_type": asset.content_type,
+                "size_bytes": asset.size_bytes,
+                "image_title": "",
+                "ocr_text": "",
+                "vocabulary": [],
+                "sentences": [],
+                "details": ["图片已上传，等待 AI 识别。"],
+            }
+        )
 
     material.source_images = [asset.url for asset in asset_rows]
     material.source_image_keys = [asset.object_key for asset in asset_rows]
     material.normalized_image_keys = [asset.object_key for asset in asset_rows]
     material.file_size_bytes = total_size
+    material.image_records = image_records
 
     job = MaterialParseJobModel(
         material_id=material.id,
@@ -106,10 +139,11 @@ def create_material(
         confidence_summary="上传完成，等待 OCR 与解析。",
         started_at=datetime.now(timezone.utc),
         warnings=[],
-        draft_title=title,
-        draft_topic=topic,
+        draft_title=safe_title,
+        draft_topic=safe_topic,
         draft_vocabulary=[],
         draft_sentences=[],
+        draft_image_records=image_records,
     )
     db.add(job)
     db.commit()
@@ -131,3 +165,17 @@ def _get_owned_material(db: Session, parent_account_id: str, material_id: str) -
     if material is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
     return material
+
+
+def _latest_job_ids(db: Session, material_ids: list[str]) -> dict[str, str]:
+    if not material_ids:
+        return {}
+    rows = db.execute(
+        select(MaterialParseJobModel.material_id, MaterialParseJobModel.id)
+        .where(MaterialParseJobModel.material_id.in_(material_ids))
+        .order_by(MaterialParseJobModel.started_at.desc())
+    ).all()
+    result: dict[str, str] = {}
+    for material_id, job_id in rows:
+        result.setdefault(material_id, job_id)
+    return result

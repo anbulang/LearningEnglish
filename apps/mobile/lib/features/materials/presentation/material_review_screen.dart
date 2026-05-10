@@ -180,12 +180,12 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
               const SizedBox(height: AppSpacing.md),
               StatePanel(
                 title: 'AI 处理失败',
-                description: _actionError ?? job.confidenceSummary,
+                description: _recognitionFailureMessage(job, _actionError),
                 icon: Icons.error_outline_rounded,
                 assetPath: AppIllustrations.stateError,
                 action: FilledButton(
                   onPressed: _submitting ? null : _retryJob,
-                  child: Text(_submitting ? '重试中...' : '重新处理'),
+                  child: Text(_submitting ? '重试中...' : '重新识别'),
                 ),
               ),
             ],
@@ -210,6 +210,10 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
               const SizedBox(height: AppSpacing.sm),
               Text('课程标题：${job.draftTitle}'),
               Text('主题：${job.draftTopic}'),
+              if (job.draftImageRecords.isNotEmpty) ...<Widget>[
+                const SizedBox(height: AppSpacing.md),
+                _ImageRecordsSection(records: job.draftImageRecords),
+              ],
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: const <Widget>[
@@ -386,4 +390,89 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
       ),
     );
   }
+}
+
+String _recognitionFailureMessage(MaterialParseJob job, String? actionError) {
+  final message = actionError ?? job.confidenceSummary;
+  if (message.toLowerCase().contains('timeout')) {
+    return '识别超时，请确认网络稳定后重新识别。原始讲义已经保留，不需要重新上传。';
+  }
+  if (message.trim().isEmpty) {
+    return '识别失败，请重新识别。原始讲义已经保留，不需要重新上传。';
+  }
+  return message;
+}
+
+class _ImageRecordsSection extends StatelessWidget {
+  const _ImageRecordsSection({required this.records});
+
+  final List<MaterialImageRecord> records;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: const <Widget>[
+            Text('图片记录', style: AppTextStyles.cardTitle),
+            SizedBox(width: AppSpacing.sm),
+            StickerBadge(label: '逐页保留', color: AppColors.mintLeaf),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        ...records.map(
+          (record) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.softSheet,
+                borderRadius: BorderRadius.circular(AppRadii.card),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Text('第 ${record.pageIndex} 页',
+                            style: AppTextStyles.cardTitle),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(_sourceLabel(record.sourceType),
+                            style: AppTextStyles.helper),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(record.imageTitle.isEmpty
+                        ? record.originalFilename
+                        : record.imageTitle),
+                    if (record.vocabulary.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('单词：${record.vocabulary.join('、')}',
+                          style: AppTextStyles.helper),
+                    ],
+                    if (record.sentences.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('句子：${record.sentences.join(' / ')}',
+                          style: AppTextStyles.helper),
+                    ],
+                    if (record.details.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('细节：${record.details.join('；')}',
+                          style: AppTextStyles.helper),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _sourceLabel(String sourceType) {
+  return sourceType == 'camera' ? '相机拍摄' : '相册选择';
 }

@@ -50,7 +50,8 @@ def get_material_job(
             job.finished_at = None
             job.confidence_summary = f"处理失败：{exc}"
             job.warnings = [f"处理失败：{exc}", "请检查 AI provider 配置或稍后重试。"]
-            db.add(job)
+            material.status = MaterialStatus.failed.value
+            db.add_all([job, material])
             db.commit()
             db.refresh(job)
             return material_job_from_model(job)
@@ -60,11 +61,13 @@ def get_material_job(
         job.draft_topic = prepared.draft_topic
         job.draft_vocabulary = prepared.draft_vocabulary
         job.draft_sentences = prepared.draft_sentences
+        job.draft_image_records = [item.model_dump() for item in prepared.draft_image_records]
         job.confidence_summary = prepared.confidence_summary
         job.warnings = prepared.warnings
         material.status = MaterialStatus.needs_review.value
         material.ocr_text = " ".join(prepared.draft_vocabulary + prepared.draft_sentences)
         material.topic = prepared.draft_topic or material.topic
+        material.image_records = [item.model_dump() for item in prepared.draft_image_records]
         db.add_all([job, material])
         db.commit()
         db.refresh(job)
@@ -107,6 +110,7 @@ def confirm_material_job(
     material.title = prepared.draft_title or material.title
     material.topic = prepared.draft_topic or material.topic
     material.ocr_text = " ".join(prepared.draft_vocabulary + prepared.draft_sentences)
+    material.image_records = [item.model_dump() for item in prepared.draft_image_records]
 
     db.add_all([job, material])
     db.execute(delete(KnowledgePackModel).where(KnowledgePackModel.material_id == material.id))
@@ -162,6 +166,7 @@ def retry_material_job(
     job.warnings = []
     job.confidence_summary = "任务已重新排队。"
     job.finished_at = None
+    job.draft_image_records = material.image_records or []
     material.status = MaterialStatus.processing.value
     db.add_all([job, material])
     db.commit()

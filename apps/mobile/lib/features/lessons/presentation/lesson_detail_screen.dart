@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
@@ -43,6 +44,10 @@ class LessonDetailScreen extends ConsumerWidget {
                   icon: Icons.check_circle_rounded,
                   color: AppColors.mintLeaf),
             ),
+            if (material.imageRecords.isNotEmpty) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              _SourceImagesCard(records: material.imageRecords),
+            ],
             const SizedBox(height: AppSpacing.md),
             AppCard(
               child: Column(
@@ -241,6 +246,88 @@ class LessonDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _SourceImagesCard extends StatelessWidget {
+  const _SourceImagesCard({required this.records});
+
+  final List<MaterialImageRecord> records;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('原始讲义记录', style: AppTextStyles.sectionTitle),
+          const SizedBox(height: AppSpacing.sm),
+          ...records.map(
+            (record) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.softSheet,
+                  borderRadius: BorderRadius.circular(AppRadii.card),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadii.input),
+                        child: record.url.isEmpty
+                            ? Container(
+                                width: 64,
+                                height: 64,
+                                color: AppColors.paperWhite,
+                                child: const Icon(Icons.image_outlined),
+                              )
+                            : Image.network(
+                                record.url,
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                              ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              '第 ${record.pageIndex} 页 · ${record.imageTitle.isEmpty ? record.originalFilename : record.imageTitle}',
+                              style: AppTextStyles.cardTitle,
+                            ),
+                            const SizedBox(height: AppSpacing.xxs),
+                            Text(_sourceLabel(record.sourceType),
+                                style: AppTextStyles.helper),
+                            if (record.vocabulary.isNotEmpty)
+                              Text('单词：${record.vocabulary.join('、')}',
+                                  style: AppTextStyles.helper),
+                            if (record.sentences.isNotEmpty)
+                              Text('句子：${record.sentences.join(' / ')}',
+                                  style: AppTextStyles.helper),
+                            if (record.details.isNotEmpty)
+                              Text('细节：${record.details.join('；')}',
+                                  style: AppTextStyles.helper),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _sourceLabel(String sourceType) {
+  return sourceType == 'camera' ? '相机拍摄' : '相册选择';
 }
 
 Color _lessonAccent(String topic) {

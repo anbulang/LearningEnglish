@@ -35,6 +35,12 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>LearningEnglish 需要连接本机开发环境中的 API 服务，用于内部测试登录、上传讲义和生成复习内容。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>LearningEnglish 需要使用相机拍摄英语讲义，用于识别课程内容并生成复习材料。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>LearningEnglish 需要从相册选择英语讲义图片，用于识别课程内容并生成复习材料。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>LearningEnglish 仅在用户保存讲义相关图片时写入相册。</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_http._tcp</string>

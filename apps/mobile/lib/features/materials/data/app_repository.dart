@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:learning_english_contracts/contracts.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../session/data/session_controller.dart'
     show sessionControllerProvider;
 import 'materials_repository.dart';
+import 'scan_draft_controller.dart';
 
 final appRepositoryProvider = Provider<AppRepository>((ref) {
   return AppRepository(
@@ -180,21 +180,26 @@ class AppRepository implements MaterialsRepository {
     required DateTime lessonDate,
     required String title,
     required String topic,
-    required List<XFile> files,
+    required List<ScanDraftPage> files,
   }) async {
     Future<FormData> buildFormData() async {
+      final safeTitle = title.trim().isEmpty ? '待识别讲义' : title.trim();
+      final safeTeacherName =
+          teacherName.trim().isEmpty ? '外教课' : teacherName.trim();
+      final safeTopic = topic.trim();
       return FormData.fromMap(<String, dynamic>{
         'child_id': childId,
-        'teacher_name': teacherName,
+        'teacher_name': safeTeacherName,
         'lesson_date': lessonDate.toIso8601String().split('T').first,
-        'title': title,
-        'topic': topic,
-        'tags': topic,
+        'title': safeTitle,
+        'topic': safeTopic,
+        'tags': safeTopic,
+        'file_sources': [for (final file in files) file.sourceType],
         'files': [
           for (final file in files)
             await MultipartFile.fromFile(
-              file.path,
-              filename: file.name,
+              file.file.path,
+              filename: file.file.name,
             ),
         ],
       });

@@ -9,16 +9,53 @@ import 'package:learning_english_mobile/features/materials/data/app_repository.d
 import 'package:learning_english_mobile/features/materials/data/scan_draft_controller.dart';
 import 'package:learning_english_mobile/features/materials/presentation/material_review_screen.dart';
 import 'package:learning_english_mobile/features/materials/presentation/scan_upload_screen.dart';
+import 'package:learning_english_mobile/features/lessons/presentation/lesson_detail_screen.dart';
 import 'package:learning_english_mobile/features/profiles/data/demo_data.dart';
 
 void main() {
+  testWidgets('scan page is image-first and does not require metadata form',
+      (tester) async {
+    _useTallPhoneViewport(tester);
+    final repository = _FakeAppRepository();
+    final router = GoRouter(
+      initialLocation: '/materials/scan',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/materials/scan',
+          builder: (context, state) => const ScanUploadScreen(),
+        ),
+      ],
+    );
+
+    await _pumpTestApp(
+      tester,
+      router: router,
+      repository: repository,
+      overrides: <Override>[
+        activeChildProvider.overrideWithValue(_childProfile()),
+      ],
+    );
+
+    expect(find.text('课程标题'), findsNothing);
+    expect(find.text('老师名'), findsNothing);
+    expect(find.text('主题'), findsNothing);
+    expect(find.text('拍照'), findsOneWidget);
+    expect(find.text('从相册选择'), findsOneWidget);
+    expect(find.text('添加讲义页'), findsOneWidget);
+    expect(find.text('先添加讲义页'), findsOneWidget);
+    expect(find.text('拍照上传'), findsNothing);
+  });
+
   testWidgets('upload success navigates from scan page to AI review page',
       (tester) async {
     _useTallPhoneViewport(tester);
     final repository = _FakeAppRepository();
     final draftController = ScanDraftController()
-      ..setPages(<XFile>[
-        XFile('/tmp/worksheet.jpg', name: 'worksheet.jpg'),
+      ..setPages(<ScanDraftPage>[
+        ScanDraftPage(
+          file: XFile('/tmp/worksheet.jpg', name: 'worksheet.jpg'),
+          sourceType: 'camera',
+        ),
       ]);
 
     final router = GoRouter(
@@ -48,7 +85,11 @@ void main() {
       ],
     );
 
-    final uploadButton = find.widgetWithText(FilledButton, '完成上传');
+    expect(find.text('已添加 1 页'), findsOneWidget);
+    expect(find.text('相机拍摄'), findsOneWidget);
+    expect(find.text('继续拍照'), findsOneWidget);
+    expect(find.text('继续选择'), findsOneWidget);
+    final uploadButton = find.widgetWithText(FilledButton, '开始识别');
     await tester.ensureVisible(uploadButton);
     await tester.tap(uploadButton);
     await tester.pumpAndSettle();
@@ -86,12 +127,42 @@ void main() {
     );
 
     expect(find.text('AI 识别结果'), findsOneWidget);
+    expect(find.text('图片记录'), findsOneWidget);
+    expect(find.textContaining('Animals page'), findsOneWidget);
+    expect(find.textContaining('单词：cat、dog、bird'), findsOneWidget);
     await tester.ensureVisible(find.text('确认并生成课程详情'));
     await tester.tap(find.text('确认并生成课程详情'));
     await tester.pumpAndSettle();
 
     expect(repository.confirmCalls, 1);
     expect(find.text('lesson:material_1'), findsOneWidget);
+  });
+
+  testWidgets('lesson detail keeps source image records', (tester) async {
+    _useTallPhoneViewport(tester);
+    final repository = _FakeAppRepository();
+    final router = GoRouter(
+      initialLocation: '/lessons/material_1',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/lessons/:materialId',
+          builder: (context, state) => LessonDetailScreen(
+            materialId: state.pathParameters['materialId'] ?? '',
+          ),
+        ),
+      ],
+    );
+
+    await _pumpTestApp(
+      tester,
+      router: router,
+      repository: repository,
+    );
+
+    expect(find.text('原始讲义记录'), findsOneWidget);
+    expect(find.textContaining('第 1 页 · Animals page'), findsOneWidget);
+    expect(find.textContaining('句子：It is a cat.'), findsOneWidget);
+    expect(find.textContaining('细节：图片中包含动物词汇。'), findsOneWidget);
   });
 }
 
@@ -138,7 +209,7 @@ class _FakeAppRepository extends AppRepository {
     required DateTime lessonDate,
     required String title,
     required String topic,
-    required List<XFile> files,
+    required List<ScanDraftPage> files,
   }) async {
     uploadCalls += 1;
     return MaterialCreateResult(
@@ -150,6 +221,16 @@ class _FakeAppRepository extends AppRepository {
   @override
   Future<MaterialParseJob> getMaterialJob(String jobId) async {
     return _materialJob(status: JobStatus.needsReview);
+  }
+
+  @override
+  Future<CourseMaterial> getMaterial(String materialId) async {
+    return _courseMaterial(status: MaterialStatus.ready);
+  }
+
+  @override
+  Future<KnowledgePack> getKnowledgePack(String materialId) async {
+    return _knowledgePack();
   }
 
   @override
@@ -182,6 +263,7 @@ CourseMaterial _courseMaterial({required MaterialStatus status}) {
   return CourseMaterial(
     id: 'material_1',
     childId: 'child_1',
+    parseJobId: 'job_1',
     teacherName: 'Emma',
     lessonDate: DateTime(2026, 4, 29),
     title: 'Animals Around Me',
@@ -191,6 +273,7 @@ CourseMaterial _courseMaterial({required MaterialStatus status}) {
     pdfUrl: '',
     ocrText: 'cat dog bird',
     tags: const <String>['动物'],
+    imageRecords: _imageRecords(),
   );
 }
 
@@ -207,5 +290,59 @@ MaterialParseJob _materialJob({required JobStatus status}) {
     draftTopic: '动物',
     draftVocabulary: const <String>['cat', 'dog', 'bird'],
     draftSentences: const <String>['It is a cat.', 'I can see a dog.'],
+    draftImageRecords: _imageRecords(),
+  );
+}
+
+List<MaterialImageRecord> _imageRecords() {
+  return const <MaterialImageRecord>[
+    MaterialImageRecord(
+      id: 'image_1',
+      pageIndex: 1,
+      sourceType: 'camera',
+      originalFilename: 'worksheet.jpg',
+      url: '',
+      objectKey: 'materials/material_1/worksheet.jpg',
+      contentType: 'image/jpeg',
+      sizeBytes: 1024,
+      imageTitle: 'Animals page',
+      ocrText: 'cat dog bird',
+      vocabulary: <String>['cat', 'dog', 'bird'],
+      sentences: <String>['It is a cat.'],
+      details: <String>['图片中包含动物词汇。'],
+    ),
+  ];
+}
+
+KnowledgePack _knowledgePack() {
+  return KnowledgePack(
+    id: 'knowledge_1',
+    materialId: 'material_1',
+    topic: '动物',
+    difficultyBand: DifficultyBand.repeat,
+    lessonSummary: '本课复习 cat、dog、bird。',
+    reviewRecommendation: '先看图认词，再练句子。',
+    vocabularyItems: const <VocabularyItem>[
+      VocabularyItem(
+        id: 'word_1',
+        knowledgePackId: 'knowledge_1',
+        word: 'cat',
+        meaningCn: '猫',
+        exampleSentence: 'It is a cat.',
+        phonics: '',
+        imageUrl: '',
+        audioUrl: '',
+      ),
+    ],
+    sentencePatterns: const <SentencePattern>[
+      SentencePattern(
+        id: 'sentence_1',
+        knowledgePackId: 'knowledge_1',
+        sentence: 'It is a cat.',
+        meaningCn: '它是一只猫。',
+        usageType: 'answer',
+        audioUrl: '',
+      ),
+    ],
   );
 }

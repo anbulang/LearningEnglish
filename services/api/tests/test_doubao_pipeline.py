@@ -40,19 +40,24 @@ def _completion_response(content: str) -> httpx.Response:
     return httpx.Response(
         200,
         json={
-            "choices": [
+            "output": [
                 {
-                    "message": {
-                        "content": content,
-                    }
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": content}],
                 }
             ]
         },
     )
 
 
-def _client_for_response(response: httpx.Response) -> httpx.Client:
+def _client_for_response(response: httpx.Response, *, expected_content_types: list[str] | None = None) -> httpx.Client:
     def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v3/responses"
+        payload = json.loads(request.content)
+        assert payload["model"]
+        if expected_content_types is not None:
+            content = payload["input"][0]["content"]
+            assert [item["type"] for item in content] == expected_content_types
         return response
 
     return httpx.Client(transport=httpx.MockTransport(handler))
@@ -67,6 +72,16 @@ def test_doubao_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) ->
         "topic": "动物",
         "vocabulary": ["cat", "dog", "bird"],
         "sentences": ["What is this?", "It is a cat."],
+        "image_records": [
+            {
+                "page_index": 1,
+                "image_title": "Animals page",
+                "ocr_text": "cat dog bird",
+                "vocabulary": ["cat", "dog", "bird"],
+                "sentences": ["What is this?", "It is a cat."],
+                "details": ["图片中包含动物词汇和问答句型。"],
+            }
+        ],
         "warnings": ["图片略有倾斜，已提取主要内容。"],
         "confidence_summary": "识别结果较清晰，建议家长检查 bird。",
     }
@@ -74,7 +89,10 @@ def test_doubao_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) ->
         api_key="ark-key",
         base_url="https://ark.test/api/v3",
         model_or_endpoint="doubao-vision-test",
-        client=_client_for_response(_completion_response(json.dumps(payload, ensure_ascii=False))),
+        client=_client_for_response(
+            _completion_response(json.dumps(payload, ensure_ascii=False)),
+            expected_content_types=["input_image", "input_text"],
+        ),
     )
 
     draft = provider.extract(_material(), [worksheet])
@@ -83,7 +101,39 @@ def test_doubao_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) ->
     assert draft.topic == "动物"
     assert draft.vocabulary == ["cat", "dog", "bird"]
     assert draft.sentences == ["What is this?", "It is a cat."]
+    assert len(draft.image_records) == 1
+    assert draft.image_records[0].image_title == "Animals page"
+    assert draft.image_records[0].vocabulary == ["cat", "dog", "bird"]
+    assert draft.image_records[0].details == ["图片中包含动物词汇和问答句型。"]
     assert "bird" in draft.confidence_summary
+
+
+def test_doubao_vision_provider_normalizes_list_title_and_topic(tmp_path: Path) -> None:
+    worksheet = tmp_path / "worksheet.jpg"
+    worksheet.write_bytes(b"fake-image")
+    payload = {
+        "ocr_text": "A horse can run fast. Find the queen. Quick!",
+        "title": ["Run, Hop, Go!", "Quick!"],
+        "topic": ["Phonics: Rr", "Phonics: Qq"],
+        "vocabulary": ["run", "queen"],
+        "sentences": ["A horse can run fast.", "Find the queen. Quick!"],
+        "warnings": [],
+        "confidence_summary": "识别清晰。",
+    }
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(
+            _completion_response(json.dumps(payload, ensure_ascii=False)),
+            expected_content_types=["input_image", "input_text"],
+        ),
+    )
+
+    draft = provider.extract(_material(), [worksheet])
+
+    assert draft.title == "Run, Hop, Go! / Quick!"
+    assert draft.topic == "Phonics: Rr / Phonics: Qq"
 
 
 @pytest.mark.parametrize(
@@ -151,7 +201,10 @@ def test_doubao_language_parser_generates_knowledge_pack_and_review_tasks() -> N
         api_key="ark-key",
         base_url="https://ark.test/api/v3",
         model_or_endpoint="doubao-text-test",
-        client=_client_for_response(_completion_response(json.dumps(payload, ensure_ascii=False))),
+        client=_client_for_response(
+            _completion_response(json.dumps(payload, ensure_ascii=False)),
+            expected_content_types=["input_text"],
+        ),
     )
 
     pack = provider.generate_knowledge_pack(_material(), _job())

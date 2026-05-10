@@ -3,6 +3,7 @@ enum MaterialStatus {
   processing('processing'),
   needsReview('needs_review'),
   ready('ready'),
+  failed('failed'),
   archived('archived');
 
   const MaterialStatus(this.value);

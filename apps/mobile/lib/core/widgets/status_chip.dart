@@ -14,6 +14,7 @@ class MaterialStatusChip extends StatelessWidget {
       MaterialStatus.processing => ('处理中', AppColors.warningSurface),
       MaterialStatus.needsReview => ('待校对', AppColors.errorSurface),
       MaterialStatus.ready => ('可复习', AppColors.successSurface),
+      MaterialStatus.failed => ('识别失败', AppColors.errorSurface),
       MaterialStatus.archived => ('已归档', AppColors.softSheet),
     };
 

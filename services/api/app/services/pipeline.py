@@ -18,6 +18,7 @@ from app.models.contracts import (
     DifficultyBand,
     JobStatus,
     KnowledgePack,
+    MaterialImageRecord,
     MaterialParseJob,
     ParentCoachingScript,
     ParentCoachingStep,
@@ -36,6 +37,7 @@ class OCRDraft:
     topic: str
     vocabulary: list[str]
     sentences: list[str]
+    image_records: list[MaterialImageRecord]
     warnings: list[str]
     confidence_summary: str
 
@@ -74,6 +76,14 @@ class StubOCRProvider:
             topic=topic,
             vocabulary=vocabulary,
             sentences=sentences,
+            image_records=_fallback_image_records(
+                material,
+                title=material.title,
+                ocr_text=ocr_text,
+                vocabulary=vocabulary,
+                sentences=sentences,
+                details=["当前环境未启用真实 OCR，图片级明细使用开发回退结果。"],
+            ),
             warnings=["当前环境未启用真实 OCR，已使用可运行的开发回退结果。"],
             confidence_summary="开发环境使用 fallback OCR 草稿，请家长确认后继续。",
         )
@@ -114,6 +124,14 @@ class PaddleOCRProvider:
             topic=material.topic or _infer_topic(ocr_text),
             vocabulary=vocabulary[:8] or ["cat", "dog", "bird"],
             sentences=sentences[:6] or ["What is this?", "It is a cat."],
+            image_records=_fallback_image_records(
+                material,
+                title=material.title,
+                ocr_text=ocr_text,
+                vocabulary=vocabulary[:8] or ["cat", "dog", "bird"],
+                sentences=sentences[:6] or ["What is this?", "It is a cat."],
+                details=["PaddleOCR 已完成图片级文本抽取，请家长确认。"],
+            ),
             warnings=warnings,
             confidence_summary=confidence_summary,
         )
@@ -146,8 +164,9 @@ class DoubaoVisionOCRProvider:
                 "type": "text",
                 "text": (
                     "请识别这些低龄儿童英语课堂讲义图片，并只返回 json。"
-                    "json 字段必须包含：ocr_text, title, topic, vocabulary, sentences, warnings, confidence_summary。"
+                    "json 字段必须包含：ocr_text, title, topic, vocabulary, sentences, warnings, confidence_summary, image_records。"
                     "vocabulary 只放英文单词或短语，sentences 只放英文句型或课堂对话句子。"
+                    "image_records 必须按图片页返回数组，每项包含 page_index, image_title, ocr_text, vocabulary, sentences, details。"
                     "如果不确定，请在 warnings 用中文说明。"
                 ),
             }
@@ -174,12 +193,21 @@ class DoubaoVisionOCRProvider:
         sentences = _clean_string_list(payload.get("sentences"))
         return OCRDraft(
             ocr_text=ocr_text or " ".join(vocabulary + sentences),
-            title=str(payload.get("title") or material.title).strip(),
-            topic=str(payload.get("topic") or material.topic or _infer_topic(ocr_text)).strip(),
+            title=_clean_text_value(payload.get("title")) or material.title,
+            topic=_clean_text_value(payload.get("topic")) or material.topic or _infer_topic(ocr_text),
             vocabulary=vocabulary or _extract_candidate_vocabulary(ocr_text)[:8],
             sentences=sentences or _extract_candidate_sentences([ocr_text])[:6],
+            image_records=_image_records_from_payload(
+                material,
+                payload.get("image_records"),
+                title=_clean_text_value(payload.get("title")) or material.title,
+                ocr_text=ocr_text or " ".join(vocabulary + sentences),
+                vocabulary=vocabulary or _extract_candidate_vocabulary(ocr_text)[:8],
+                sentences=sentences or _extract_candidate_sentences([ocr_text])[:6],
+            ),
             warnings=_clean_string_list(payload.get("warnings")),
-            confidence_summary=str(payload.get("confidence_summary") or "豆包已完成识别，请家长确认重点词句。").strip(),
+            confidence_summary=_clean_text_value(payload.get("confidence_summary"))
+            or "豆包已完成识别，请家长确认重点词句。",
         )
 
 
@@ -419,6 +447,7 @@ class ProviderBackedPipelineService:
                 "draft_topic": draft.topic,
                 "draft_vocabulary": draft.vocabulary,
                 "draft_sentences": draft.sentences,
+                "draft_image_records": draft.image_records,
                 "confidence_summary": draft.confidence_summary,
                 "warnings": draft.warnings,
             }
@@ -514,16 +543,14 @@ def _post_chat_json(
     active_client = client or httpx.Client(timeout=timeout_seconds)
     try:
         response = active_client.post(
-            f"{base_url.rstrip('/')}/chat/completions",
+            f"{base_url.rstrip('/')}/responses",
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             json={
                 "model": model_or_endpoint,
-                "temperature": 0.2,
-                "messages": messages,
-                "response_format": {"type": "json_object"},
+                "input": [{"role": "user", "content": _responses_content_from_messages(messages)}],
             },
             timeout=timeout_seconds,
         )
@@ -539,10 +566,7 @@ def _post_chat_json(
         detail = _response_error_detail(response)
         raise DoubaoProviderError(f"Doubao API returned HTTP {response.status_code}: {detail}")
 
-    try:
-        content = response.json()["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-        raise DoubaoProviderError("Doubao response did not contain chat message content") from exc
+    content = _response_output_text(response)
     if not isinstance(content, str) or not content.strip():
         raise DoubaoProviderError("Doubao response contained empty content")
     try:
@@ -552,6 +576,64 @@ def _post_chat_json(
     if not isinstance(payload, dict):
         raise DoubaoProviderError("Doubao response JSON must be an object")
     return payload
+
+
+def _responses_content_from_messages(messages: list[dict[str, Any]]) -> list[dict[str, str]]:
+    text_parts: list[str] = []
+    image_parts: list[dict[str, str]] = []
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, str):
+            text_parts.append(content)
+            continue
+        if not isinstance(content, list):
+            continue
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            item_type = item.get("type")
+            if item_type == "text" and item.get("text"):
+                text_parts.append(str(item["text"]))
+            elif item_type == "image_url":
+                image_url = item.get("image_url")
+                if isinstance(image_url, dict) and image_url.get("url"):
+                    image_parts.append({"type": "input_image", "image_url": str(image_url["url"])})
+
+    merged_text = "\n\n".join(part.strip() for part in text_parts if part.strip())
+    output: list[dict[str, str]] = image_parts
+    if merged_text:
+        output.append({"type": "input_text", "text": merged_text})
+    return output
+
+
+def _response_output_text(response: httpx.Response) -> str:
+    try:
+        root = response.json()
+    except json.JSONDecodeError as exc:
+        raise DoubaoProviderError("Doubao response did not contain valid JSON") from exc
+
+    if isinstance(root.get("output_text"), str):
+        return root["output_text"].strip()
+
+    output = root.get("output")
+    if not isinstance(output, list):
+        raise DoubaoProviderError("Doubao response did not contain output text")
+
+    parts: list[str] = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        content = item.get("content")
+        if not isinstance(content, list):
+            continue
+        for entry in content:
+            if not isinstance(entry, dict):
+                continue
+            if isinstance(entry.get("text"), str):
+                parts.append(entry["text"])
+            elif isinstance(entry.get("output_text"), str):
+                parts.append(entry["output_text"])
+    return "".join(parts).strip()
 
 
 def _response_error_detail(response: httpx.Response) -> str:
@@ -590,10 +672,106 @@ def _clean_string_list(value: Any) -> list[str]:
         return []
     clean: list[str] = []
     for item in value:
-        text = str(item).strip()
+        text = _clean_text_value(item)
         if text and text not in clean:
             clean.append(text)
     return clean
+
+
+def _clean_text_value(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        parts: list[str] = []
+        for item in value:
+            text = _clean_text_value(item)
+            if text and text not in parts:
+                parts.append(text)
+        return " / ".join(parts)
+    if isinstance(value, dict):
+        return ""
+    return str(value).strip()
+
+
+def _fallback_image_records(
+    material: CourseMaterial,
+    *,
+    title: str,
+    ocr_text: str,
+    vocabulary: list[str],
+    sentences: list[str],
+    details: list[str],
+) -> list[MaterialImageRecord]:
+    source_records = material.image_records or []
+    if not source_records:
+        return [
+            MaterialImageRecord(
+                id=f"image_{uuid4().hex[:12]}",
+                page_index=1,
+                image_title=title or material.title or "讲义页 1",
+                ocr_text=ocr_text,
+                vocabulary=vocabulary,
+                sentences=sentences,
+                details=details,
+            )
+        ]
+    return [
+        record.model_copy(
+            update={
+                "image_title": record.image_title or f"{title or material.title or '讲义'} 第 {record.page_index} 页",
+                "ocr_text": record.ocr_text or ocr_text,
+                "vocabulary": record.vocabulary or vocabulary,
+                "sentences": record.sentences or sentences,
+                "details": record.details
+                if record.details and record.details != ["图片已上传，等待 AI 识别。"]
+                else details,
+            }
+        )
+        for record in source_records
+    ]
+
+
+def _image_records_from_payload(
+    material: CourseMaterial,
+    raw_records: Any,
+    *,
+    title: str,
+    ocr_text: str,
+    vocabulary: list[str],
+    sentences: list[str],
+) -> list[MaterialImageRecord]:
+    fallback = _fallback_image_records(
+        material,
+        title=title,
+        ocr_text=ocr_text,
+        vocabulary=vocabulary,
+        sentences=sentences,
+        details=["AI 已完成图片级识别，请家长确认。"],
+    )
+    if not isinstance(raw_records, list):
+        return fallback
+
+    by_page = {record.page_index: record for record in fallback}
+    for index, raw in enumerate(raw_records, start=1):
+        if not isinstance(raw, dict):
+            continue
+        page_index = int(raw.get("page_index") or index)
+        base = by_page.get(page_index) or MaterialImageRecord(
+            id=f"image_{uuid4().hex[:12]}",
+            page_index=page_index,
+        )
+        by_page[page_index] = base.model_copy(
+            update={
+                "image_title": _clean_text_value(raw.get("image_title")) or base.image_title,
+                "ocr_text": _clean_text_value(raw.get("ocr_text")) or base.ocr_text,
+                "vocabulary": _clean_string_list(raw.get("vocabulary")) or base.vocabulary,
+                "sentences": _clean_string_list(raw.get("sentences")) or base.sentences,
+                "details": _clean_string_list(raw.get("details")) or base.details,
+            }
+        )
+    return [by_page[key] for key in sorted(by_page)]
 
 
 def _knowledge_pack_from_payload(material: CourseMaterial, job: MaterialParseJob, payload: dict[str, Any]) -> KnowledgePack:
@@ -636,10 +814,10 @@ def _knowledge_pack_from_payload(material: CourseMaterial, job: MaterialParseJob
     return KnowledgePack(
         id=knowledge_pack_id,
         material_id=material.id,
-        topic=str(payload.get("topic") or job.draft_topic or material.topic or "课堂主题").strip(),
+        topic=_clean_text_value(payload.get("topic")) or job.draft_topic or material.topic or "课堂主题",
         difficulty_band=DifficultyBand.repeat,
-        lesson_summary=str(payload.get("lesson_summary") or fallback.lesson_summary).strip(),
-        review_recommendation=str(payload.get("review_recommendation") or fallback.review_recommendation).strip(),
+        lesson_summary=_clean_text_value(payload.get("lesson_summary")) or fallback.lesson_summary,
+        review_recommendation=_clean_text_value(payload.get("review_recommendation")) or fallback.review_recommendation,
         vocabulary_items=vocabulary_items or fallback.vocabulary_items,
         sentence_patterns=sentence_patterns or fallback.sentence_patterns,
     )
