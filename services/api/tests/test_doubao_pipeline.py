@@ -8,7 +8,12 @@ import httpx
 import pytest
 
 from app.models.contracts import CourseMaterial, JobStatus, MaterialParseJob
-from app.services.pipeline import DoubaoLanguageParsingProvider, DoubaoProviderError, DoubaoVisionOCRProvider
+from app.services.pipeline import (
+    DoubaoLanguageParsingProvider,
+    DoubaoProviderError,
+    DoubaoVisionOCRProvider,
+    _fallback_learning_assets,
+)
 
 
 def _material() -> CourseMaterial:
@@ -50,7 +55,12 @@ def _completion_response(content: str) -> httpx.Response:
     )
 
 
-def _client_for_response(response: httpx.Response, *, expected_content_types: list[str] | None = None) -> httpx.Client:
+def _client_for_response(
+    response: httpx.Response,
+    *,
+    expected_content_types: list[str] | None = None,
+    inspect_content=None,
+) -> httpx.Client:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/api/v3/responses"
         payload = json.loads(request.content)
@@ -58,6 +68,8 @@ def _client_for_response(response: httpx.Response, *, expected_content_types: li
         if expected_content_types is not None:
             content = payload["input"][0]["content"]
             assert [item["type"] for item in content] == expected_content_types
+        if inspect_content is not None:
+            inspect_content(payload["input"][0]["content"])
         return response
 
     return httpx.Client(transport=httpx.MockTransport(handler))
@@ -91,7 +103,7 @@ def test_doubao_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) ->
         model_or_endpoint="doubao-vision-test",
         client=_client_for_response(
             _completion_response(json.dumps(payload, ensure_ascii=False)),
-            expected_content_types=["input_image", "input_text"],
+            expected_content_types=["input_text", "input_text", "input_text", "input_image"],
         ),
     )
 
@@ -126,7 +138,7 @@ def test_doubao_vision_provider_normalizes_list_title_and_topic(tmp_path: Path) 
         model_or_endpoint="doubao-vision-test",
         client=_client_for_response(
             _completion_response(json.dumps(payload, ensure_ascii=False)),
-            expected_content_types=["input_image", "input_text"],
+            expected_content_types=["input_text", "input_text", "input_text", "input_image"],
         ),
     )
 
@@ -134,6 +146,187 @@ def test_doubao_vision_provider_normalizes_list_title_and_topic(tmp_path: Path) 
 
     assert draft.title == "Run, Hop, Go! / Quick!"
     assert draft.topic == "Phonics: Rr / Phonics: Qq"
+
+
+def test_doubao_vision_provider_sends_page_labels_between_multiple_images(tmp_path: Path) -> None:
+    first = tmp_path / "rr.jpg"
+    second = tmp_path / "qq.jpg"
+    first.write_bytes(b"first-image")
+    second.write_bytes(b"second-image")
+    payload = {
+        "ocr_text": "A horse can run fast. Find the queen. Quick!",
+        "title": "Phonics storybooks",
+        "topic": "Rr / Qq",
+        "vocabulary": ["run", "queen"],
+        "sentences": ["A horse can run fast.", "Find the queen."],
+        "image_records": [
+            {"page_index": 1, "image_title": "Rr page", "ocr_text": "Rr", "vocabulary": ["run"], "sentences": []},
+            {"page_index": 2, "image_title": "Qq page", "ocr_text": "Qq", "vocabulary": ["queen"], "sentences": []},
+        ],
+        "warnings": [],
+        "confidence_summary": "识别清晰。",
+    }
+
+    def inspect_content(content: list[dict[str, str]]) -> None:
+        assert [item["type"] for item in content] == [
+            "input_text",
+            "input_text",
+            "input_text",
+            "input_image",
+            "input_text",
+            "input_image",
+        ]
+        assert "第 1 页" in content[2]["text"]
+        assert "第 2 页" in content[4]["text"]
+        assert content[3]["image_url"].startswith("data:image")
+        assert content[5]["image_url"].startswith("data:image")
+
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(
+            _completion_response(json.dumps(payload, ensure_ascii=False)),
+            inspect_content=inspect_content,
+        ),
+    )
+
+    draft = provider.extract(_material(), [first, second])
+
+    assert [record.page_index for record in draft.image_records] == [1, 2]
+    assert [record.image_title for record in draft.image_records] == ["Rr page", "Qq page"]
+
+
+def test_doubao_extracts_learning_assets_with_bbox(tmp_path: Path) -> None:
+    first = tmp_path / "qq.jpg"
+    second = tmp_path / "rr.jpg"
+    first.write_bytes(b"first-image")
+    second.write_bytes(b"second-image")
+    payload = {
+        "ocr_text": "Find the queen. A rabbit can hop fast.",
+        "title": "Qq Rr Storybook",
+        "topic": "phonics",
+        "vocabulary": ["queen", "rabbit"],
+        "sentences": ["Find the queen.", "A rabbit can hop fast."],
+        "warnings": [],
+        "confidence_summary": "high",
+        "image_records": [
+            {"page_index": 1, "image_title": "Qq page", "vocabulary": ["queen"], "sentences": ["Find the queen."]},
+            {
+                "page_index": 2,
+                "image_title": "Rr page",
+                "vocabulary": ["rabbit"],
+                "sentences": ["A rabbit can hop fast."],
+            },
+        ],
+        "learning_assets": [
+            {
+                "text": "queen",
+                "kind": "word",
+                "translation": "女王",
+                "source_page_index": 1,
+                "source_bbox": {"x": 0.05, "y": 0.14, "width": 0.43, "height": 0.35},
+                "source_visual_description": "迷宫里的女王。",
+                "pronunciation_text": "queen",
+                "image_prompt": "参考讲义女王线稿生成彩色图。",
+                "difficulty": "easy",
+                "teaching_note": "让孩子找女王并读 queen。",
+            },
+            {
+                "text": "A rabbit can hop fast.",
+                "kind": "sentence",
+                "translation": "兔子能跳得很快。",
+                "source_page_index": 2,
+                "source_bbox": {"x": 0.51, "y": 0.16, "width": 0.43, "height": 0.33},
+                "source_visual_description": "跳跃的兔子。",
+                "pronunciation_text": "A rabbit can hop fast.",
+                "image_prompt": "参考讲义兔子跳跃线稿生成彩色图。",
+                "difficulty": "easy",
+                "teaching_note": "让孩子模仿兔子跳并跟读。",
+            },
+        ],
+    }
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(_completion_response(json.dumps(payload, ensure_ascii=False))),
+    )
+
+    draft = provider.extract(_material(), [first, second])
+
+    assert [asset.text for asset in draft.learning_assets] == ["queen", "A rabbit can hop fast."]
+    assert draft.learning_assets[0].source_bbox is not None
+    assert draft.learning_assets[0].source_bbox.x == 0.05
+    assert draft.learning_assets[1].source_page_index == 2
+
+
+def test_doubao_learning_assets_clamps_page_index_and_bbox_overflow(tmp_path: Path) -> None:
+    first = tmp_path / "qq.jpg"
+    second = tmp_path / "rr.jpg"
+    first.write_bytes(b"first-image")
+    second.write_bytes(b"second-image")
+    payload = {
+        "ocr_text": "Find the queen. Find the duck.",
+        "title": "Qq Storybook",
+        "topic": "phonics",
+        "vocabulary": ["queen", "duck"],
+        "sentences": ["Find the queen.", "Find the duck."],
+        "warnings": [],
+        "confidence_summary": "high",
+        "learning_assets": [
+            {
+                "text": "queen",
+                "kind": "word",
+                "source_page_index": 99,
+                "source_bbox": {"x": 0.9, "y": 0.8, "width": 0.5, "height": 0.5},
+            },
+            {
+                "text": "duck",
+                "kind": "word",
+                "source_page_index": "not-a-page",
+                "source_bbox": {"x": 1.2, "y": -0.2, "width": 0.5, "height": 0.5},
+            },
+        ],
+    }
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(_completion_response(json.dumps(payload, ensure_ascii=False))),
+    )
+
+    draft = provider.extract(_material(), [first, second])
+
+    queen_bbox = draft.learning_assets[0].source_bbox
+    duck_bbox = draft.learning_assets[1].source_bbox
+    assert queen_bbox is not None
+    assert duck_bbox is not None
+    assert draft.learning_assets[0].source_page_index == 2
+    assert draft.learning_assets[1].source_page_index == 1
+    assert queen_bbox.x == 0.9
+    assert queen_bbox.width == pytest.approx(0.1)
+    assert queen_bbox.x + queen_bbox.width <= 1.0
+    assert queen_bbox.y == 0.8
+    assert queen_bbox.height == pytest.approx(0.2)
+    assert queen_bbox.y + queen_bbox.height <= 1.0
+    assert duck_bbox.x == 1.0
+    assert duck_bbox.width == 0.0
+    assert duck_bbox.y == 0.0
+    assert duck_bbox.height == 0.5
+
+
+def test_learning_assets_fallback_uses_vocabulary_and_sentences() -> None:
+    assets = _fallback_learning_assets(
+        _material(),
+        vocabulary=["queen", "duck"],
+        sentences=["Find the queen."],
+    )
+
+    assert [asset.text for asset in assets] == ["queen", "duck", "Find the queen."]
+    assert all(asset.source_page_index >= 1 for asset in assets)
+    assert all(asset.pronunciation_text for asset in assets)
+    assert len(assets) <= 20
 
 
 @pytest.mark.parametrize(
@@ -203,7 +396,7 @@ def test_doubao_language_parser_generates_knowledge_pack_and_review_tasks() -> N
         model_or_endpoint="doubao-text-test",
         client=_client_for_response(
             _completion_response(json.dumps(payload, ensure_ascii=False)),
-            expected_content_types=["input_text"],
+            expected_content_types=["input_text", "input_text"],
         ),
     )
 
@@ -214,3 +407,41 @@ def test_doubao_language_parser_generates_knowledge_pack_and_review_tasks() -> N
     assert [item.word for item in pack.vocabulary_items] == ["cat", "dog", "bird"]
     assert [item.sentence for item in pack.sentence_patterns] == ["What is this?", "It is a cat."]
     assert {task.task_type.value for task in tasks} == {"flashcard", "listen_choice", "match_choice"}
+
+
+def test_doubao_provider_disables_environment_proxy_by_default(monkeypatch) -> None:
+    captured_trust_env: list[bool] = []
+
+    class FakeClient:
+        def __init__(self, *, timeout: int, trust_env: bool) -> None:
+            captured_trust_env.append(trust_env)
+
+        def post(self, *args, **kwargs) -> httpx.Response:
+            return _completion_response(
+                json.dumps(
+                    {
+                        "topic": "动物",
+                        "lesson_summary": "本课练习动物词汇。",
+                        "review_recommendation": "先看图说词，再跟读句子。",
+                        "vocabulary_items": [],
+                        "sentence_patterns": [],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:7890")
+    monkeypatch.setattr(httpx, "Client", FakeClient)
+    provider = DoubaoLanguageParsingProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-text-test",
+        trust_env=False,
+    )
+
+    provider.generate_knowledge_pack(_material(), _job())
+
+    assert captured_trust_env == [False]
