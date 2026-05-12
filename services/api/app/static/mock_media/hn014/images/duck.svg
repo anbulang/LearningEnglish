@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Color illustration of a duck in a maze">
+  <rect width="512" height="512" rx="44" fill="#f0fbff"/>
+  <path d="M70 82h372v270H70z" fill="#fff" stroke="#5f4637" stroke-width="12"/>
+  <path d="M104 126h84v62h-48v76h122v-64h74v-74h70" fill="none" stroke="#9ed08d" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M168 330c26 30 70 48 122 42 58-7 98-38 112-86-58 14-108-1-142-44-14-18-38-25-58-13-22 14-26 45-8 67-18 10-32 21-26 34z" fill="#ffd95e" stroke="#5f4637" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="212" cy="260" r="9" fill="#3f3128"/>
+  <path d="M185 276l-50 16 48 18" fill="#f28a4b" stroke="#5f4637" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M252 318c32 12 68 10 104-7" fill="none" stroke="#f2a443" stroke-width="9" stroke-linecap="round"/>
+  <text x="256" y="444" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#3f3128">duck</text>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Color illustration of children looking at a rock">
+  <rect width="512" height="512" rx="44" fill="#fff7ef"/>
+  <path d="M74 368c86 30 282 28 364 0" fill="none" stroke="#8bc58a" stroke-width="16" stroke-linecap="round"/>
+  <path d="M224 344c16-28 54-34 82-10 12 10 18 24 16 42H210c0-12 4-22 14-32z" fill="#888f99" stroke="#5f4637" stroke-width="8"/>
+  <circle cx="164" cy="194" r="34" fill="#f3bf91" stroke="#5f4637" stroke-width="8"/>
+  <path d="M130 240h70v110h-70z" fill="#ff9aa2" stroke="#5f4637" stroke-width="8"/>
+  <path d="M132 274l-42 36M198 274l42 28M142 350l-20 54M188 350l20 54" stroke="#5f4637" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="354" cy="180" r="36" fill="#f3bf91" stroke="#5f4637" stroke-width="8"/>
+  <path d="M318 228h76v122h-76z" fill="#8cc7ff" stroke="#5f4637" stroke-width="8"/>
+  <path d="M316 270l-44 36M394 270l38 34M330 350l-22 54M382 350l22 54" stroke="#5f4637" stroke-width="11" stroke-linecap="round"/>
+  <text x="256" y="454" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#3f3128">What can a rock do?</text>
+</svg>

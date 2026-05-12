@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Color storybook cover for Run, Hop, Go">
+  <rect width="512" height="512" rx="44" fill="#fff8ec"/>
+  <path d="M76 374c100 34 260 32 360-2" fill="none" stroke="#8bc58a" stroke-width="18" stroke-linecap="round"/>
+  <path d="M98 258c34-54 102-62 152-24l30-18 20 20-28 24c-6 48-58 68-106 58-38-8-66-30-68-60z" fill="#d99a5f" stroke="#5f4637" stroke-width="8"/>
+  <path d="M312 250c8-44 48-66 88-46 38 18 50 58 28 84-22 28-76 32-106 12-18-12-22-32-10-50z" fill="#ffffff" stroke="#5f4637" stroke-width="8"/>
+  <path d="M348 204c-2-44 10-72 28-82 18 22 16 56-2 86M382 212c20-38 42-54 64-48 0 28-18 52-48 66" fill="#fff" stroke="#5f4637" stroke-width="8" stroke-linecap="round"/>
+  <path d="M120 220H62M114 286H56" stroke="#8cc7ff" stroke-width="12" stroke-linecap="round"/>
+  <text x="256" y="102" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="800" fill="#3f3128">Run, Hop, Go!</text>
+  <text x="256" y="454" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#3f3128">run · hop · go</text>
+</svg>

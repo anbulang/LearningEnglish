@@ -1,0 +1,133 @@
+{
+  "id": "hn014_qq_rr_mock_media",
+  "description": "HN-014 Qq/Rr worksheet mock learning assets with colored illustrations and US/UK TTS audio.",
+  "primary_accent": "us",
+  "image_style": "colored worksheet line-art redraw",
+  "tts": {
+    "us_voice": "Samantha",
+    "uk_voice": "Daniel",
+    "format": "m4a"
+  },
+  "assets": [
+    {
+      "id": "asset_queen",
+      "text": "queen",
+      "kind": "word",
+      "translation": "女王",
+      "source_page_index": 1,
+      "source_bbox": {"x": 0.05, "y": 0.14, "width": 0.43, "height": 0.35},
+      "source_visual_description": "Qq 讲义左上角迷宫中的女王图像。",
+      "image": "images/queen.svg",
+      "tts_us": "tts/us/queen.m4a",
+      "tts_uk": "tts/uk/queen.m4a"
+    },
+    {
+      "id": "asset_duck",
+      "text": "duck",
+      "kind": "word",
+      "translation": "鸭子",
+      "source_page_index": 1,
+      "source_bbox": {"x": 0.51, "y": 0.14, "width": 0.43, "height": 0.35},
+      "source_visual_description": "Qq 讲义右上角迷宫中的鸭子图像。",
+      "image": "images/duck.svg",
+      "tts_us": "tts/us/duck.m4a",
+      "tts_uk": "tts/uk/duck.m4a"
+    },
+    {
+      "id": "asset_quilt",
+      "text": "quilt",
+      "kind": "word",
+      "translation": "被子",
+      "source_page_index": 1,
+      "source_bbox": {"x": 0.05, "y": 0.52, "width": 0.43, "height": 0.36},
+      "source_visual_description": "Qq 讲义左下角圆形迷宫中间的拼布被。",
+      "image": "images/quilt.svg",
+      "tts_us": "tts/us/quilt.m4a",
+      "tts_uk": "tts/uk/quilt.m4a"
+    },
+    {
+      "id": "asset_question_mark",
+      "text": "question mark",
+      "kind": "phrase",
+      "translation": "问号",
+      "source_page_index": 1,
+      "source_bbox": {"x": 0.51, "y": 0.52, "width": 0.43, "height": 0.36},
+      "source_visual_description": "Qq 讲义右下角问号形状迷宫中的问号。",
+      "image": "images/question_mark.svg",
+      "tts_us": "tts/us/question_mark.m4a",
+      "tts_uk": "tts/uk/question_mark.m4a"
+    },
+    {
+      "id": "asset_find_the_queen",
+      "text": "Find the queen.",
+      "kind": "sentence",
+      "translation": "找到女王。",
+      "source_page_index": 1,
+      "source_bbox": {"x": 0.05, "y": 0.14, "width": 0.43, "height": 0.35},
+      "source_visual_description": "Qq 讲义左上角女王迷宫和句子 Find the queen.",
+      "image": "images/find_the_queen.svg",
+      "tts_us": "tts/us/find_the_queen.m4a",
+      "tts_uk": "tts/uk/find_the_queen.m4a"
+    },
+    {
+      "id": "asset_horse_run_fast",
+      "text": "A horse can run fast.",
+      "kind": "sentence",
+      "translation": "马能跑得很快。",
+      "source_page_index": 2,
+      "source_bbox": {"x": 0.05, "y": 0.16, "width": 0.43, "height": 0.33},
+      "source_visual_description": "Rr 讲义左上角奔跑的马和句子 A horse can run fast.",
+      "image": "images/horse_run_fast.svg",
+      "tts_us": "tts/us/horse_run_fast.m4a",
+      "tts_uk": "tts/uk/horse_run_fast.m4a"
+    },
+    {
+      "id": "asset_rabbit_hop_fast",
+      "text": "A rabbit can hop fast.",
+      "kind": "sentence",
+      "translation": "兔子能跳得很快。",
+      "source_page_index": 2,
+      "source_bbox": {"x": 0.51, "y": 0.16, "width": 0.43, "height": 0.33},
+      "source_visual_description": "Rr 讲义右上角正在跳跃的兔子和句子 A rabbit can hop fast.",
+      "image": "images/rabbit_hop_fast.svg",
+      "tts_us": "tts/us/rabbit_hop_fast.m4a",
+      "tts_uk": "tts/uk/rabbit_hop_fast.m4a"
+    },
+    {
+      "id": "asset_car_go_fast",
+      "text": "A car can go fast.",
+      "kind": "sentence",
+      "translation": "汽车能开得很快。",
+      "source_page_index": 2,
+      "source_bbox": {"x": 0.05, "y": 0.52, "width": 0.43, "height": 0.34},
+      "source_visual_description": "Rr 讲义左下角快速行驶的汽车和句子 A car can go fast.",
+      "image": "images/car_go_fast.svg",
+      "tts_us": "tts/us/car_go_fast.m4a",
+      "tts_uk": "tts/uk/car_go_fast.m4a"
+    },
+    {
+      "id": "asset_rock",
+      "text": "What can a rock do?",
+      "kind": "sentence",
+      "translation": "石头能做什么？",
+      "source_page_index": 2,
+      "source_bbox": {"x": 0.51, "y": 0.52, "width": 0.43, "height": 0.34},
+      "source_visual_description": "Rr 讲义右下角两个孩子看着石头的画面和句子 What can a rock do?",
+      "image": "images/rock.svg",
+      "tts_us": "tts/us/rock.m4a",
+      "tts_uk": "tts/uk/rock.m4a"
+    },
+    {
+      "id": "asset_run_hop_go",
+      "text": "Run, hop, go!",
+      "kind": "sentence",
+      "translation": "跑、跳、走！",
+      "source_page_index": 2,
+      "source_bbox": {"x": 0.05, "y": 0.16, "width": 0.89, "height": 0.70},
+      "source_visual_description": "Rr 讲义整体主题 Run, Hop, Go!，包含奔跑、跳跃和移动的动作。",
+      "image": "images/run_hop_go.svg",
+      "tts_us": "tts/us/run_hop_go.m4a",
+      "tts_uk": "tts/uk/run_hop_go.m4a"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Color storybook scene for Find the queen">
+  <rect width="512" height="512" rx="44" fill="#fff7ea"/>
+  <path d="M88 120h312v220H88z" fill="#ffffff" stroke="#5f4637" stroke-width="11"/>
+  <path d="M124 166h138v38H158v58h116v38H158" fill="none" stroke="#8cc7ff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M334 170l18-46 22 34 26-40 18 52z" fill="#ffd95e" stroke="#5f4637" stroke-width="7"/>
+  <circle cx="374" cy="228" r="48" fill="#f6c48b" stroke="#5f4637" stroke-width="8"/>
+  <path d="M322 300c38 22 77 22 112 0v58H322z" fill="#e77f67" stroke="#5f4637" stroke-width="7"/>
+  <path d="M118 395c88 34 184 34 276 0" fill="none" stroke="#82c7a5" stroke-width="16" stroke-linecap="round"/>
+  <text x="256" y="456" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#3f3128">Find the queen.</text>
+</svg>
