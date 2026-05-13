@@ -4,6 +4,155 @@ import 'enums.dart';
 import 'json.dart';
 
 @immutable
+class SourceBoundingBox {
+  const SourceBoundingBox({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  final double height;
+  final double width;
+  final double x;
+  final double y;
+
+  factory SourceBoundingBox.fromJson(JsonMap json) {
+    return SourceBoundingBox(
+      x: doubleFromJson(json['x']) ?? 0,
+      y: doubleFromJson(json['y']) ?? 0,
+      width: doubleFromJson(json['width']) ?? 1,
+      height: doubleFromJson(json['height']) ?? 1,
+    );
+  }
+
+  JsonMap toJson() => {
+        'x': x,
+        'y': y,
+        'width': width,
+        'height': height,
+      };
+}
+
+@immutable
+class LearningAsset {
+  const LearningAsset({
+    required this.id,
+    required this.text,
+    required this.kind,
+    this.translation = '',
+    this.sourcePageIndex = 1,
+    this.sourceBbox,
+    this.sourceVisualDescription = '',
+    this.pronunciationText = '',
+    this.imagePrompt = '',
+    this.difficulty = 'easy',
+    this.teachingNote = '',
+    this.isCore = true,
+    this.generatedImageStatus = 'pending',
+    this.generatedImageUrl = '',
+    this.generatedImageObjectKey = '',
+    this.ttsUsStatus = 'pending',
+    this.ttsUsUrl = '',
+    this.ttsUsObjectKey = '',
+    this.ttsUkStatus = 'pending',
+    this.ttsUkUrl = '',
+    this.ttsUkObjectKey = '',
+    this.primaryAccent = 'us',
+  });
+
+  final String difficulty;
+  final String generatedImageObjectKey;
+  final String generatedImageStatus;
+  final String generatedImageUrl;
+  final String id;
+  final String imagePrompt;
+  final bool isCore;
+  final String kind;
+  final String primaryAccent;
+  final String pronunciationText;
+  final SourceBoundingBox? sourceBbox;
+  final int sourcePageIndex;
+  final String sourceVisualDescription;
+  final String teachingNote;
+  final String text;
+  final String translation;
+  final String ttsUkObjectKey;
+  final String ttsUkStatus;
+  final String ttsUkUrl;
+  final String ttsUsObjectKey;
+  final String ttsUsStatus;
+  final String ttsUsUrl;
+
+  factory LearningAsset.fromJson(JsonMap json) {
+    final sourceBbox = json['source_bbox'];
+    return LearningAsset(
+      id: json['id'] as String? ?? '',
+      text: json['text'] as String? ?? '',
+      kind: json['kind'] as String? ?? 'word',
+      translation: json['translation'] as String? ?? '',
+      sourcePageIndex: json['source_page_index'] as int? ?? 1,
+      sourceBbox:
+          sourceBbox is JsonMap ? SourceBoundingBox.fromJson(sourceBbox) : null,
+      sourceVisualDescription:
+          json['source_visual_description'] as String? ?? '',
+      pronunciationText: json['pronunciation_text'] as String? ?? '',
+      imagePrompt: json['image_prompt'] as String? ?? '',
+      difficulty: json['difficulty'] as String? ?? 'easy',
+      teachingNote: json['teaching_note'] as String? ?? '',
+      isCore: json['is_core'] as bool? ?? true,
+      generatedImageStatus:
+          json['generated_image_status'] as String? ?? 'pending',
+      generatedImageUrl: json['generated_image_url'] as String? ?? '',
+      generatedImageObjectKey:
+          json['generated_image_object_key'] as String? ?? '',
+      ttsUsStatus: json['tts_us_status'] as String? ?? 'pending',
+      ttsUsUrl: json['tts_us_url'] as String? ?? '',
+      ttsUsObjectKey: json['tts_us_object_key'] as String? ?? '',
+      ttsUkStatus: json['tts_uk_status'] as String? ?? 'pending',
+      ttsUkUrl: json['tts_uk_url'] as String? ?? '',
+      ttsUkObjectKey: json['tts_uk_object_key'] as String? ?? '',
+      primaryAccent: json['primary_accent'] as String? ?? 'us',
+    );
+  }
+
+  JsonMap toJson() => {
+        'id': id,
+        'text': text,
+        'kind': kind,
+        'translation': translation,
+        'source_page_index': sourcePageIndex,
+        'source_bbox': sourceBbox?.toJson(),
+        'source_visual_description': sourceVisualDescription,
+        'pronunciation_text': pronunciationText,
+        'image_prompt': imagePrompt,
+        'difficulty': difficulty,
+        'teaching_note': teachingNote,
+        'is_core': isCore,
+        'generated_image_status': generatedImageStatus,
+        'generated_image_url': generatedImageUrl,
+        'generated_image_object_key': generatedImageObjectKey,
+        'tts_us_status': ttsUsStatus,
+        'tts_us_url': ttsUsUrl,
+        'tts_us_object_key': ttsUsObjectKey,
+        'tts_uk_status': ttsUkStatus,
+        'tts_uk_url': ttsUkUrl,
+        'tts_uk_object_key': ttsUkObjectKey,
+        'primary_accent': primaryAccent,
+      };
+}
+
+List<LearningAsset> learningAssetsFromJson(dynamic value) {
+  if (value is! List) {
+    return const <LearningAsset>[];
+  }
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map((item) => LearningAsset.fromJson(item))
+      .toList();
+}
+
+@immutable
 class ChildProfile {
   const ChildProfile({
     required this.id,
@@ -67,11 +216,13 @@ class CourseMaterial {
     required this.ocrText,
     required this.tags,
     this.imageRecords = const <MaterialImageRecord>[],
+    this.learningAssets = const <LearningAsset>[],
   });
 
   final String childId;
   final String id;
   final List<MaterialImageRecord> imageRecords;
+  final List<LearningAsset> learningAssets;
   final DateTime lessonDate;
   final String ocrText;
   final String parseJobId;
@@ -98,6 +249,7 @@ class CourseMaterial {
       ocrText: json['ocr_text'] as String? ?? '',
       tags: stringListFromJson(json['tags']),
       imageRecords: materialImageRecordsFromJson(json['image_records']),
+      learningAssets: learningAssetsFromJson(json['learning_assets']),
     );
   }
 
@@ -115,6 +267,7 @@ class CourseMaterial {
         'ocr_text': ocrText,
         'tags': tags,
         'image_records': imageRecords.map((item) => item.toJson()).toList(),
+        'learning_assets': learningAssets.map((item) => item.toJson()).toList(),
       };
 }
 
@@ -210,10 +363,12 @@ class MaterialParseJob {
     required this.draftVocabulary,
     required this.draftSentences,
     this.draftImageRecords = const <MaterialImageRecord>[],
+    this.draftLearningAssets = const <LearningAsset>[],
   });
 
   final String confidenceSummary;
   final List<MaterialImageRecord> draftImageRecords;
+  final List<LearningAsset> draftLearningAssets;
   final List<String> draftSentences;
   final String draftTitle;
   final String draftTopic;
@@ -240,6 +395,8 @@ class MaterialParseJob {
       draftSentences: stringListFromJson(json['draft_sentences']),
       draftImageRecords:
           materialImageRecordsFromJson(json['draft_image_records']),
+      draftLearningAssets:
+          learningAssetsFromJson(json['draft_learning_assets']),
     );
   }
 
@@ -257,6 +414,8 @@ class MaterialParseJob {
         'draft_sentences': draftSentences,
         'draft_image_records':
             draftImageRecords.map((item) => item.toJson()).toList(),
+        'draft_learning_assets':
+            draftLearningAssets.map((item) => item.toJson()).toList(),
       };
 }
 

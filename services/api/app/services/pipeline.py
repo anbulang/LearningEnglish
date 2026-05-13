@@ -314,6 +314,10 @@ class DoubaoLanguageParsingProvider:
 
 class StubLanguageParsingProvider:
     def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
+        learning_assets = job.draft_learning_assets or material.learning_assets
+        if learning_assets:
+            return _knowledge_pack_from_learning_assets(material, job, learning_assets)
+
         knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
         vocabulary_items = [
             VocabularyItem(
@@ -351,6 +355,9 @@ class StubLanguageParsingProvider:
         )
 
     def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
+        if material.learning_assets:
+            return _review_tasks_from_learning_assets(material, material.learning_assets)
+
         now = datetime.now(timezone.utc)
         words = [item.word for item in knowledge_pack.vocabulary_items[:3]]
         first_word = words[0] if words else "cat"
@@ -518,7 +525,12 @@ class ProviderBackedPipelineService:
         # final practice assets locally from the reviewed words and sentences.
         local_parser = StubLanguageParsingProvider()
         knowledge_pack = local_parser.generate_knowledge_pack(material, job)
-        review_tasks = local_parser.generate_review_tasks(material, knowledge_pack)
+        learning_assets = job.draft_learning_assets or material.learning_assets
+        review_tasks = (
+            _review_tasks_from_learning_assets(material, learning_assets)
+            if learning_assets
+            else local_parser.generate_review_tasks(material, knowledge_pack)
+        )
         coaching_script = ParentCoachingScript(
             id=f"coach_{uuid4().hex[:8]}",
             material_id=material.id,
@@ -585,6 +597,86 @@ def build_pipeline_service() -> ProviderBackedPipelineService:
             model=settings.qwen_model,
         )
     return ProviderBackedPipelineService(ocr_provider=ocr_provider, parsing_provider=parsing_provider)
+
+
+def _knowledge_pack_from_learning_assets(
+    material: CourseMaterial,
+    job: MaterialParseJob,
+    learning_assets: list[LearningAsset],
+) -> KnowledgePack:
+    knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
+    vocabulary_items: list[VocabularyItem] = []
+    sentence_patterns: list[SentencePattern] = []
+    for asset in learning_assets:
+        audio_url = _primary_accent_audio_url(asset)
+        if asset.kind in {"word", "phrase"}:
+            vocabulary_items.append(
+                VocabularyItem(
+                    id=f"word_{uuid4().hex[:8]}",
+                    knowledge_pack_id=knowledge_pack_id,
+                    word=asset.text,
+                    meaning_cn=asset.translation,
+                    image_url=asset.generated_image_url,
+                    audio_url=audio_url,
+                    example_sentence="",
+                )
+            )
+        elif asset.kind == "sentence":
+            sentence_patterns.append(
+                SentencePattern(
+                    id=f"sentence_{uuid4().hex[:8]}",
+                    knowledge_pack_id=knowledge_pack_id,
+                    sentence=asset.text,
+                    meaning_cn=asset.translation,
+                    usage_type="sentence",
+                    audio_url=audio_url,
+                )
+            )
+    return KnowledgePack(
+        id=knowledge_pack_id,
+        material_id=material.id,
+        topic=job.draft_topic or material.topic or _infer_topic(job.draft_title or material.title),
+        difficulty_band=DifficultyBand.repeat,
+        lesson_summary=f"本课围绕 {job.draft_topic or material.topic or '课堂主题'} 展开，重点复习学习资产。",
+        review_recommendation="先看图听音，再跟读词句。",
+        vocabulary_items=vocabulary_items,
+        sentence_patterns=sentence_patterns,
+    )
+
+
+def _review_tasks_from_learning_assets(material: CourseMaterial, learning_assets: list[LearningAsset]) -> list[ReviewTask]:
+    now = datetime.now(timezone.utc)
+    tasks: list[ReviewTask] = []
+    for asset in learning_assets[:5]:
+        prompt = f"跟读句子：{asset.text}" if asset.kind == "sentence" else f"看图跟读：{asset.text}"
+        tasks.append(
+            ReviewTask(
+                id=f"task_{uuid4().hex[:8]}",
+                child_id=material.child_id,
+                material_id=material.id,
+                task_type=TaskType.flashcard,
+                difficulty=asset.difficulty or "repeat",
+                content_json={
+                    "asset_id": asset.id,
+                    "prompt": prompt,
+                    "text": asset.text,
+                    "word": asset.text,
+                    "translation": asset.translation,
+                    "image_url": asset.generated_image_url,
+                    "audio_url": _primary_accent_audio_url(asset),
+                    "hints": ["先听标准音，再重复一遍。"],
+                },
+                due_date=now,
+                status=ReviewTaskStatus.pending,
+            )
+        )
+    return tasks
+
+
+def _primary_accent_audio_url(asset: LearningAsset) -> str:
+    if asset.primary_accent == PrimaryAccent.uk:
+        return asset.tts_uk_url or asset.tts_us_url
+    return asset.tts_us_url or asset.tts_uk_url
 
 
 def _post_chat_json(

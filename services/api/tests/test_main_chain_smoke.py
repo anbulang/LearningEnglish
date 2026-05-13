@@ -84,17 +84,16 @@ def test_stub_parent_login_upload_reaches_ai_review(api_client) -> None:
     job_response = api_client.get(f"/v1/material-jobs/{job_id}", headers=headers)
     assert job_response.status_code == 200
     job = job_response.json()
-    assert job["status"] == "needs_review"
+    assert job["status"] == "processing"
     assert job["material_id"] == material_id
     assert job["draft_title"]
     assert job["draft_topic"]
-    assert job["draft_vocabulary"]
 
     material_response = api_client.get(f"/v1/materials/{material_id}", headers=headers)
     assert material_response.status_code == 200
     material = material_response.json()["material"]
     assert material["id"] == material_id
-    assert material["status"] == "needs_review"
+    assert material["status"] == "processing"
 
 
 def test_upload_poll_confirm_preserves_image_level_records(api_client) -> None:
@@ -163,26 +162,11 @@ def test_upload_poll_confirm_preserves_image_level_records(api_client) -> None:
     job_response = api_client.get(f"/v1/material-jobs/{job_id}", headers=headers)
     assert job_response.status_code == 200
     job = job_response.json()
-    assert job["status"] == "needs_review"
+    assert job["status"] == "processing"
     assert len(job["draft_image_records"]) == 2
-    assert all(item["image_title"] for item in job["draft_image_records"])
-    assert all(item["vocabulary"] for item in job["draft_image_records"])
-    assert all(item["sentences"] for item in job["draft_image_records"])
     assert all(item["details"] for item in job["draft_image_records"])
 
     material_response = api_client.get(f"/v1/materials/{material_id}", headers=headers)
     assert material_response.status_code == 200
     material = material_response.json()["material"]
     assert len(material["image_records"]) == 2
-    assert all(item["image_title"] for item in material["image_records"])
-
-    confirm_response = api_client.post(
-        f"/v1/material-jobs/{job_id}/confirm",
-        json={},
-        headers=headers,
-    )
-    assert confirm_response.status_code == 200
-
-    knowledge_response = api_client.get(f"/v1/knowledge-packs/{material_id}", headers=headers)
-    assert knowledge_response.status_code == 200
-    assert len(knowledge_response.json()["material"]["image_records"]) == 2

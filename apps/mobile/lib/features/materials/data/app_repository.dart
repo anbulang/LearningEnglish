@@ -76,7 +76,7 @@ class AppRepository implements MaterialsRepository {
         options: options,
       ),
     );
-    return MaterialParseJob.fromJson(
+    return _materialParseJobFromJson(
         response.data ?? const <String, dynamic>{});
   }
 
@@ -99,7 +99,7 @@ class AppRepository implements MaterialsRepository {
       ),
     );
     final payload = response.data ?? const <String, dynamic>{};
-    return CourseMaterial.fromJson(payload['material'] as Map<String, dynamic>);
+    return _courseMaterialFromJson(payload['material'] as Map<String, dynamic>);
   }
 
   @override
@@ -112,7 +112,7 @@ class AppRepository implements MaterialsRepository {
       ),
     );
     return (response.data ?? const <dynamic>[])
-        .map((item) => CourseMaterial.fromJson(item as Map<String, dynamic>))
+        .map((item) => _courseMaterialFromJson(item as Map<String, dynamic>))
         .toList();
   }
 
@@ -215,9 +215,123 @@ class AppRepository implements MaterialsRepository {
     final payload = response.data ?? const <String, dynamic>{};
     return MaterialCreateResult(
       material:
-          CourseMaterial.fromJson(payload['material'] as Map<String, dynamic>),
-      job: MaterialParseJob.fromJson(payload['job'] as Map<String, dynamic>),
+          _courseMaterialFromJson(payload['material'] as Map<String, dynamic>),
+      job: _materialParseJobFromJson(payload['job'] as Map<String, dynamic>),
     );
+  }
+
+  CourseMaterial _courseMaterialFromJson(Map<String, dynamic> json) {
+    return CourseMaterial.fromJson(_normalizeMaterialRuntimeUrls(json));
+  }
+
+  MaterialParseJob _materialParseJobFromJson(Map<String, dynamic> json) {
+    return MaterialParseJob.fromJson(_normalizeJobRuntimeUrls(json));
+  }
+
+  Map<String, dynamic> _normalizeMaterialRuntimeUrls(
+      Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized['source_images'] =
+        _normalizeStringUrls(normalized['source_images']);
+    final records = normalized['image_records'];
+    if (records is List) {
+      normalized['image_records'] = records.map((record) {
+        if (record is! Map<String, dynamic>) {
+          return record;
+        }
+        final normalizedRecord = Map<String, dynamic>.from(record);
+        normalizedRecord['url'] =
+            _publicRuntimeUrl(normalizedRecord['url'] as String? ?? '');
+        return normalizedRecord;
+      }).toList();
+    }
+    normalized['learning_assets'] =
+        _normalizeLearningAssetUrls(normalized['learning_assets']);
+    return normalized;
+  }
+
+  Map<String, dynamic> _normalizeJobRuntimeUrls(Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    final records = normalized['draft_image_records'];
+    if (records is List) {
+      normalized['draft_image_records'] = records.map((record) {
+        if (record is! Map<String, dynamic>) {
+          return record;
+        }
+        final normalizedRecord = Map<String, dynamic>.from(record);
+        normalizedRecord['url'] =
+            _publicRuntimeUrl(normalizedRecord['url'] as String? ?? '');
+        return normalizedRecord;
+      }).toList();
+    }
+    normalized['draft_learning_assets'] =
+        _normalizeLearningAssetUrls(normalized['draft_learning_assets']);
+    return normalized;
+  }
+
+  dynamic _normalizeLearningAssetUrls(dynamic value) {
+    if (value is! List) {
+      return value;
+    }
+    return value.map((asset) {
+      if (asset is! Map<String, dynamic>) {
+        return asset;
+      }
+      final normalizedAsset = Map<String, dynamic>.from(asset);
+      for (final key in <String>[
+        'generated_image_url',
+        'tts_us_url',
+        'tts_uk_url',
+      ]) {
+        normalizedAsset[key] =
+            _publicRuntimeUrl(normalizedAsset[key] as String? ?? '');
+      }
+      return normalizedAsset;
+    }).toList();
+  }
+
+  List<String> _normalizeStringUrls(dynamic value) {
+    if (value is! List) {
+      return const <String>[];
+    }
+    return value
+        .whereType<String>()
+        .map(_publicRuntimeUrl)
+        .toList(growable: false);
+  }
+
+  String _publicRuntimeUrl(String url) {
+    final parsed = Uri.tryParse(url);
+    if (parsed == null) {
+      return url;
+    }
+    final apiBase = Uri.parse(_dio.options.baseUrl);
+    if (parsed.host == 'minio') {
+      final segments = parsed.pathSegments;
+      if (segments.length < 2) {
+        return url;
+      }
+      return apiBase.replace(
+        pathSegments: <String>['uploads', ...segments.skip(1)],
+        queryParameters: null,
+        fragment: null,
+      ).toString();
+    }
+    if (parsed.host == 'localhost') {
+      final firstSegment =
+          parsed.pathSegments.isEmpty ? '' : parsed.pathSegments.first;
+      if (firstSegment != 'uploads' && firstSegment != 'mock-media') {
+        return url;
+      }
+      return parsed
+          .replace(
+            scheme: apiBase.scheme,
+            host: apiBase.host,
+            port: apiBase.hasPort ? apiBase.port : null,
+          )
+          .toString();
+    }
+    return url;
   }
 
   Future<MaterialParseJob> confirmMaterialJob({
@@ -239,8 +353,24 @@ class AppRepository implements MaterialsRepository {
         options: options,
       ),
     );
-    return MaterialParseJob.fromJson(
+    return _materialParseJobFromJson(
         response.data ?? const <String, dynamic>{});
+  }
+
+  Future<CourseMaterial> updateLearningAssetPrimaryAccent({
+    required String materialId,
+    required String assetId,
+    required String primaryAccent,
+  }) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.patch<Map<String, dynamic>>(
+        '/materials/$materialId/learning-assets/$assetId/primary-accent',
+        data: <String, dynamic>{'primary_accent': primaryAccent},
+        options: options,
+      ),
+    );
+    final payload = response.data ?? const <String, dynamic>{};
+    return _courseMaterialFromJson(payload['material'] as Map<String, dynamic>);
   }
 
   Future<MaterialParseJob> retryMaterialJob({
@@ -252,7 +382,7 @@ class AppRepository implements MaterialsRepository {
         options: options,
       ),
     );
-    return MaterialParseJob.fromJson(
+    return _materialParseJobFromJson(
         response.data ?? const <String, dynamic>{});
   }
 

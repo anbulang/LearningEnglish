@@ -26,7 +26,7 @@
 
 这里暴露了两个问题：
 
-- Doubao 视觉识别在真实图片上可能超过当前 `AI_REQUEST_TIMEOUT_SECONDS=60`。
+- Doubao 视觉识别在真实图片上可能超过 60 秒，真实讲义验证建议 `AI_REQUEST_TIMEOUT_SECONDS=180` 起步。
 - job 失败后，material 仍停留在 `processing`，资料库状态不清楚。
 
 ## 下一批需求

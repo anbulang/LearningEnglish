@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from app.models.contracts import LearningAsset, MediaGenerationStatus, SourceBoundingBox
 
@@ -97,7 +97,7 @@ def _validate_manifest_item(raw: object) -> None:
         raise ValueError(f"HN-014 mock media manifest asset {label} has invalid source_page_index")
 
 
-def _source_bbox_from_manifest(raw: object) -> SourceBoundingBox | None:
+def _source_bbox_from_manifest(raw: object) -> Optional[SourceBoundingBox]:
     if not isinstance(raw, dict):
         return None
     values: dict[str, Any] = raw

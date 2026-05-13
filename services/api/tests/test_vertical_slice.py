@@ -1,12 +1,64 @@
 from __future__ import annotations
 
+from app.core.db import SessionLocal
+from app.db.models import CourseMaterialModel, MaterialParseJobModel
+from app.models.contracts import JobStatus, MaterialStatus
 from conftest import auth_headers, configure_test_environment
 
 
 configure_test_environment("learning-english-api-test-")
 
 
-def test_vertical_slice_flow(api_client) -> None:
+def _mark_job_needs_review(material_id: str, job_id: str) -> None:
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        material = db.get(CourseMaterialModel, material_id)
+        assert job is not None
+        assert material is not None
+        job.status = JobStatus.needs_review.value
+        job.draft_title = "Animals Around Me"
+        job.draft_topic = "动物"
+        job.draft_vocabulary = ["cat", "dog", "bird"]
+        job.draft_sentences = ["What is this?", "It is a cat."]
+        job.draft_learning_assets = [
+            {
+                "id": "asset_queen",
+                "text": "queen",
+                "kind": "word",
+                "translation": "女王",
+                "source_page_index": 1,
+                "pronunciation_text": "queen",
+                "image_prompt": "A friendly queen for a phonics worksheet.",
+                "primary_accent": "us",
+            },
+            {
+                "id": "asset_sentence_queen",
+                "text": "A queen can sing.",
+                "kind": "sentence",
+                "translation": "女王会唱歌。",
+                "source_page_index": 1,
+                "pronunciation_text": "A queen can sing.",
+                "image_prompt": "A queen singing.",
+                "tts_us_url": "http://testserver/mock-media/hn014/tts/us/queen.m4a",
+                "tts_uk_url": "http://testserver/mock-media/hn014/tts/uk/queen.m4a",
+                "primary_accent": "uk",
+            },
+        ]
+        job.confidence_summary = "测试已模拟 worker 完成识别。"
+        material.status = MaterialStatus.needs_review.value
+        material.topic = "动物"
+        material.ocr_text = "cat dog bird What is this? It is a cat."
+        db.add_all([job, material])
+        db.commit()
+
+
+def test_vertical_slice_flow(api_client, monkeypatch) -> None:
+    enqueued_media_material_ids: list[str] = []
+    monkeypatch.setattr(
+        "app.api.routes.material_jobs.enqueue_learning_asset_media_job",
+        lambda material_id: enqueued_media_material_ids.append(material_id),
+    )
+
     health_response = api_client.get("/healthz", headers={"x-request-id": "req_test_1"})
     assert health_response.status_code == 200
     assert health_response.headers["x-request-id"] == "req_test_1"
@@ -58,8 +110,9 @@ def test_vertical_slice_flow(api_client) -> None:
     job_response = api_client.get(f"/v1/material-jobs/{job_id}", headers=headers)
     assert job_response.status_code == 200
     job = job_response.json()
-    assert job["status"] == "needs_review"
-    assert job["draft_vocabulary"]
+    assert job["status"] == "processing"
+
+    _mark_job_needs_review(material_id, job_id)
 
     confirm_response = api_client.post(
         f"/v1/material-jobs/{job_id}/confirm",
@@ -68,11 +121,20 @@ def test_vertical_slice_flow(api_client) -> None:
     )
     assert confirm_response.status_code == 200
     assert confirm_response.json()["status"] == "ready"
+    assert enqueued_media_material_ids == [material_id]
+
+    material_detail_response = api_client.get(f"/v1/materials/{material_id}", headers=headers)
+    assert material_detail_response.status_code == 200
+    confirmed_assets = material_detail_response.json()["material"]["learning_assets"]
+    assert [asset["id"] for asset in confirmed_assets] == ["asset_queen", "asset_sentence_queen"]
 
     knowledge_response = api_client.get(f"/v1/knowledge-packs/{material_id}", headers=headers)
     assert knowledge_response.status_code == 200
     knowledge = knowledge_response.json()
-    assert knowledge["knowledge_pack"]["vocabulary_items"]
+    assert knowledge["knowledge_pack"]["vocabulary_items"][0]["word"] == "queen"
+    assert knowledge["knowledge_pack"]["vocabulary_items"][0]["meaning_cn"] == "女王"
+    assert knowledge["knowledge_pack"]["sentence_patterns"][0]["sentence"] == "A queen can sing."
+    assert knowledge["knowledge_pack"]["sentence_patterns"][0]["meaning_cn"] == "女王会唱歌。"
 
     coaching_response = api_client.get(f"/v1/parent-coaching/{material_id}", headers=headers)
     assert coaching_response.status_code == 200
@@ -85,7 +147,9 @@ def test_vertical_slice_flow(api_client) -> None:
     )
     assert tasks_response.status_code == 200
     tasks = tasks_response.json()["items"]
-    assert len(tasks) == 3
+    assert len(tasks) == 2
+    assert {task["task_type"] for task in tasks} == {"flashcard"}
+    assert {task["content_json"]["asset_id"] for task in tasks} == {"asset_queen", "asset_sentence_queen"}
 
     speaking_response = api_client.post(
         "/v1/speaking-attempts",

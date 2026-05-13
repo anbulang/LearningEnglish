@@ -218,6 +218,10 @@ class MaterialParseConfirmRequest(BaseModel):
     draft_sentences: Optional[list[str]] = None
 
 
+class LearningAssetPrimaryAccentUpdate(BaseModel):
+    primary_accent: PrimaryAccent
+
+
 class VocabularyItem(BaseModel):
     id: str
     knowledge_pack_id: str

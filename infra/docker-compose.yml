@@ -40,6 +40,8 @@ services:
       - minio
     environment:
       REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
       DATABASE_URL: postgresql://learning_english:learning_english@postgres:5432/learning_english
       STORAGE_BACKEND: s3
       OBJECT_STORAGE_ENDPOINT: http://minio:9000
@@ -52,8 +54,9 @@ services:
       ARK_BASE_URL: ${ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
       DOUBAO_VISION_MODEL_OR_ENDPOINT: ${DOUBAO_VISION_MODEL_OR_ENDPOINT:-}
       DOUBAO_TEXT_MODEL_OR_ENDPOINT: ${DOUBAO_TEXT_MODEL_OR_ENDPOINT:-}
-      AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-60}
+      AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-180}
       AI_MAX_IMAGE_COUNT: ${AI_MAX_IMAGE_COUNT:-5}
+      AI_HTTP_TRUST_ENV: ${AI_HTTP_TRUST_ENV:-false}
     ports:
       - "${API_PORT:-8000}:8000"
 
@@ -81,8 +84,9 @@ services:
       ARK_BASE_URL: ${ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
       DOUBAO_VISION_MODEL_OR_ENDPOINT: ${DOUBAO_VISION_MODEL_OR_ENDPOINT:-}
       DOUBAO_TEXT_MODEL_OR_ENDPOINT: ${DOUBAO_TEXT_MODEL_OR_ENDPOINT:-}
-      AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-60}
+      AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-180}
       AI_MAX_IMAGE_COUNT: ${AI_MAX_IMAGE_COUNT:-5}
+      AI_HTTP_TRUST_ENV: ${AI_HTTP_TRUST_ENV:-false}
 
 volumes:
   postgres_data:
