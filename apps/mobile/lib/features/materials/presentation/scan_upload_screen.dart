@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -279,8 +281,7 @@ class _SelectedPagesPanel extends StatelessWidget {
           ...pages.asMap().entries.map(
                 (entry) => _PageListItem(
                   index: entry.key + 1,
-                  fileName: entry.value.file.name,
-                  sourceLabel: entry.value.sourceLabel,
+                  page: entry.value,
                 ),
               ),
           const SizedBox(height: AppSpacing.md),
@@ -312,13 +313,11 @@ class _SelectedPagesPanel extends StatelessWidget {
 class _PageListItem extends StatelessWidget {
   const _PageListItem({
     required this.index,
-    required this.fileName,
-    required this.sourceLabel,
+    required this.page,
   });
 
-  final String fileName;
   final int index;
-  final String sourceLabel;
+  final ScanDraftPage page;
 
   @override
   Widget build(BuildContext context) {
@@ -339,18 +338,20 @@ class _PageListItem extends StatelessWidget {
                 child: Text('$index', style: AppTextStyles.helper),
               ),
               const SizedBox(width: AppSpacing.sm),
+              _PageThumbnail(page: page),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      fileName,
+                      '第 $index 页',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.body,
+                      style: AppTextStyles.cardTitle,
                     ),
                     const SizedBox(height: AppSpacing.xxs),
-                    Text(sourceLabel, style: AppTextStyles.helper),
+                    Text(page.sourceLabel, style: AppTextStyles.helper),
                   ],
                 ),
               ),
@@ -358,6 +359,75 @@ class _PageListItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PageThumbnail extends StatefulWidget {
+  const _PageThumbnail({required this.page});
+
+  final ScanDraftPage page;
+
+  @override
+  State<_PageThumbnail> createState() => _PageThumbnailState();
+}
+
+class _PageThumbnailState extends State<_PageThumbnail> {
+  late Future<Uint8List> _bytesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _bytesFuture = widget.page.file.readAsBytes();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PageThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.page.file.path != widget.page.file.path) {
+      _bytesFuture = widget.page.file.readAsBytes();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.input),
+      child: SizedBox(
+        width: 72,
+        height: 88,
+        child: FutureBuilder<Uint8List>(
+          future: _bytesFuture,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return _ThumbnailPlaceholder(icon: Icons.image_outlined);
+            }
+            return Image.memory(
+              snapshot.data!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const _ThumbnailPlaceholder(
+                icon: Icons.image_not_supported_outlined,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ThumbnailPlaceholder extends StatelessWidget {
+  const _ThumbnailPlaceholder({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.paperWhite,
+      alignment: Alignment.center,
+      child: Icon(icon, color: AppColors.cocoaCoral),
     );
   }
 }

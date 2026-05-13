@@ -21,6 +21,25 @@ class ReviewTasksScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (reportMode) {
+      final child = ref.watch(activeChildProvider);
+      if (child == null) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('报告')),
+          body: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: StatePanel(
+              title: '先添加孩子档案',
+              description: '添加孩子姓名、年龄和学习目标后，系统会开始生成每周复习报告。',
+              assetPath: AppIllustrations.stateEmpty,
+              action: FilledButton.icon(
+                onPressed: () => context.go('/profile'),
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: const Text('去我的页面添加'),
+              ),
+            ),
+          ),
+        );
+      }
       final report = ref.watch(weeklyReportProvider);
       return Scaffold(
         appBar: AppBar(title: const Text('报告')),
