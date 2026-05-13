@@ -174,11 +174,11 @@ ARK_API_KEY=<your-volcengine-ark-api-key>
 ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
 DOUBAO_VISION_MODEL_OR_ENDPOINT=<your-vision-model-or-endpoint>
 DOUBAO_TEXT_MODEL_OR_ENDPOINT=<your-text-model-or-endpoint>
-AI_REQUEST_TIMEOUT_SECONDS=60
+AI_REQUEST_TIMEOUT_SECONDS=180
 AI_MAX_IMAGE_COUNT=5
 ```
 
-豆包调用方式已与 ReceiptLens 对齐：文本和视觉都请求 `ARK_BASE_URL/responses`，文本内容使用 `input_text`，图片使用 `input_image`。`doubao-seed-2-0-lite-260215` 可同时用于文本和视觉 smoke；如果其他模型返回 `ModelNotOpen`，需要先在火山方舟控制台开通该模型，或改用在线推理中的 `ep-...` endpoint ID。
+豆包调用方式已与 ReceiptLens 对齐：文本和视觉都请求 `ARK_BASE_URL/responses`，文本内容使用 `input_text`，图片使用 `input_image`。真实讲义图片会比 provider smoke 慢，建议 `AI_REQUEST_TIMEOUT_SECONDS=180` 起步；前端校对页使用后台任务轮询，不会等待这个长请求。`doubao-seed-2-0-lite-260215` 可同时用于文本和视觉 smoke；如果其他模型返回 `ModelNotOpen`，需要先在火山方舟控制台开通该模型，或改用在线推理中的 `ep-...` endpoint ID。
 
 运行 provider smoke，不会打印密钥：
 

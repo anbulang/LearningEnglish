@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
@@ -10,6 +11,7 @@ import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
+import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
 
 class LessonDetailScreen extends ConsumerWidget {
@@ -47,6 +49,13 @@ class LessonDetailScreen extends ConsumerWidget {
             if (material.imageRecords.isNotEmpty) ...<Widget>[
               const SizedBox(height: AppSpacing.md),
               _SourceImagesCard(records: material.imageRecords),
+            ],
+            if (material.learningAssets.isNotEmpty) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              _LearningAssetsCard(
+                materialId: material.id,
+                assets: material.learningAssets,
+              ),
             ],
             const SizedBox(height: AppSpacing.md),
             AppCard(
@@ -324,6 +333,248 @@ class _SourceImagesCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LearningAssetsCard extends ConsumerWidget {
+  const _LearningAssetsCard({
+    required this.materialId,
+    required this.assets,
+  });
+
+  final List<LearningAsset> assets;
+  final String materialId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text('核心学习资产', style: AppTextStyles.sectionTitle),
+              const SizedBox(width: AppSpacing.sm),
+              const StickerBadge(label: '图文音', color: AppColors.mintLeaf),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ...assets.map(
+            (asset) => _LearningAssetDetailTile(
+              materialId: materialId,
+              asset: asset,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LearningAssetDetailTile extends ConsumerStatefulWidget {
+  const _LearningAssetDetailTile({
+    required this.materialId,
+    required this.asset,
+  });
+
+  final LearningAsset asset;
+  final String materialId;
+
+  @override
+  ConsumerState<_LearningAssetDetailTile> createState() =>
+      _LearningAssetDetailTileState();
+}
+
+class _LearningAssetDetailTileState
+    extends ConsumerState<_LearningAssetDetailTile> {
+  String? _accentError;
+  bool _updatingAccent = false;
+
+  Future<void> _updatePrimaryAccent(String selected) async {
+    setState(() {
+      _accentError = null;
+      _updatingAccent = true;
+    });
+    try {
+      await ref.read(appRepositoryProvider).updateLearningAssetPrimaryAccent(
+            materialId: widget.materialId,
+            assetId: widget.asset.id,
+            primaryAccent: selected,
+          );
+      ref.invalidate(materialProvider(widget.materialId));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _accentError = describeApiError(error, fallback: '发音切换失败，请稍后重试。');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _updatingAccent = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = widget.asset;
+    final selectedAccent = asset.primaryAccent == 'uk' ? 'uk' : 'us';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.softSheet,
+          borderRadius: BorderRadius.circular(AppRadii.card),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _GeneratedAssetImage(asset: asset),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(asset.text, style: AppTextStyles.cardTitle),
+                    if (asset.translation.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(asset.translation),
+                    ],
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      '${_assetKindLabel(asset.kind)} · 第 ${asset.sourcePageIndex} 页',
+                      style: AppTextStyles.helper,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      '配图：${_mediaStatusLabel(asset.generatedImageStatus)}',
+                      style: AppTextStyles.helper,
+                    ),
+                    Text(
+                      '美式：${_mediaStatusLabel(asset.ttsUsStatus)} · 英式：${_mediaStatusLabel(asset.ttsUkStatus)}',
+                      style: AppTextStyles.helper,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    SegmentedButton<String>(
+                      segments: const <ButtonSegment<String>>[
+                        ButtonSegment<String>(
+                          value: 'us',
+                          label: Text('美式'),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'uk',
+                          label: Text('英式'),
+                        ),
+                      ],
+                      selected: <String>{selectedAccent},
+                      onSelectionChanged: _updatingAccent
+                          ? null
+                          : (selection) => _updatePrimaryAccent(
+                                selection.single,
+                              ),
+                    ),
+                    if (_accentError != null) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        _accentError!,
+                        style: AppTextStyles.helper
+                            .copyWith(color: AppColors.cocoaCoral),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GeneratedAssetImage extends StatelessWidget {
+  const _GeneratedAssetImage({required this.asset});
+
+  final LearningAsset asset;
+
+  @override
+  Widget build(BuildContext context) {
+    if (asset.generatedImageStatus != 'ready' ||
+        asset.generatedImageUrl.isEmpty) {
+      return _GeneratedImagePlaceholder(status: asset.generatedImageStatus);
+    }
+    if (asset.generatedImageUrl.toLowerCase().endsWith('.svg')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        child: SvgPicture.network(
+          asset.generatedImageUrl,
+          width: 88,
+          height: 88,
+          fit: BoxFit.cover,
+          placeholderBuilder: (context) =>
+              _GeneratedImagePlaceholder(status: asset.generatedImageStatus),
+          errorBuilder: (context, error, stackTrace) =>
+              const _GeneratedImagePlaceholder(status: 'failed'),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.input),
+      child: Image.network(
+        asset.generatedImageUrl,
+        width: 88,
+        height: 88,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            const _GeneratedImagePlaceholder(status: 'failed'),
+      ),
+    );
+  }
+}
+
+class _GeneratedImagePlaceholder extends StatelessWidget {
+  const _GeneratedImagePlaceholder({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: BoxDecoration(
+        color: AppColors.paperWhite,
+        borderRadius: BorderRadius.circular(AppRadii.input),
+      ),
+      child: Icon(
+        status == 'failed'
+            ? Icons.error_outline_rounded
+            : Icons.hourglass_top_rounded,
+        color: AppColors.cocoaCoral,
+      ),
+    );
+  }
+}
+
+String _assetKindLabel(String kind) {
+  return switch (kind) {
+    'sentence' => '句子',
+    'phrase' => '短语',
+    _ => '单词',
+  };
+}
+
+String _mediaStatusLabel(String status) {
+  return switch (status) {
+    'ready' => '已生成',
+    'processing' => '生成中',
+    'failed' => '失败',
+    _ => '等待生成',
+  };
 }
 
 String _sourceLabel(String sourceType) {

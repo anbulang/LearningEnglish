@@ -162,6 +162,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `HN-011`：Doubao 超时和重试体验清晰化。
 - `HN-012`：真机上传识别 harness 记录。
 - `HN-013`：图片级讲义记录与解析留存。
+- `HN-014`：讲义学习资产自动生成。
 
 当前实施状态：
 - [x] `HN-008` 上传页已改为拍照/相册优先，不再要求用户填写标题、老师名、主题。
@@ -170,6 +171,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-011` timeout 失败在移动端显示中文重试说明。
 - [ ] `HN-012` 仍需重新构建 Profile 真机包并用真实手机补一次上传识别截图/日志证据。
 - [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
+- [ ] `HN-014` 讲义学习资产自动生成：需要保存 job/material JSON 摘录、AI 校对页截图和课程详情媒体状态截图。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.5:8000/v1` 构建、安装并启动成功。
@@ -177,6 +179,12 @@ make harness-capture-ios-screen SCREEN=report-screen
 - 拍照入口首次真机测试直接闪退，crash report 显示 iOS TCC 因缺少 `NSCameraUsageDescription` 终止 App。
 - 已补齐相机/相册用途说明并重新安装启动；crash report 证据见 `dist/harness/HN-012/Runner-2026-05-05-154100.ips`。
 - 仍缺少一次实际上传后的 `POST /v1/materials`、material/job 状态和真机截图证据，因此 `HN-012` 不标完成。
+
+`HN-014` 验收证据：
+- `dist/harness/HN-014/job-learning-assets.json`
+- `dist/harness/HN-014/material-learning-assets.json`
+- `dist/harness/HN-014/review-learning-assets.png`
+- `dist/harness/HN-014/lesson-learning-assets.png`
 
 本轮自动化验证：
 - `services/api/.venv/bin/python -m pytest services/api/tests`：`35 passed`

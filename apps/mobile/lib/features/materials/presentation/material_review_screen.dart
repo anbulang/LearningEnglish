@@ -214,6 +214,13 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 const SizedBox(height: AppSpacing.md),
                 _ImageRecordsSection(records: job.draftImageRecords),
               ],
+              if (job.draftLearningAssets.isNotEmpty) ...<Widget>[
+                const SizedBox(height: AppSpacing.md),
+                _LearningAssetsSection(
+                  assets: job.draftLearningAssets,
+                  imageRecords: job.draftImageRecords,
+                ),
+              ],
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: const <Widget>[
@@ -471,6 +478,215 @@ class _ImageRecordsSection extends StatelessWidget {
       ],
     );
   }
+}
+
+class _LearningAssetsSection extends StatelessWidget {
+  const _LearningAssetsSection({
+    required this.assets,
+    required this.imageRecords,
+  });
+
+  final List<LearningAsset> assets;
+  final List<MaterialImageRecord> imageRecords;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: const <Widget>[
+            Text('核心学习资产', style: AppTextStyles.cardTitle),
+            SizedBox(width: AppSpacing.sm),
+            StickerBadge(label: '1-20 个', color: AppColors.butterYellow),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        ...assets.map(
+          (asset) => _LearningAssetReviewTile(
+            asset: asset,
+            imageRecords: imageRecords,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LearningAssetReviewTile extends StatelessWidget {
+  const _LearningAssetReviewTile({
+    required this.asset,
+    required this.imageRecords,
+  });
+
+  final LearningAsset asset;
+  final List<MaterialImageRecord> imageRecords;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.softSheet,
+          borderRadius: BorderRadius.circular(AppRadii.card),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _SourceCropPreview(asset: asset, imageRecords: imageRecords),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(asset.text, style: AppTextStyles.cardTitle),
+                    if (asset.translation.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(asset.translation),
+                    ],
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      '${_assetKindLabel(asset.kind)} · 第 ${asset.sourcePageIndex} 页',
+                      style: AppTextStyles.helper,
+                    ),
+                    if (asset.teachingNote.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(asset.teachingNote, style: AppTextStyles.helper),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceCropPreview extends StatelessWidget {
+  const _SourceCropPreview({
+    required this.asset,
+    required this.imageRecords,
+  });
+
+  final LearningAsset asset;
+  final List<MaterialImageRecord> imageRecords;
+
+  @override
+  Widget build(BuildContext context) {
+    final record = _recordForPage();
+    if (record == null || record.url.isEmpty) {
+      return _CropPlaceholder(
+        icon: Icons.crop_rounded,
+        label: '第 ${asset.sourcePageIndex} 页',
+      );
+    }
+    final bbox = asset.sourceBbox;
+    if (bbox == null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        child: Image.network(
+          record.url,
+          width: 72,
+          height: 72,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              const _CropPlaceholder(icon: Icons.image_not_supported_outlined),
+        ),
+      );
+    }
+    final width = _boundedFraction(bbox.width, minimum: 0.05);
+    final height = _boundedFraction(bbox.height, minimum: 0.05);
+    final x = _boundedFraction(bbox.x);
+    final y = _boundedFraction(bbox.y);
+    final scaledWidth = 72 / width;
+    final scaledHeight = 72 / height;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.input),
+      child: SizedBox(
+        width: 72,
+        height: 72,
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.topLeft,
+            minWidth: scaledWidth,
+            maxWidth: scaledWidth,
+            minHeight: scaledHeight,
+            maxHeight: scaledHeight,
+            child: Transform.translate(
+              offset: Offset(-x * scaledWidth, -y * scaledHeight),
+              child: Image.network(
+                record.url,
+                width: scaledWidth,
+                height: scaledHeight,
+                fit: BoxFit.fill,
+                errorBuilder: (context, error, stackTrace) =>
+                    const _CropPlaceholder(
+                  icon: Icons.image_not_supported_outlined,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  MaterialImageRecord? _recordForPage() {
+    for (final record in imageRecords) {
+      if (record.pageIndex == asset.sourcePageIndex) {
+        return record;
+      }
+    }
+    return null;
+  }
+}
+
+class _CropPlaceholder extends StatelessWidget {
+  const _CropPlaceholder({required this.icon, this.label});
+
+  final IconData icon;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        color: AppColors.paperWhite,
+        borderRadius: BorderRadius.circular(AppRadii.input),
+      ),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, color: AppColors.cocoaCoral),
+          if (label != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(label!, style: AppTextStyles.helper),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+double _boundedFraction(double value,
+    {double minimum = 0, double maximum = 1}) {
+  return value.clamp(minimum, maximum).toDouble();
+}
+
+String _assetKindLabel(String kind) {
+  return switch (kind) {
+    'sentence' => '句子',
+    'phrase' => '短语',
+    _ => '单词',
+  };
 }
 
 String _sourceLabel(String sourceType) {

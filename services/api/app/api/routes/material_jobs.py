@@ -3,7 +3,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_parent
-from app.core.config import get_pipeline_service, get_storage
+from app.core.config import get_pipeline_service
 from app.core.db import get_db
 from app.db.models import (
     ChildProfileModel,
@@ -13,11 +13,19 @@ from app.db.models import (
     ParentAccountModel,
     ParentCoachingScriptModel,
     ReviewTaskModel,
-    StoredAssetModel,
 )
-from app.models.contracts import JobStatus, MaterialParseConfirmRequest, MaterialParseJob, MaterialStatus
+from app.models.contracts import (
+    JobStatus,
+    LearningAsset,
+    MaterialParseConfirmRequest,
+    MaterialParseJob,
+    MaterialStatus,
+    MediaGenerationStatus,
+)
 from app.services.mappers import course_material_from_model, material_job_from_model
 from app.services.pipeline import ProviderBackedPipelineService
+from app.services.job_queue import enqueue_material_job
+from app.services.media_queue import enqueue_learning_asset_media_job
 
 router = APIRouter(prefix="/material-jobs", tags=["material-jobs"])
 
@@ -27,50 +35,8 @@ def get_material_job(
     job_id: str,
     current_parent: ParentAccountModel = Depends(get_current_parent),
     db: Session = Depends(get_db),
-    pipeline: ProviderBackedPipelineService = Depends(get_pipeline_service),
-    storage=Depends(get_storage),
 ) -> MaterialParseJob:
-    job, material = _get_owned_job(db, current_parent.id, job_id)
-    if job.status in {JobStatus.queued.value, JobStatus.processing.value}:
-        asset_rows = db.scalars(
-            select(StoredAssetModel).where(
-                StoredAssetModel.owner_type == "material",
-                StoredAssetModel.owner_id == material.id,
-            )
-        ).all()
-        local_paths = [storage.resolve_local_path(asset) for asset in asset_rows]
-        try:
-            prepared = pipeline.prepare_job(
-                course_material_from_model(material),
-                material_job_from_model(job),
-                local_paths=local_paths,
-            )
-        except Exception as exc:
-            job.status = JobStatus.failed.value
-            job.finished_at = None
-            job.confidence_summary = f"处理失败：{exc}"
-            job.warnings = [f"处理失败：{exc}", "请检查 AI provider 配置或稍后重试。"]
-            material.status = MaterialStatus.failed.value
-            db.add_all([job, material])
-            db.commit()
-            db.refresh(job)
-            return material_job_from_model(job)
-        job.status = prepared.status.value
-        job.finished_at = prepared.finished_at
-        job.draft_title = prepared.draft_title
-        job.draft_topic = prepared.draft_topic
-        job.draft_vocabulary = prepared.draft_vocabulary
-        job.draft_sentences = prepared.draft_sentences
-        job.draft_image_records = [item.model_dump() for item in prepared.draft_image_records]
-        job.confidence_summary = prepared.confidence_summary
-        job.warnings = prepared.warnings
-        material.status = MaterialStatus.needs_review.value
-        material.ocr_text = " ".join(prepared.draft_vocabulary + prepared.draft_sentences)
-        material.topic = prepared.draft_topic or material.topic
-        material.image_records = [item.model_dump() for item in prepared.draft_image_records]
-        db.add_all([job, material])
-        db.commit()
-        db.refresh(job)
+    job, _ = _get_owned_job(db, current_parent.id, job_id)
     return material_job_from_model(job)
 
 
@@ -96,21 +62,25 @@ def confirm_material_job(
             "draft_topic": payload.draft_topic or prepared.draft_topic,
             "draft_vocabulary": payload.draft_vocabulary or prepared.draft_vocabulary,
             "draft_sentences": payload.draft_sentences or prepared.draft_sentences,
+            "draft_learning_assets": prepared.draft_learning_assets,
         }
     )
-    material_contract = course_material_from_model(material)
-    knowledge_pack, review_tasks, coaching_script = pipeline.build_knowledge_assets(material_contract, prepared)
 
     job.status = JobStatus.ready.value
     job.draft_title = prepared.draft_title
     job.draft_topic = prepared.draft_topic
     job.draft_vocabulary = prepared.draft_vocabulary
     job.draft_sentences = prepared.draft_sentences
+    job.draft_learning_assets = [asset.model_dump(mode="json") for asset in prepared.draft_learning_assets]
     material.status = MaterialStatus.ready.value
     material.title = prepared.draft_title or material.title
     material.topic = prepared.draft_topic or material.topic
     material.ocr_text = " ".join(prepared.draft_vocabulary + prepared.draft_sentences)
     material.image_records = [item.model_dump() for item in prepared.draft_image_records]
+    material.learning_assets = [asset.model_dump(mode="json") for asset in prepared.draft_learning_assets]
+
+    material_contract = course_material_from_model(material)
+    knowledge_pack, review_tasks, coaching_script = pipeline.build_knowledge_assets(material_contract, prepared)
 
     db.add_all([job, material])
     db.execute(delete(KnowledgePackModel).where(KnowledgePackModel.material_id == material.id))
@@ -151,6 +121,13 @@ def confirm_material_job(
             )
         )
     db.commit()
+    try:
+        enqueue_learning_asset_media_job(material.id)
+    except Exception as exc:
+        job.warnings = [*list(job.warnings or []), f"媒体生成排队失败：{exc}"]
+        material.learning_assets = _media_failed_learning_assets(prepared.draft_learning_assets)
+        db.add_all([job, material])
+        db.commit()
     db.refresh(job)
     return material_job_from_model(job)
 
@@ -167,10 +144,21 @@ def retry_material_job(
     job.confidence_summary = "任务已重新排队。"
     job.finished_at = None
     job.draft_image_records = material.image_records or []
+    job.draft_learning_assets = material.learning_assets or []
     material.status = MaterialStatus.processing.value
     db.add_all([job, material])
     db.commit()
     db.refresh(job)
+    try:
+        enqueue_material_job(job.id)
+    except Exception as exc:
+        job.status = JobStatus.failed.value
+        job.confidence_summary = f"识别任务排队失败：{exc}"
+        job.warnings = [f"识别任务排队失败：{exc}", "请稍后重新识别。"]
+        material.status = MaterialStatus.failed.value
+        db.add_all([job, material])
+        db.commit()
+        db.refresh(job)
     return material_job_from_model(job)
 
 
@@ -185,3 +173,16 @@ def _get_owned_job(db: Session, parent_account_id: str, job_id: str) -> tuple[Ma
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material job not found")
     return row[0], row[1]
+
+
+def _media_failed_learning_assets(assets: list[LearningAsset]) -> list[dict]:
+    return [
+        asset.model_copy(
+            update={
+                "generated_image_status": MediaGenerationStatus.failed,
+                "tts_us_status": MediaGenerationStatus.failed,
+                "tts_uk_status": MediaGenerationStatus.failed,
+            }
+        ).model_dump(mode="json")
+        for asset in assets
+    ]

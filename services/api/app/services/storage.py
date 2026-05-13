@@ -73,7 +73,7 @@ class S3StorageService:
             Body=payload,
             ContentType=upload.content_type or "application/octet-stream",
         )
-        url = f"{self.settings.object_storage_endpoint.rstrip('/')}/{self.settings.storage_bucket}/{object_key}"
+        url = f"{self.settings.public_base_url.rstrip('/')}/uploads/{object_key}"
         return StoredAssetModel(
             owner_type=owner_type,
             owner_id=owner_id,

@@ -31,7 +31,7 @@ String describeApiError(Object error, {String fallback = '请求失败，请稍�
 String _debugRequestHint(DioException error) {
   const showDebugNetworkErrors = bool.fromEnvironment(
     'SHOW_DEBUG_NETWORK_ERRORS',
-    defaultValue: true,
+    defaultValue: false,
   );
   if (!showDebugNetworkErrors) {
     return '';

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Color illustration of a quilt in a circular maze">
+  <rect width="512" height="512" rx="44" fill="#fff3f5"/>
+  <circle cx="256" cy="234" r="152" fill="#ffffff" stroke="#5f4637" stroke-width="12"/>
+  <path d="M154 236a102 102 0 0 1 204 0M190 236a66 66 0 0 1 132 0M154 236h44M314 236h44M256 82v54M256 332v54" fill="none" stroke="#b19cd9" stroke-width="18" stroke-linecap="round"/>
+  <path d="M198 176h116v116H198z" fill="#fff" stroke="#5f4637" stroke-width="8"/>
+  <path d="M198 176l58 58-58 58M256 234l58-58M256 234l58 58" fill="none" stroke="#5f4637" stroke-width="5"/>
+  <path d="M198 176h58v58h-58z" fill="#ff9aa2"/>
+  <path d="M256 176h58v58h-58z" fill="#ffdac1"/>
+  <path d="M198 234h58v58h-58z" fill="#b5ead7"/>
+  <path d="M256 234h58v58h-58z" fill="#c7ceea"/>
+  <text x="256" y="444" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#3f3128">quilt</text>
+</svg>

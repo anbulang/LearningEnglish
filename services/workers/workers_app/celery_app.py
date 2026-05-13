@@ -16,3 +16,5 @@ celery_app.conf.update(
     timezone="Asia/Shanghai",
     task_default_queue="learning_english",
 )
+
+import workers_app.tasks  # noqa: E402,F401

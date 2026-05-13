@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import base64
+import logging
 import mimetypes
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -18,16 +20,22 @@ from app.models.contracts import (
     DifficultyBand,
     JobStatus,
     KnowledgePack,
+    LearningAsset,
     MaterialImageRecord,
     MaterialParseJob,
+    MediaGenerationStatus,
     ParentCoachingScript,
     ParentCoachingStep,
+    PrimaryAccent,
     ReviewTask,
     ReviewTaskStatus,
     SentencePattern,
+    SourceBoundingBox,
     TaskType,
     VocabularyItem,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -38,6 +46,7 @@ class OCRDraft:
     vocabulary: list[str]
     sentences: list[str]
     image_records: list[MaterialImageRecord]
+    learning_assets: list[LearningAsset]
     warnings: list[str]
     confidence_summary: str
 
@@ -84,6 +93,11 @@ class StubOCRProvider:
                 sentences=sentences,
                 details=["当前环境未启用真实 OCR，图片级明细使用开发回退结果。"],
             ),
+            learning_assets=_fallback_learning_assets(
+                material,
+                vocabulary=vocabulary,
+                sentences=sentences,
+            ),
             warnings=["当前环境未启用真实 OCR，已使用可运行的开发回退结果。"],
             confidence_summary="开发环境使用 fallback OCR 草稿，请家长确认后继续。",
         )
@@ -118,19 +132,26 @@ class PaddleOCRProvider:
         warnings = []
         if avg_confidence < 0.78:
             warnings.append("OCR 置信度偏低，建议家长重点检查低频词和整句。")
+        draft_vocabulary = vocabulary[:8] or ["cat", "dog", "bird"]
+        draft_sentences = sentences[:6] or ["What is this?", "It is a cat."]
         return OCRDraft(
             ocr_text=ocr_text,
             title=material.title,
             topic=material.topic or _infer_topic(ocr_text),
-            vocabulary=vocabulary[:8] or ["cat", "dog", "bird"],
-            sentences=sentences[:6] or ["What is this?", "It is a cat."],
+            vocabulary=draft_vocabulary,
+            sentences=draft_sentences,
             image_records=_fallback_image_records(
                 material,
                 title=material.title,
                 ocr_text=ocr_text,
-                vocabulary=vocabulary[:8] or ["cat", "dog", "bird"],
-                sentences=sentences[:6] or ["What is this?", "It is a cat."],
+                vocabulary=draft_vocabulary,
+                sentences=draft_sentences,
                 details=["PaddleOCR 已完成图片级文本抽取，请家长确认。"],
+            ),
+            learning_assets=_fallback_learning_assets(
+                material,
+                vocabulary=draft_vocabulary,
+                sentences=draft_sentences,
             ),
             warnings=warnings,
             confidence_summary=confidence_summary,
@@ -146,6 +167,7 @@ class DoubaoVisionOCRProvider:
         timeout_seconds: int = 60,
         max_image_count: int = 5,
         client: Optional[httpx.Client] = None,
+        trust_env: bool = False,
     ) -> None:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
@@ -153,6 +175,7 @@ class DoubaoVisionOCRProvider:
         self.timeout_seconds = timeout_seconds
         self.max_image_count = max_image_count
         self._client = client
+        self.trust_env = trust_env
 
     def extract(self, material: CourseMaterial, local_paths: list[Path]) -> OCRDraft:
         image_paths = local_paths[: self.max_image_count]
@@ -164,14 +187,30 @@ class DoubaoVisionOCRProvider:
                 "type": "text",
                 "text": (
                     "请识别这些低龄儿童英语课堂讲义图片，并只返回 json。"
-                    "json 字段必须包含：ocr_text, title, topic, vocabulary, sentences, warnings, confidence_summary, image_records。"
+                    "json 字段必须包含：ocr_text, title, topic, vocabulary, sentences, "
+                    "warnings, confidence_summary, image_records, learning_assets。"
                     "vocabulary 只放英文单词或短语，sentences 只放英文句型或课堂对话句子。"
-                    "image_records 必须按图片页返回数组，每项包含 page_index, image_title, ocr_text, vocabulary, sentences, details。"
+                    "image_records 必须按图片页返回数组，每项包含 page_index, image_title, "
+                    "ocr_text, vocabulary, sentences, details。"
+                    "learning_assets 常规目标 8 到 15 个，绝对总量 1 到 20 个，每项包含 "
+                    "text, kind, translation, source_page_index, source_bbox, "
+                    "source_visual_description, pronunciation_text, image_prompt, difficulty, teaching_note。"
+                    "source_bbox 使用 0 到 1 的相对坐标；无法定位时可为空。"
+                    "不要把教师说明、页码、版权或出版社信息放入 learning_assets。"
                     "如果不确定，请在 warnings 用中文说明。"
                 ),
             }
         ]
-        for path in image_paths:
+        for index, path in enumerate(image_paths, start=1):
+            content.append(
+                {
+                    "type": "text",
+                    "text": (
+                        f"第 {index} 页图片如下。请只把这张图片的 OCR、标题、词汇、句子和细节写入 "
+                        f"image_records 中 page_index={index} 的对象；不要混入其他页内容。"
+                    ),
+                }
+            )
             content.append({"type": "image_url", "image_url": {"url": _image_data_url(path)}})
 
         payload = _post_chat_json(
@@ -187,23 +226,35 @@ class DoubaoVisionOCRProvider:
             ],
             timeout_seconds=self.timeout_seconds,
             client=self._client,
+            trust_env=self.trust_env,
         )
         ocr_text = str(payload.get("ocr_text") or "").strip()
         vocabulary = _clean_string_list(payload.get("vocabulary"))
         sentences = _clean_string_list(payload.get("sentences"))
+        draft_vocabulary = vocabulary or _extract_candidate_vocabulary(ocr_text)[:8]
+        draft_sentences = sentences or _extract_candidate_sentences([ocr_text])[:6]
+        draft_ocr_text = ocr_text or " ".join(draft_vocabulary + draft_sentences)
+        image_records = _image_records_from_payload(
+            material,
+            payload.get("image_records"),
+            title=_clean_text_value(payload.get("title")) or material.title,
+            ocr_text=draft_ocr_text,
+            vocabulary=draft_vocabulary,
+            sentences=draft_sentences,
+        )
         return OCRDraft(
-            ocr_text=ocr_text or " ".join(vocabulary + sentences),
+            ocr_text=draft_ocr_text,
             title=_clean_text_value(payload.get("title")) or material.title,
             topic=_clean_text_value(payload.get("topic")) or material.topic or _infer_topic(ocr_text),
-            vocabulary=vocabulary or _extract_candidate_vocabulary(ocr_text)[:8],
-            sentences=sentences or _extract_candidate_sentences([ocr_text])[:6],
-            image_records=_image_records_from_payload(
+            vocabulary=draft_vocabulary,
+            sentences=draft_sentences,
+            image_records=image_records,
+            learning_assets=_learning_assets_from_payload(
                 material,
-                payload.get("image_records"),
-                title=_clean_text_value(payload.get("title")) or material.title,
-                ocr_text=ocr_text or " ".join(vocabulary + sentences),
-                vocabulary=vocabulary or _extract_candidate_vocabulary(ocr_text)[:8],
-                sentences=sentences or _extract_candidate_sentences([ocr_text])[:6],
+                payload.get("learning_assets"),
+                vocabulary=draft_vocabulary,
+                sentences=draft_sentences,
+                page_count=max(1, len(image_paths)),
             ),
             warnings=_clean_string_list(payload.get("warnings")),
             confidence_summary=_clean_text_value(payload.get("confidence_summary"))
@@ -219,12 +270,14 @@ class DoubaoLanguageParsingProvider:
         model_or_endpoint: str,
         timeout_seconds: int = 60,
         client: Optional[httpx.Client] = None,
+        trust_env: bool = False,
     ) -> None:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model_or_endpoint = model_or_endpoint
         self.timeout_seconds = timeout_seconds
         self._client = client
+        self.trust_env = trust_env
 
     def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
         prompt = {
@@ -251,6 +304,7 @@ class DoubaoLanguageParsingProvider:
             ],
             timeout_seconds=self.timeout_seconds,
             client=self._client,
+            trust_env=self.trust_env,
         )
         return _knowledge_pack_from_payload(material, job, payload)
 
@@ -260,6 +314,10 @@ class DoubaoLanguageParsingProvider:
 
 class StubLanguageParsingProvider:
     def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
+        learning_assets = job.draft_learning_assets or material.learning_assets
+        if learning_assets:
+            return _knowledge_pack_from_learning_assets(material, job, learning_assets)
+
         knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
         vocabulary_items = [
             VocabularyItem(
@@ -297,6 +355,9 @@ class StubLanguageParsingProvider:
         )
 
     def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
+        if material.learning_assets:
+            return _review_tasks_from_learning_assets(material, material.learning_assets)
+
         now = datetime.now(timezone.utc)
         words = [item.word for item in knowledge_pack.vocabulary_items[:3]]
         first_word = words[0] if words else "cat"
@@ -448,6 +509,7 @@ class ProviderBackedPipelineService:
                 "draft_vocabulary": draft.vocabulary,
                 "draft_sentences": draft.sentences,
                 "draft_image_records": draft.image_records,
+                "draft_learning_assets": draft.learning_assets,
                 "confidence_summary": draft.confidence_summary,
                 "warnings": draft.warnings,
             }
@@ -458,8 +520,17 @@ class ProviderBackedPipelineService:
         material: CourseMaterial,
         job: MaterialParseJob,
     ) -> tuple[KnowledgePack, list[ReviewTask], ParentCoachingScript]:
-        knowledge_pack = self.parsing_provider.generate_knowledge_pack(material, job)
-        review_tasks = self.parsing_provider.generate_review_tasks(material, knowledge_pack)
+        # Confirmation is part of the interactive review flow. The expensive
+        # model calls already happened while preparing the draft, so generate
+        # final practice assets locally from the reviewed words and sentences.
+        local_parser = StubLanguageParsingProvider()
+        knowledge_pack = local_parser.generate_knowledge_pack(material, job)
+        learning_assets = job.draft_learning_assets or material.learning_assets
+        review_tasks = (
+            _review_tasks_from_learning_assets(material, learning_assets)
+            if learning_assets
+            else local_parser.generate_review_tasks(material, knowledge_pack)
+        )
         coaching_script = ParentCoachingScript(
             id=f"coach_{uuid4().hex[:8]}",
             material_id=material.id,
@@ -507,12 +578,14 @@ def build_pipeline_service() -> ProviderBackedPipelineService:
                 model_or_endpoint=settings.doubao_vision_model_or_endpoint,
                 timeout_seconds=settings.ai_request_timeout_seconds,
                 max_image_count=settings.ai_max_image_count,
+                trust_env=settings.ai_http_trust_env,
             ),
             parsing_provider=DoubaoLanguageParsingProvider(
                 api_key=settings.ark_api_key,
                 base_url=settings.ark_base_url,
                 model_or_endpoint=settings.doubao_text_model_or_endpoint,
                 timeout_seconds=settings.ai_request_timeout_seconds,
+                trust_env=settings.ai_http_trust_env,
             ),
         )
 
@@ -526,6 +599,86 @@ def build_pipeline_service() -> ProviderBackedPipelineService:
     return ProviderBackedPipelineService(ocr_provider=ocr_provider, parsing_provider=parsing_provider)
 
 
+def _knowledge_pack_from_learning_assets(
+    material: CourseMaterial,
+    job: MaterialParseJob,
+    learning_assets: list[LearningAsset],
+) -> KnowledgePack:
+    knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
+    vocabulary_items: list[VocabularyItem] = []
+    sentence_patterns: list[SentencePattern] = []
+    for asset in learning_assets:
+        audio_url = _primary_accent_audio_url(asset)
+        if asset.kind in {"word", "phrase"}:
+            vocabulary_items.append(
+                VocabularyItem(
+                    id=f"word_{uuid4().hex[:8]}",
+                    knowledge_pack_id=knowledge_pack_id,
+                    word=asset.text,
+                    meaning_cn=asset.translation,
+                    image_url=asset.generated_image_url,
+                    audio_url=audio_url,
+                    example_sentence="",
+                )
+            )
+        elif asset.kind == "sentence":
+            sentence_patterns.append(
+                SentencePattern(
+                    id=f"sentence_{uuid4().hex[:8]}",
+                    knowledge_pack_id=knowledge_pack_id,
+                    sentence=asset.text,
+                    meaning_cn=asset.translation,
+                    usage_type="sentence",
+                    audio_url=audio_url,
+                )
+            )
+    return KnowledgePack(
+        id=knowledge_pack_id,
+        material_id=material.id,
+        topic=job.draft_topic or material.topic or _infer_topic(job.draft_title or material.title),
+        difficulty_band=DifficultyBand.repeat,
+        lesson_summary=f"本课围绕 {job.draft_topic or material.topic or '课堂主题'} 展开，重点复习学习资产。",
+        review_recommendation="先看图听音，再跟读词句。",
+        vocabulary_items=vocabulary_items,
+        sentence_patterns=sentence_patterns,
+    )
+
+
+def _review_tasks_from_learning_assets(material: CourseMaterial, learning_assets: list[LearningAsset]) -> list[ReviewTask]:
+    now = datetime.now(timezone.utc)
+    tasks: list[ReviewTask] = []
+    for asset in learning_assets[:5]:
+        prompt = f"跟读句子：{asset.text}" if asset.kind == "sentence" else f"看图跟读：{asset.text}"
+        tasks.append(
+            ReviewTask(
+                id=f"task_{uuid4().hex[:8]}",
+                child_id=material.child_id,
+                material_id=material.id,
+                task_type=TaskType.flashcard,
+                difficulty=asset.difficulty or "repeat",
+                content_json={
+                    "asset_id": asset.id,
+                    "prompt": prompt,
+                    "text": asset.text,
+                    "word": asset.text,
+                    "translation": asset.translation,
+                    "image_url": asset.generated_image_url,
+                    "audio_url": _primary_accent_audio_url(asset),
+                    "hints": ["先听标准音，再重复一遍。"],
+                },
+                due_date=now,
+                status=ReviewTaskStatus.pending,
+            )
+        )
+    return tasks
+
+
+def _primary_accent_audio_url(asset: LearningAsset) -> str:
+    if asset.primary_accent == PrimaryAccent.uk:
+        return asset.tts_uk_url or asset.tts_us_url
+    return asset.tts_us_url or asset.tts_uk_url
+
+
 def _post_chat_json(
     *,
     api_key: str,
@@ -534,13 +687,15 @@ def _post_chat_json(
     messages: list[dict[str, Any]],
     timeout_seconds: int,
     client: Optional[httpx.Client],
+    trust_env: bool = False,
 ) -> dict[str, Any]:
     if not api_key:
         raise DoubaoProviderError("Doubao provider requires ARK_API_KEY")
     if not model_or_endpoint:
         raise DoubaoProviderError("Doubao provider requires model or endpoint config")
     owns_client = client is None
-    active_client = client or httpx.Client(timeout=timeout_seconds)
+    _log_proxy_diagnostics(trust_env=trust_env)
+    active_client = client or httpx.Client(timeout=timeout_seconds, trust_env=trust_env)
     try:
         response = active_client.post(
             f"{base_url.rstrip('/')}/responses",
@@ -578,13 +733,20 @@ def _post_chat_json(
     return payload
 
 
+def _log_proxy_diagnostics(*, trust_env: bool) -> None:
+    proxy_keys = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy")
+    present = sorted({key.upper() for key in proxy_keys if os.getenv(key)})
+    logger.info("AI HTTP proxy diagnostics: trust_env=%s proxy_env_present=%s", trust_env, present)
+
+
 def _responses_content_from_messages(messages: list[dict[str, Any]]) -> list[dict[str, str]]:
-    text_parts: list[str] = []
-    image_parts: list[dict[str, str]] = []
+    output: list[dict[str, str]] = []
     for message in messages:
         content = message.get("content")
         if isinstance(content, str):
-            text_parts.append(content)
+            text = content.strip()
+            if text:
+                output.append({"type": "input_text", "text": text})
             continue
         if not isinstance(content, list):
             continue
@@ -593,16 +755,13 @@ def _responses_content_from_messages(messages: list[dict[str, Any]]) -> list[dic
                 continue
             item_type = item.get("type")
             if item_type == "text" and item.get("text"):
-                text_parts.append(str(item["text"]))
+                text = str(item["text"]).strip()
+                if text:
+                    output.append({"type": "input_text", "text": text})
             elif item_type == "image_url":
                 image_url = item.get("image_url")
                 if isinstance(image_url, dict) and image_url.get("url"):
-                    image_parts.append({"type": "input_image", "image_url": str(image_url["url"])})
-
-    merged_text = "\n\n".join(part.strip() for part in text_parts if part.strip())
-    output: list[dict[str, str]] = image_parts
-    if merged_text:
-        output.append({"type": "input_text", "text": merged_text})
+                    output.append({"type": "input_image", "image_url": str(image_url["url"])})
     return output
 
 
@@ -772,6 +931,152 @@ def _image_records_from_payload(
             }
         )
     return [by_page[key] for key in sorted(by_page)]
+
+
+def _learning_assets_from_payload(
+    material: CourseMaterial,
+    raw_assets: Any,
+    *,
+    vocabulary: list[str],
+    sentences: list[str],
+    page_count: Optional[int] = None,
+) -> list[LearningAsset]:
+    fallback = _fallback_learning_assets(
+        material,
+        vocabulary=vocabulary,
+        sentences=sentences,
+        page_count=page_count,
+    )
+    if not isinstance(raw_assets, list):
+        return fallback
+
+    assets: list[LearningAsset] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(raw_assets, start=1):
+        if not isinstance(raw, dict):
+            continue
+        text = _clean_text_value(raw.get("text"))
+        normalized = text.lower()
+        if not text or normalized in seen:
+            continue
+        seen.add(normalized)
+        assets.append(_learning_asset_from_raw(material, raw, index=index, text=text, page_count=page_count))
+        if len(assets) == 20:
+            break
+    return assets or fallback
+
+
+def _learning_asset_from_raw(
+    material: CourseMaterial,
+    raw: dict[str, Any],
+    *,
+    index: int,
+    text: str,
+    page_count: Optional[int] = None,
+) -> LearningAsset:
+    bbox = raw.get("source_bbox")
+    source_bbox = None
+    if isinstance(bbox, dict):
+        source_bbox = _source_bbox_from_raw(bbox)
+
+    kind = _clean_text_value(raw.get("kind")).lower()
+    if kind not in {"word", "phrase", "sentence"}:
+        kind = "sentence" if " " in text or text.endswith((".", "?", "!")) else "word"
+
+    try:
+        page_index = int(raw.get("source_page_index") or 1)
+    except (TypeError, ValueError):
+        page_index = 1
+    effective_page_count = page_count or len(material.image_records) or 1
+    page_index = max(1, min(page_index, effective_page_count))
+
+    return LearningAsset(
+        id=_clean_text_value(raw.get("id")) or f"asset_{uuid4().hex[:12]}",
+        text=text,
+        kind=kind,
+        translation=_clean_text_value(raw.get("translation")),
+        source_page_index=page_index,
+        source_bbox=source_bbox,
+        source_visual_description=_clean_text_value(raw.get("source_visual_description")),
+        pronunciation_text=_clean_text_value(raw.get("pronunciation_text")) or text,
+        image_prompt=_clean_text_value(raw.get("image_prompt")) or f"参考讲义内容，为 {text} 生成彩色插图。",
+        difficulty=_clean_text_value(raw.get("difficulty")) or "easy",
+        teaching_note=_clean_text_value(raw.get("teaching_note")),
+        is_core=bool(raw.get("is_core", True)),
+        generated_image_status=MediaGenerationStatus.pending,
+        tts_us_status=MediaGenerationStatus.pending,
+        tts_uk_status=MediaGenerationStatus.pending,
+        primary_accent=PrimaryAccent.us,
+    )
+
+
+def _fallback_learning_assets(
+    material: CourseMaterial,
+    *,
+    vocabulary: list[str],
+    sentences: list[str],
+    page_count: Optional[int] = None,
+) -> list[LearningAsset]:
+    candidates = [*vocabulary, *sentences]
+    assets: list[LearningAsset] = []
+    seen: set[str] = set()
+    effective_page_count = max(1, page_count or len(material.image_records))
+    for index, text in enumerate(candidates, start=1):
+        clean = _clean_text_value(text)
+        normalized = clean.lower()
+        if not clean or normalized in seen:
+            continue
+        seen.add(normalized)
+        kind = (
+            "sentence"
+            if clean.endswith((".", "?", "!")) or len(clean.split()) > 3
+            else "phrase"
+            if " " in clean
+            else "word"
+        )
+        assets.append(
+            LearningAsset(
+                id=f"asset_{uuid4().hex[:12]}",
+                text=clean,
+                kind=kind,
+                translation="",
+                source_page_index=((index - 1) % effective_page_count) + 1,
+                pronunciation_text=clean,
+                image_prompt=f"参考讲义内容，为 {clean} 生成清晰彩色儿童插图。",
+                difficulty="easy",
+                teaching_note="让孩子先看图，再读英文。",
+                is_core=True,
+                generated_image_status=MediaGenerationStatus.pending,
+                tts_us_status=MediaGenerationStatus.pending,
+                tts_uk_status=MediaGenerationStatus.pending,
+                primary_accent=PrimaryAccent.us,
+            )
+        )
+        if len(assets) == 20:
+            break
+    return assets
+
+
+def _source_bbox_from_raw(raw: dict[str, Any]) -> SourceBoundingBox:
+    x = _clamp_float(raw.get("x"), 0.0, 1.0)
+    y = _clamp_float(raw.get("y"), 0.0, 1.0)
+    width = _clamp_bbox_extent(raw.get("width"), maximum=1.0 - x)
+    height = _clamp_bbox_extent(raw.get("height"), maximum=1.0 - y)
+    return SourceBoundingBox(x=x, y=y, width=width, height=height)
+
+
+def _clamp_bbox_extent(value: Any, *, maximum: float) -> float:
+    maximum = max(0.0, maximum)
+    minimum = min(0.05, maximum)
+    return _clamp_float(value, minimum, maximum)
+
+
+def _clamp_float(value: Any, minimum: float, maximum: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return minimum
+    return max(minimum, min(maximum, parsed))
 
 
 def _knowledge_pack_from_payload(material: CourseMaterial, job: MaterialParseJob, payload: dict[str, Any]) -> KnowledgePack:

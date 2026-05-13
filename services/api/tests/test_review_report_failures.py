@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.db import SessionLocal
+from app.db.models import CourseMaterialModel, MaterialParseJobModel
+from app.models.contracts import JobStatus, MaterialStatus
 from conftest import auth_headers, configure_test_environment
 
 
@@ -43,6 +46,19 @@ def _create_ready_material(api_client, headers: dict[str, str], child_id: str) -
 
     job = api_client.get(f"/v1/material-jobs/{job_id}", headers=headers)
     assert job.status_code == 200
+    with SessionLocal() as db:
+        job_model = db.get(MaterialParseJobModel, job_id)
+        material_model = db.get(CourseMaterialModel, material_id)
+        assert job_model is not None
+        assert material_model is not None
+        job_model.status = JobStatus.needs_review.value
+        job_model.draft_title = "Animals Around Me"
+        job_model.draft_topic = "动物"
+        job_model.draft_vocabulary = ["cat", "dog", "bird"]
+        job_model.draft_sentences = ["What is this?", "It is a cat."]
+        material_model.status = MaterialStatus.needs_review.value
+        db.add_all([job_model, material_model])
+        db.commit()
     confirm = api_client.post(f"/v1/material-jobs/{job_id}/confirm", json={"draft_topic": "动物"}, headers=headers)
     assert confirm.status_code == 200
 

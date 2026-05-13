@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,12 +51,19 @@ void main() {
   testWidgets('upload success navigates from scan page to AI review page',
       (tester) async {
     _useTallPhoneViewport(tester);
+    final worksheetBytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+    );
     final repository = _FakeAppRepository();
     final draftController = ScanDraftController()
       ..setPages(<ScanDraftPage>[
         ScanDraftPage(
-          file: XFile('/tmp/worksheet.jpg', name: 'worksheet.jpg'),
-          sourceType: 'camera',
+          file: XFile.fromData(
+            worksheetBytes,
+            name: 'gallery-worksheet.jpg',
+            mimeType: 'image/png',
+          ),
+          sourceType: 'gallery',
         ),
       ]);
 
@@ -79,20 +88,25 @@ void main() {
       tester,
       router: router,
       repository: repository,
+      settle: false,
       overrides: <Override>[
         activeChildProvider.overrideWithValue(_childProfile()),
         scanDraftProvider.overrideWith((ref) => draftController),
       ],
     );
+    await tester.pump();
 
     expect(find.text('已添加 1 页'), findsOneWidget);
-    expect(find.text('相机拍摄'), findsOneWidget);
+    expect(find.text('相册选择'), findsOneWidget);
+    expect(find.text('第 1 页'), findsOneWidget);
+    expect(find.text('gallery-worksheet.jpg'), findsNothing);
+    expect(find.byType(Image), findsWidgets);
     expect(find.text('继续拍照'), findsOneWidget);
     expect(find.text('继续选择'), findsOneWidget);
     final uploadButton = find.widgetWithText(FilledButton, '开始识别');
-    await tester.ensureVisible(uploadButton);
     await tester.tap(uploadButton);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(repository.uploadCalls, 1);
     expect(find.text('review:job_1:material_1'), findsOneWidget);
@@ -138,6 +152,36 @@ void main() {
     expect(find.text('lesson:material_1'), findsOneWidget);
   });
 
+  testWidgets('AI review page shows learning assets with source page label',
+      (tester) async {
+    _useTallPhoneViewport(tester);
+    final repository = _FakeAppRepository();
+    final router = GoRouter(
+      initialLocation: '/materials/review/job_1?materialId=material_1',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/materials/review/:jobId',
+          builder: (context, state) => MaterialReviewScreen(
+            jobId: state.pathParameters['jobId'] ?? '',
+            materialId: state.uri.queryParameters['materialId'] ?? '',
+          ),
+        ),
+      ],
+    );
+
+    await _pumpTestApp(
+      tester,
+      router: router,
+      repository: repository,
+    );
+
+    expect(find.text('核心学习资产'), findsOneWidget);
+    expect(find.text('queen'), findsWidgets);
+    expect(find.text('女王'), findsOneWidget);
+    expect(find.textContaining('单词 · 第 1 页'), findsOneWidget);
+    expect(find.text('读 queen。'), findsOneWidget);
+  });
+
   testWidgets('lesson detail keeps source image records', (tester) async {
     _useTallPhoneViewport(tester);
     final repository = _FakeAppRepository();
@@ -164,6 +208,66 @@ void main() {
     expect(find.textContaining('句子：It is a cat.'), findsOneWidget);
     expect(find.textContaining('细节：图片中包含动物词汇。'), findsOneWidget);
   });
+
+  testWidgets('lesson detail shows learning asset media and tts status',
+      (tester) async {
+    _useTallPhoneViewport(tester);
+    final repository = _FakeAppRepository();
+    final router = GoRouter(
+      initialLocation: '/lessons/material_1',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/lessons/:materialId',
+          builder: (context, state) => LessonDetailScreen(
+            materialId: state.pathParameters['materialId'] ?? '',
+          ),
+        ),
+      ],
+    );
+
+    await _pumpTestApp(
+      tester,
+      router: router,
+      repository: repository,
+    );
+
+    expect(find.text('核心学习资产'), findsOneWidget);
+    expect(find.text('queen'), findsWidgets);
+    expect(find.text('女王'), findsOneWidget);
+    expect(find.text('美式'), findsOneWidget);
+    expect(find.text('英式'), findsOneWidget);
+    expect(find.textContaining('配图：已生成'), findsOneWidget);
+    expect(find.textContaining('美式：已生成 · 英式：已生成'), findsOneWidget);
+  });
+
+  testWidgets('lesson detail shows error when primary accent update fails',
+      (tester) async {
+    _useTallPhoneViewport(tester);
+    final repository = _FakeAppRepository()..failPrimaryAccentUpdate = true;
+    final router = GoRouter(
+      initialLocation: '/lessons/material_1',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/lessons/:materialId',
+          builder: (context, state) => LessonDetailScreen(
+            materialId: state.pathParameters['materialId'] ?? '',
+          ),
+        ),
+      ],
+    );
+
+    await _pumpTestApp(
+      tester,
+      router: router,
+      repository: repository,
+    );
+
+    await tester.tap(find.text('英式'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('发音切换失败，请稍后重试。'), findsOneWidget);
+  });
 }
 
 void _useTallPhoneViewport(WidgetTester tester) {
@@ -177,6 +281,7 @@ Future<void> _pumpTestApp(
   WidgetTester tester, {
   required GoRouter router,
   required _FakeAppRepository repository,
+  bool settle = true,
   List<Override> overrides = const <Override>[],
 }) async {
   await tester.pumpWidget(
@@ -188,7 +293,9 @@ Future<void> _pumpTestApp(
       child: MaterialApp.router(routerConfig: router),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  }
 }
 
 class _FakeAppRepository extends AppRepository {
@@ -201,6 +308,7 @@ class _FakeAppRepository extends AppRepository {
 
   var uploadCalls = 0;
   var confirmCalls = 0;
+  var failPrimaryAccentUpdate = false;
 
   @override
   Future<MaterialCreateResult> uploadMaterial({
@@ -244,6 +352,21 @@ class _FakeAppRepository extends AppRepository {
     confirmCalls += 1;
     return _materialJob(status: JobStatus.ready);
   }
+
+  @override
+  Future<CourseMaterial> updateLearningAssetPrimaryAccent({
+    required String materialId,
+    required String assetId,
+    required String primaryAccent,
+  }) async {
+    if (failPrimaryAccentUpdate) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/materials/$materialId'),
+        error: 'network failed',
+      );
+    }
+    return _courseMaterial(status: MaterialStatus.ready);
+  }
 }
 
 ChildProfile _childProfile() {
@@ -274,6 +397,7 @@ CourseMaterial _courseMaterial({required MaterialStatus status}) {
     ocrText: 'cat dog bird',
     tags: const <String>['动物'],
     imageRecords: _imageRecords(),
+    learningAssets: _learningAssets(),
   );
 }
 
@@ -291,6 +415,7 @@ MaterialParseJob _materialJob({required JobStatus status}) {
     draftVocabulary: const <String>['cat', 'dog', 'bird'],
     draftSentences: const <String>['It is a cat.', 'I can see a dog.'],
     draftImageRecords: _imageRecords(),
+    draftLearningAssets: _learningAssets(),
   );
 }
 
@@ -310,6 +435,36 @@ List<MaterialImageRecord> _imageRecords() {
       vocabulary: <String>['cat', 'dog', 'bird'],
       sentences: <String>['It is a cat.'],
       details: <String>['图片中包含动物词汇。'],
+    ),
+  ];
+}
+
+List<LearningAsset> _learningAssets() {
+  return const <LearningAsset>[
+    LearningAsset(
+      id: 'asset_queen',
+      text: 'queen',
+      kind: 'word',
+      translation: '女王',
+      sourcePageIndex: 1,
+      sourceBbox:
+          SourceBoundingBox(x: 0.05, y: 0.14, width: 0.43, height: 0.35),
+      sourceVisualDescription: '迷宫里的女王。',
+      pronunciationText: 'queen',
+      imagePrompt: '参考讲义生成彩色图。',
+      difficulty: 'easy',
+      teachingNote: '读 queen。',
+      isCore: true,
+      generatedImageStatus: 'ready',
+      generatedImageUrl: '',
+      generatedImageObjectKey: 'mock_media/hn014/images/queen.svg',
+      ttsUsStatus: 'ready',
+      ttsUsUrl: 'http://127.0.0.1:8000/mock-media/hn014/tts/us/queen.m4a',
+      ttsUsObjectKey: 'mock_media/hn014/tts/us/queen.m4a',
+      ttsUkStatus: 'ready',
+      ttsUkUrl: 'http://127.0.0.1:8000/mock-media/hn014/tts/uk/queen.m4a',
+      ttsUkObjectKey: 'mock_media/hn014/tts/uk/queen.m4a',
+      primaryAccent: 'us',
     ),
   ];
 }

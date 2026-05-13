@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Color illustration of a rabbit hopping fast">
+  <rect width="512" height="512" rx="44" fill="#f3fbff"/>
+  <path d="M80 350c84 30 270 28 352 0" fill="none" stroke="#8bc58a" stroke-width="18" stroke-linecap="round"/>
+  <path d="M186 268c18-70 82-104 144-72 56 29 74 92 38 134-36 43-118 50-166 18-28-19-37-50-16-80z" fill="#ffffff" stroke="#5f4637" stroke-width="10"/>
+  <path d="M268 196c-4-72 14-118 42-130 26 36 24 86-2 138M318 206c28-66 60-94 92-88 2 42-22 78-70 106" fill="#ffffff" stroke="#5f4637" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="338" cy="248" r="7" fill="#3f3128"/>
+  <path d="M364 264l38 14-38 14" fill="#f4a6a6" stroke="#5f4637" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M186 326l-54 46M238 352l-18 58M314 354l42 52" fill="none" stroke="#5f4637" stroke-width="12" stroke-linecap="round"/>
+  <path d="M132 246c-32 6-56 18-78 36" fill="none" stroke="#8cc7ff" stroke-width="12" stroke-linecap="round"/>
+  <text x="256" y="454" text-anchor="middle" font-family="Arial, sans-serif" font-size="27" font-weight="700" fill="#3f3128">A rabbit can hop fast.</text>
+</svg>

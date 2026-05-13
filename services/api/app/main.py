@@ -1,17 +1,20 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.db import init_db
 from app.core.settings import ensure_local_paths, get_settings
+from app.db.models import StoredAssetModel
+from app.services.storage import get_storage_service
 
 
 logger = logging.getLogger("learning_english.api")
@@ -34,7 +37,23 @@ app = FastAPI(
 
 settings = get_settings()
 ensure_local_paths(settings)
-app.mount("/uploads", StaticFiles(directory=settings.local_storage_path), name="uploads")
+if settings.storage_backend == "s3":
+    @app.get("/uploads/{object_key:path}", include_in_schema=False)
+    def uploaded_asset(object_key: str) -> FileResponse:
+        asset = StoredAssetModel(
+            owner_type="material",
+            owner_id="",
+            bucket=settings.storage_bucket,
+            object_key=object_key,
+            content_type="application/octet-stream",
+            size_bytes=0,
+            url="",
+        )
+        return FileResponse(get_storage_service().resolve_local_path(asset))
+else:
+    app.mount("/uploads", StaticFiles(directory=settings.local_storage_path), name="uploads")
+mock_media_root = Path(__file__).resolve().parent / "static" / "mock_media"
+app.mount("/mock-media", StaticFiles(directory=mock_media_root), name="mock-media")
 app.include_router(api_router)
 
 

@@ -24,6 +24,18 @@ class JobStatus(str, Enum):
     failed = "failed"
 
 
+class MediaGenerationStatus(str, Enum):
+    pending = "pending"
+    processing = "processing"
+    ready = "ready"
+    failed = "failed"
+
+
+class PrimaryAccent(str, Enum):
+    us = "us"
+    uk = "uk"
+
+
 class TaskType(str, Enum):
     flashcard = "flashcard"
     listen_choice = "listen_choice"
@@ -122,6 +134,7 @@ class CourseMaterial(BaseModel):
     ocr_text: str = ""
     tags: list[str] = Field(default_factory=list)
     image_records: list["MaterialImageRecord"] = Field(default_factory=list)
+    learning_assets: list["LearningAsset"] = Field(default_factory=list)
 
 
 class CourseMaterialCreate(BaseModel):
@@ -147,6 +160,7 @@ class MaterialParseJob(BaseModel):
     draft_vocabulary: list[str] = Field(default_factory=list)
     draft_sentences: list[str] = Field(default_factory=list)
     draft_image_records: list["MaterialImageRecord"] = Field(default_factory=list)
+    draft_learning_assets: list["LearningAsset"] = Field(default_factory=list)
 
 
 class MaterialImageRecord(BaseModel):
@@ -165,11 +179,47 @@ class MaterialImageRecord(BaseModel):
     details: list[str] = Field(default_factory=list)
 
 
+class SourceBoundingBox(BaseModel):
+    x: float = 0.0
+    y: float = 0.0
+    width: float = 1.0
+    height: float = 1.0
+
+
+class LearningAsset(BaseModel):
+    id: str
+    text: str
+    kind: str
+    translation: str = ""
+    source_page_index: int = 1
+    source_bbox: Optional[SourceBoundingBox] = None
+    source_visual_description: str = ""
+    pronunciation_text: str = ""
+    image_prompt: str = ""
+    difficulty: str = "easy"
+    teaching_note: str = ""
+    is_core: bool = True
+    generated_image_status: MediaGenerationStatus = MediaGenerationStatus.pending
+    generated_image_url: str = ""
+    generated_image_object_key: str = ""
+    tts_us_status: MediaGenerationStatus = MediaGenerationStatus.pending
+    tts_us_url: str = ""
+    tts_us_object_key: str = ""
+    tts_uk_status: MediaGenerationStatus = MediaGenerationStatus.pending
+    tts_uk_url: str = ""
+    tts_uk_object_key: str = ""
+    primary_accent: PrimaryAccent = PrimaryAccent.us
+
+
 class MaterialParseConfirmRequest(BaseModel):
     draft_title: Optional[str] = None
     draft_topic: Optional[str] = None
     draft_vocabulary: Optional[list[str]] = None
     draft_sentences: Optional[list[str]] = None
+
+
+class LearningAssetPrimaryAccentUpdate(BaseModel):
+    primary_accent: PrimaryAccent
 
 
 class VocabularyItem(BaseModel):

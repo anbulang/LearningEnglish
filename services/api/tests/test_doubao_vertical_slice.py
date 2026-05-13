@@ -5,8 +5,12 @@ import json
 import httpx
 
 from app.core.config import get_pipeline_service
+from app.core.db import SessionLocal
+from app.db.models import CourseMaterialModel, MaterialParseJobModel, StoredAssetModel
 from app.main import app
+from app.services.mappers import course_material_from_model, material_job_from_model
 from app.services.pipeline import DoubaoLanguageParsingProvider, DoubaoVisionOCRProvider, ProviderBackedPipelineService
+from app.services.storage import get_storage_service
 from conftest import auth_headers, configure_test_environment
 
 
@@ -101,6 +105,39 @@ def test_fake_doubao_upload_review_confirm_generates_ready_tasks(api_client) -> 
         assert upload_response.status_code == 201
         material_id = upload_response.json()["material"]["id"]
         job_id = upload_response.json()["job"]["id"]
+
+        job_response = api_client.get(f"/v1/material-jobs/{job_id}", headers=headers)
+        assert job_response.status_code == 200
+        job = job_response.json()
+        assert job["status"] == "processing"
+
+        with SessionLocal() as db:
+            material_model = db.get(CourseMaterialModel, material_id)
+            job_model = db.get(MaterialParseJobModel, job_id)
+            assert material_model is not None
+            assert job_model is not None
+            asset_rows = db.query(StoredAssetModel).filter_by(owner_type="material", owner_id=material_id).all()
+            local_paths = [get_storage_service().resolve_local_path(asset) for asset in asset_rows]
+            prepared = app.dependency_overrides[get_pipeline_service]().prepare_job(
+                course_material_from_model(material_model),
+                material_job_from_model(job_model),
+                local_paths=local_paths,
+            )
+            job_model.status = prepared.status.value
+            job_model.finished_at = prepared.finished_at
+            job_model.draft_title = prepared.draft_title
+            job_model.draft_topic = prepared.draft_topic
+            job_model.draft_vocabulary = prepared.draft_vocabulary
+            job_model.draft_sentences = prepared.draft_sentences
+            job_model.draft_image_records = [item.model_dump() for item in prepared.draft_image_records]
+            job_model.confidence_summary = prepared.confidence_summary
+            job_model.warnings = prepared.warnings
+            material_model.status = "needs_review"
+            material_model.ocr_text = " ".join(prepared.draft_vocabulary + prepared.draft_sentences)
+            material_model.topic = prepared.draft_topic or material_model.topic
+            material_model.image_records = [item.model_dump() for item in prepared.draft_image_records]
+            db.add_all([job_model, material_model])
+            db.commit()
 
         job_response = api_client.get(f"/v1/material-jobs/{job_id}", headers=headers)
         assert job_response.status_code == 200
