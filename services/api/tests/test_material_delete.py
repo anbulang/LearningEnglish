@@ -53,7 +53,10 @@ def _create_material(api_client, headers: dict[str, str], child_id: str) -> tupl
     return payload["material"]["id"], payload["job"]["id"]
 
 
-def _seed_ready_derivatives(material_id: str, job_id: str, child_id: str) -> None:
+def _seed_ready_derivatives(material_id: str, job_id: str, child_id: str) -> tuple[str, str, str]:
+    knowledge_id = f"knowledge_{material_id}"
+    coach_id = f"coach_{material_id}"
+    task_id = f"task_{material_id}"
     with SessionLocal() as db:
         material = db.get(CourseMaterialModel, material_id)
         job = db.get(MaterialParseJobModel, job_id)
@@ -73,7 +76,7 @@ def _seed_ready_derivatives(material_id: str, job_id: str, child_id: str) -> Non
         db.add_all([material, job])
         db.add(
             KnowledgePackModel(
-                id="knowledge_delete",
+                id=knowledge_id,
                 material_id=material_id,
                 topic="Phonics Rr",
                 difficulty_band="repeat",
@@ -85,7 +88,7 @@ def _seed_ready_derivatives(material_id: str, job_id: str, child_id: str) -> Non
         )
         db.add(
             ParentCoachingScriptModel(
-                id="coach_delete",
+                id=coach_id,
                 material_id=material_id,
                 title="亲子陪练",
                 intro="和孩子一起读 rabbit。",
@@ -94,7 +97,7 @@ def _seed_ready_derivatives(material_id: str, job_id: str, child_id: str) -> Non
         )
         db.add(
             ReviewTaskModel(
-                id="task_delete",
+                id=task_id,
                 child_id=child_id,
                 material_id=material_id,
                 task_type="flashcard",
@@ -105,13 +108,14 @@ def _seed_ready_derivatives(material_id: str, job_id: str, child_id: str) -> Non
             )
         )
         db.commit()
+    return knowledge_id, coach_id, task_id
 
 
 def test_delete_material_archives_material_and_removes_visible_derivatives(api_client) -> None:
     headers, _ = auth_headers(api_client, auth_code="delete-owner")
     child_id = _create_child(api_client, headers)
     material_id, job_id = _create_material(api_client, headers, child_id)
-    _seed_ready_derivatives(material_id, job_id, child_id)
+    knowledge_id, coach_id, task_id = _seed_ready_derivatives(material_id, job_id, child_id)
 
     response = api_client.delete(f"/v1/materials/{material_id}", headers=headers)
 
@@ -135,9 +139,9 @@ def test_delete_material_archives_material_and_removes_visible_derivatives(api_c
         assert material is not None
         assert material.status == MaterialStatus.archived.value
         assert db.get(MaterialParseJobModel, job_id) is not None
-        assert db.get(KnowledgePackModel, "knowledge_delete") is None
-        assert db.get(ParentCoachingScriptModel, "coach_delete") is None
-        assert db.get(ReviewTaskModel, "task_delete") is None
+        assert db.get(KnowledgePackModel, knowledge_id) is None
+        assert db.get(ParentCoachingScriptModel, coach_id) is None
+        assert db.get(ReviewTaskModel, task_id) is None
 
 
 def test_delete_material_is_parent_scoped_and_idempotent(api_client) -> None:
