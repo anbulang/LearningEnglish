@@ -440,3 +440,120 @@ def test_process_learning_asset_media_returns_missing_for_unknown_material() -> 
     result = process_learning_asset_media("material_missing")
 
     assert result == {"material_id": "material_missing", "status": "missing"}
+
+
+def test_process_material_job_skips_archived_material() -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        parent = ParentAccountModel(
+            id="parent_archived_job",
+            display_name="家长",
+            wechat_union_id="wechat_union_archived_job",
+            wechat_open_id="wechat_open_archived_job",
+        )
+        child = ChildProfileModel(
+            id="child_archived_job",
+            parent_account_id=parent.id,
+            name="Mia",
+            age=6,
+            level="starter",
+            learning_goal="稳定复习",
+            preferred_review_duration_minutes=10,
+            parent_notes="",
+        )
+        material = CourseMaterialModel(
+            id="material_archived_job",
+            child_id=child.id,
+            teacher_name="Emma",
+            lesson_date=date(2026, 5, 15),
+            title="Archived Worksheet",
+            topic="Phonics",
+            status=MaterialStatus.archived.value,
+            uploaded_at=datetime.now(timezone.utc),
+            tags=[],
+        )
+        job = MaterialParseJobModel(
+            id="job_archived",
+            material_id=material.id,
+            status=JobStatus.processing.value,
+            confidence_summary="等待 OCR 与解析。",
+            draft_title=material.title,
+            draft_topic=material.topic,
+            draft_vocabulary=[],
+            draft_sentences=[],
+        )
+        db.add_all([parent, child, material, job])
+        db.commit()
+    finally:
+        db.close()
+
+    result = process_material_job("job_archived")
+
+    assert result == {"job_id": "job_archived", "status": "archived"}
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, "material_archived_job")
+        job = db.get(MaterialParseJobModel, "job_archived")
+        assert material is not None
+        assert job is not None
+        assert material.status == MaterialStatus.archived.value
+        assert job.status == JobStatus.processing.value
+        assert job.draft_vocabulary == []
+
+
+def test_process_learning_asset_media_skips_archived_material() -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        parent = ParentAccountModel(
+            id="parent_archived_media",
+            display_name="家长",
+            wechat_union_id="wechat_union_archived_media",
+            wechat_open_id="wechat_open_archived_media",
+        )
+        child = ChildProfileModel(
+            id="child_archived_media",
+            parent_account_id=parent.id,
+            name="Mia",
+            age=6,
+            level="starter",
+            learning_goal="稳定复习",
+            preferred_review_duration_minutes=10,
+            parent_notes="",
+        )
+        material = CourseMaterialModel(
+            id="material_archived_media",
+            child_id=child.id,
+            teacher_name="Emma",
+            lesson_date=date(2026, 5, 15),
+            title="Qq Queen",
+            topic="Phonics Qq",
+            status=MaterialStatus.archived.value,
+            uploaded_at=datetime.now(timezone.utc),
+            learning_assets=[
+                {
+                    "id": "asset_queen",
+                    "text": "queen",
+                    "kind": "word",
+                    "translation": "女王",
+                    "primary_accent": "us",
+                }
+            ],
+        )
+        db.add_all([parent, child, material])
+        db.commit()
+    finally:
+        db.close()
+
+    result = process_learning_asset_media("material_archived_media")
+
+    assert result == {"material_id": "material_archived_media", "status": "archived"}
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, "material_archived_media")
+        assert material is not None
+        assert material.status == MaterialStatus.archived.value
+        assert material.learning_assets[0].get("generated_image_status") is None
