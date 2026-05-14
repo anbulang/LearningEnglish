@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_parent
 from app.core.db import get_db
 from app.db.models import ChildProfileModel, CourseMaterialModel, ParentAccountModel, SpeakingAttemptModel, WeeklyReportModel
-from app.models.contracts import SpeakingAttempt, SpeakingAttemptCreate, SpeakingAttemptStatus
+from app.models.contracts import MaterialStatus, SpeakingAttempt, SpeakingAttemptCreate, SpeakingAttemptStatus
 from app.services.mappers import speaking_attempt_from_model
 
 router = APIRouter(prefix="/speaking-attempts", tags=["speaking-attempts"])
@@ -51,6 +51,7 @@ def create_speaking_attempt(
         select(CourseMaterialModel).where(
             CourseMaterialModel.id == payload.material_id,
             CourseMaterialModel.child_id == payload.child_id,
+            CourseMaterialModel.status != MaterialStatus.archived.value,
         )
     )
     if material is None:

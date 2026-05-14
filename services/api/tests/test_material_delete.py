@@ -9,6 +9,8 @@ from app.db.models import (
     MaterialParseJobModel,
     ParentCoachingScriptModel,
     ReviewTaskModel,
+    SpeakingAttemptModel,
+    WeeklyReportModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus
 from conftest import auth_headers, configure_test_environment
@@ -197,6 +199,39 @@ def test_archived_material_blocks_job_and_primary_accent_routes(api_client) -> N
         headers=headers,
     )
     assert accent_response.status_code == 404
+
+
+def test_archived_material_rejects_speaking_attempt(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="delete-archived-speaking-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, _ = _create_material(api_client, headers, child_id)
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        report = db.query(WeeklyReportModel).filter_by(child_id=child_id).one()
+        assert material is not None
+        material.status = MaterialStatus.archived.value
+        initial_speaking_attempts = report.speaking_attempts
+        db.add(material)
+        db.commit()
+
+    response = api_client.post(
+        "/v1/speaking-attempts",
+        json={
+            "child_id": child_id,
+            "material_id": material_id,
+            "prompt_text": "Read rabbit aloud.",
+            "transcript": "rabbit",
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Material not found"
+    with SessionLocal() as db:
+        attempts = db.query(SpeakingAttemptModel).filter_by(child_id=child_id, material_id=material_id).all()
+        report = db.query(WeeklyReportModel).filter_by(child_id=child_id).one()
+        assert attempts == []
+        assert report.speaking_attempts == initial_speaking_attempts
 
 
 def test_review_tasks_route_filters_archived_material_even_if_task_row_exists(api_client) -> None:
