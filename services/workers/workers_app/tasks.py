@@ -121,6 +121,9 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
             )
             for asset in assets
         ]
+        db.refresh(material)
+        if material.status == MaterialStatus.archived.value:
+            return {"material_id": material_id, "status": "archived"}
         material.learning_assets = [asset.model_dump(mode="json") for asset in processing_assets]
         db.add(material)
         db.commit()

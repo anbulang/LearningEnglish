@@ -30,7 +30,7 @@ from app.db.models import (
     ReviewTaskModel,
     StoredAssetModel,
 )
-from app.models.contracts import JobStatus, MaterialStatus, MediaGenerationStatus
+from app.models.contracts import JobStatus, LearningAsset, MaterialStatus, MediaGenerationStatus
 from workers_app.celery_app import celery_app
 from workers_app.tasks import process_learning_asset_media, process_material_job
 
@@ -557,3 +557,78 @@ def test_process_learning_asset_media_skips_archived_material() -> None:
         assert material is not None
         assert material.status == MaterialStatus.archived.value
         assert material.learning_assets[0].get("generated_image_status") is None
+
+
+def test_process_learning_asset_media_skips_if_archived_before_processing_write(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        parent = ParentAccountModel(
+            id="parent_archived_media_race",
+            display_name="家长",
+            wechat_union_id="wechat_union_archived_media_race",
+            wechat_open_id="wechat_open_archived_media_race",
+        )
+        child = ChildProfileModel(
+            id="child_archived_media_race",
+            parent_account_id=parent.id,
+            name="Mia",
+            age=6,
+            level="starter",
+            learning_goal="稳定复习",
+            preferred_review_duration_minutes=10,
+            parent_notes="",
+        )
+        material = CourseMaterialModel(
+            id="material_archived_media_race",
+            child_id=child.id,
+            teacher_name="Emma",
+            lesson_date=date(2026, 5, 15),
+            title="Qq Queen",
+            topic="Phonics Qq",
+            status=MaterialStatus.ready.value,
+            uploaded_at=datetime.now(timezone.utc),
+            learning_assets=[
+                {
+                    "id": "asset_queen",
+                    "text": "queen",
+                    "kind": "word",
+                    "translation": "女王",
+                    "primary_accent": "us",
+                }
+            ],
+        )
+        db.add_all([parent, child, material])
+        db.commit()
+    finally:
+        db.close()
+
+    class ArchiveBeforeProcessingAsset:
+        def __init__(self, **item) -> None:
+            self._asset = LearningAsset(**item)
+
+        def model_copy(self, update=None):
+            if (update or {}).get("generated_image_status") == MediaGenerationStatus.processing:
+                with SessionLocal() as db:
+                    material = db.get(CourseMaterialModel, "material_archived_media_race")
+                    assert material is not None
+                    material.status = MaterialStatus.archived.value
+                    db.add(material)
+                    db.commit()
+            return self._asset.model_copy(update=update)
+
+    monkeypatch.setattr("workers_app.tasks.LearningAsset", ArchiveBeforeProcessingAsset)
+
+    result = process_learning_asset_media("material_archived_media_race")
+
+    assert result == {"material_id": "material_archived_media_race", "status": "archived"}
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, "material_archived_media_race")
+        assert material is not None
+        assert material.status == MaterialStatus.archived.value
+        asset = material.learning_assets[0]
+        assert "generated_image_status" not in asset
+        assert "tts_us_status" not in asset
+        assert "tts_uk_status" not in asset
