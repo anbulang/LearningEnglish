@@ -173,7 +173,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [ ] `HN-012` 仍需重新构建 Profile 真机包并用真实手机补一次上传识别截图/日志证据。
 - [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
 - [ ] `HN-014` 讲义学习资产自动生成：需要保存 job/material JSON 摘录、AI 校对页截图和课程详情媒体状态截图。
-- [ ] `HN-015` 课程资料左滑删除：需要补齐 API、worker、Flutter 左滑删除和 Harness 证据。
+- [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除和自动化 Harness 日志已补齐；人工截图可在下一次真机/模拟器回归时补充。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.5:8000/v1` 构建、安装并启动成功。
@@ -192,8 +192,10 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `dist/harness/HN-015/material-delete-api.log`
 - `dist/harness/HN-015/material-delete-worker.log`
 - `dist/harness/HN-015/material-delete-mobile.log`
-- `dist/harness/HN-015/material-delete-screen.png`
+- `dist/harness/HN-015/material-delete-screen.png`（人工截图，可选补充）
 
 本轮自动化验证：
-- `services/api/.venv/bin/python -m pytest services/api/tests`：`35 passed`
-- `cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test`：`10 passed`
+- `services/api/.venv/bin/python -m pytest services/api/tests -q`：`61 passed`
+- `services/workers/.venv/bin/python -m pytest services/workers/tests -q`：`9 passed`
+- `cd apps/mobile && /opt/homebrew/bin/flutter test`：`25 passed`
+- `cd apps/mobile && /opt/homebrew/bin/flutter analyze`：`No issues found`
