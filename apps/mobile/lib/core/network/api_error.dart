@@ -28,6 +28,10 @@ String describeApiError(Object error, {String fallback = '请求失败，请稍�
   return fallback;
 }
 
+bool isNotFoundApiError(Object error) {
+  return error is DioException && error.response?.statusCode == 404;
+}
+
 String _debugRequestHint(DioException error) {
   const showDebugNetworkErrors = bool.fromEnvironment(
     'SHOW_DEBUG_NETWORK_ERRORS',
