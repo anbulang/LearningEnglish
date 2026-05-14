@@ -13,11 +13,26 @@ import '../../../core/widgets/status_chip.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
 
-class MaterialsLibraryScreen extends ConsumerWidget {
+class MaterialsLibraryScreen extends ConsumerStatefulWidget {
   const MaterialsLibraryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MaterialsLibraryScreen> createState() =>
+      _MaterialsLibraryScreenState();
+}
+
+class _MaterialsLibraryScreenState
+    extends ConsumerState<MaterialsLibraryScreen> {
+  final Set<String> _locallyDeletedMaterialIds = <String>{};
+
+  void _hideDeletedMaterial(String materialId) {
+    setState(() {
+      _locallyDeletedMaterialIds.add(materialId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final materials = ref.watch(materialsProvider);
     final formFactor = formFactorOf(context);
 
@@ -58,7 +73,10 @@ class MaterialsLibraryScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         ...materials.when(
           data: (items) {
-            if (items.isEmpty) {
+            final visibleItems = items
+                .where((item) => !_locallyDeletedMaterialIds.contains(item.id))
+                .toList();
+            if (visibleItems.isEmpty) {
               return <Widget>[
                 StatePanel(
                   title: '还没有课程资料',
@@ -71,7 +89,7 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                 ),
               ];
             }
-            return items
+            return visibleItems
                 .map(
                   (material) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -80,8 +98,12 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                           'material-dismissible-${material.id}'),
                       direction: DismissDirection.endToStart,
                       background: const _DeleteMaterialBackground(),
-                      confirmDismiss: (_) =>
-                          _confirmAndDeleteMaterial(context, ref, material),
+                      confirmDismiss: (_) => _confirmAndDeleteMaterial(
+                        context,
+                        ref,
+                        material,
+                        onDeleted: _hideDeletedMaterial,
+                      ),
                       child: AppCard(
                         child: InkWell(
                           key: ValueKey<String>('material-card-${material.id}'),
@@ -170,9 +192,11 @@ class MaterialsLibraryScreen extends ConsumerWidget {
       );
     }
 
-    final selected = materials.valueOrNull?.isNotEmpty == true
-        ? materials.valueOrNull!.first
-        : null;
+    final visibleMaterials = materials.valueOrNull
+        ?.where((item) => !_locallyDeletedMaterialIds.contains(item.id))
+        .toList();
+    final selected =
+        visibleMaterials?.isNotEmpty == true ? visibleMaterials!.first : null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('资料库'),
@@ -271,8 +295,9 @@ class _DeleteMaterialBackground extends StatelessWidget {
 Future<bool> _confirmAndDeleteMaterial(
   BuildContext context,
   WidgetRef ref,
-  CourseMaterial material,
-) async {
+  CourseMaterial material, {
+  required ValueChanged<String> onDeleted,
+}) async {
   final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -300,6 +325,7 @@ Future<bool> _confirmAndDeleteMaterial(
 
   try {
     await ref.read(appRepositoryProvider).deleteMaterial(material.id);
+    onDeleted(material.id);
     ref.invalidate(materialsProvider);
     ref.invalidate(reviewTasksProvider);
     if (context.mounted) {
