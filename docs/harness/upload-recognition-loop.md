@@ -228,3 +228,38 @@
 - 课程详情展示彩色配图状态和英式/美式 TTS 状态。
 
 **证据目录：** `dist/harness/HN-014/`
+
+### HN-015：课程资料左滑删除
+
+**目标：** 家长可以在资料库左滑删除课程资料；删除后课程详情、知识包、亲子陪练脚本和复习任务一起从用户可见入口移除。
+
+**范围内：**
+- 资料库课程卡片支持左滑删除。
+- 删除前弹出确认框，说明课程详情、知识点和复习任务会一起移除。
+- 后端将课程资料状态更新为 `archived`。
+- 后端删除该资料对应的 `KnowledgePackModel`、`ReviewTaskModel` 和 `ParentCoachingScriptModel`。
+- 已归档资料不再出现在资料库、课程详情、AI 校对和复习任务接口中。
+- worker 识别和媒体任务跳过已归档资料，不把资料重新写回可见状态。
+
+**范围外：**
+- 删除孩子档案、家长账号或全量用户数据。
+- 回收站、撤销删除或恢复课程。
+- 物理删除对象存储中的原始图片、彩色配图和 TTS 音频。
+- 回算历史周报和历史练习记录。
+
+**验收标准：**
+- 删除当前家长拥有的资料返回 `204`。
+- 删除后 `GET /materials` 不再返回该资料。
+- 删除后 `GET /materials/{material_id}`、`GET /knowledge-packs/{material_id}`、`GET /parent-coaching/{material_id}` 返回 `404`。
+- 删除后该资料对应复习任务不再返回。
+- 归档资料对应的 job 不能继续读取、确认或重试。
+- 移动端左滑删除支持取消、确认、失败恢复和中文错误提示。
+
+**Harness：**
+- 自动化：`services/api/.venv/bin/python -m pytest services/api/tests/test_material_delete.py -q`
+- 自动化：`services/workers/.venv/bin/python -m pytest services/workers/tests/test_material_job_task.py -q`
+- 自动化：`cd apps/mobile && /opt/homebrew/bin/flutter test test/features/materials/presentation/materials_library_delete_test.dart test/features/lessons/presentation/lesson_detail_deleted_test.dart`
+- 人工：模拟器或真机上传并确认一份讲义后，左滑删除并保存截图/API 摘录。
+
+**证据位置：**
+- `dist/harness/HN-015/`
