@@ -167,7 +167,11 @@ def _get_owned_job(db: Session, parent_account_id: str, job_id: str) -> tuple[Ma
         select(MaterialParseJobModel, CourseMaterialModel)
         .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
         .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
-        .where(MaterialParseJobModel.id == job_id, ChildProfileModel.parent_account_id == parent_account_id)
+        .where(
+            MaterialParseJobModel.id == job_id,
+            ChildProfileModel.parent_account_id == parent_account_id,
+            CourseMaterialModel.status != MaterialStatus.archived.value,
+        )
     )
     row = db.execute(stmt).first()
     if row is None:

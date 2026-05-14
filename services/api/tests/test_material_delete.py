@@ -158,3 +158,64 @@ def test_delete_material_is_parent_scoped_and_idempotent(api_client) -> None:
     second_delete = api_client.delete(f"/v1/materials/{material_id}", headers=owner_headers)
     assert first_delete.status_code == 204
     assert second_delete.status_code == 204
+
+
+def test_archived_material_blocks_job_and_primary_accent_routes(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="delete-archived-job-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, job_id = _create_material(api_client, headers, child_id)
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        job = db.get(MaterialParseJobModel, job_id)
+        assert material is not None
+        assert job is not None
+        material.status = MaterialStatus.archived.value
+        material.learning_assets = [
+            {
+                "id": "asset_rabbit",
+                "text": "rabbit",
+                "kind": "word",
+                "translation": "兔子",
+                "primary_accent": "us",
+            }
+        ]
+        job.status = JobStatus.needs_review.value
+        db.add_all([material, job])
+        db.commit()
+
+    assert api_client.get(f"/v1/material-jobs/{job_id}", headers=headers).status_code == 404
+    confirm_response = api_client.post(
+        f"/v1/material-jobs/{job_id}/confirm",
+        json={"draft_title": "Run, Hop, Go!"},
+        headers=headers,
+    )
+    assert confirm_response.status_code == 404
+    assert api_client.post(f"/v1/material-jobs/{job_id}/retry", headers=headers).status_code == 404
+    accent_response = api_client.patch(
+        f"/v1/materials/{material_id}/learning-assets/asset_rabbit/primary-accent",
+        json={"primary_accent": "uk"},
+        headers=headers,
+    )
+    assert accent_response.status_code == 404
+
+
+def test_review_tasks_route_filters_archived_material_even_if_task_row_exists(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="delete-archived-task-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, job_id = _create_material(api_client, headers, child_id)
+    _seed_ready_derivatives(material_id, job_id, child_id)
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        assert material is not None
+        material.status = MaterialStatus.archived.value
+        db.add(material)
+        db.commit()
+
+    response = api_client.get(
+        "/v1/review-tasks",
+        params={"child_id": child_id},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert all(item["material_id"] != material_id for item in response.json()["items"])
