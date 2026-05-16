@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_parent
 from app.core.db import get_db
-from app.db.models import ChildProfileModel, ParentAccountModel, ReviewTaskModel
-from app.models.contracts import ReviewTaskListResponse
+from app.db.models import ChildProfileModel, CourseMaterialModel, ParentAccountModel, ReviewTaskModel
+from app.models.contracts import MaterialStatus, ReviewTaskListResponse
 from app.services.mappers import review_task_from_model
 
 router = APIRouter(prefix="/review-tasks", tags=["review-tasks"])
@@ -23,7 +23,11 @@ def list_review_tasks(
     stmt = (
         select(ReviewTaskModel)
         .join(ChildProfileModel, ChildProfileModel.id == ReviewTaskModel.child_id)
-        .where(ChildProfileModel.parent_account_id == current_parent.id)
+        .join(CourseMaterialModel, CourseMaterialModel.id == ReviewTaskModel.material_id)
+        .where(
+            ChildProfileModel.parent_account_id == current_parent.id,
+            CourseMaterialModel.status != MaterialStatus.archived.value,
+        )
     )
     if child_id:
         stmt = stmt.where(ReviewTaskModel.child_id == child_id)

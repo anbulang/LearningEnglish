@@ -163,6 +163,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `HN-012`：真机上传识别 harness 记录。
 - `HN-013`：图片级讲义记录与解析留存。
 - `HN-014`：讲义学习资产自动生成。
+- `HN-015`：课程资料左滑删除。
 
 当前实施状态：
 - [x] `HN-008` 上传页已改为拍照/相册优先，不再要求用户填写标题、老师名、主题。
@@ -171,7 +172,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-011` timeout 失败在移动端显示中文重试说明。
 - [ ] `HN-012` 仍需重新构建 Profile 真机包并用真实手机补一次上传识别截图/日志证据。
 - [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
-- [ ] `HN-014` 讲义学习资产自动生成：需要保存 job/material JSON 摘录、AI 校对页截图和课程详情媒体状态截图。
+- [x] `HN-014` 讲义学习资产自动生成：API/worker/mock media 自动化和 job/material JSON 摘录已补齐；AI 校对页和课程详情截图可在下一次真机/模拟器回归时补充。
+- [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除和自动化 Harness 日志已补齐；人工截图可在下一次真机/模拟器回归时补充。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.5:8000/v1` 构建、安装并启动成功。
@@ -183,9 +185,17 @@ make harness-capture-ios-screen SCREEN=report-screen
 `HN-014` 验收证据：
 - `dist/harness/HN-014/job-learning-assets.json`
 - `dist/harness/HN-014/material-learning-assets.json`
-- `dist/harness/HN-014/review-learning-assets.png`
-- `dist/harness/HN-014/lesson-learning-assets.png`
+- `dist/harness/HN-014/review-learning-assets.png`（人工截图，可选补充）
+- `dist/harness/HN-014/lesson-learning-assets.png`（人工截图，可选补充）
+
+`HN-015` 验收证据：
+- `dist/harness/HN-015/material-delete-api.log`
+- `dist/harness/HN-015/material-delete-worker.log`
+- `dist/harness/HN-015/material-delete-mobile.log`
+- `dist/harness/HN-015/material-delete-screen.png`（人工截图，可选补充）
 
 本轮自动化验证：
-- `services/api/.venv/bin/python -m pytest services/api/tests`：`35 passed`
-- `cd apps/mobile && /private/tmp/learningenglish-flutter/bin/flutter test`：`10 passed`
+- `services/api/.venv/bin/python -m pytest services/api/tests -q`：`67 passed`
+- `services/workers/.venv/bin/python -m pytest services/workers/tests -q`：`9 passed`
+- `cd apps/mobile && /opt/homebrew/bin/flutter test`：`25 passed`
+- `cd apps/mobile && /opt/homebrew/bin/flutter analyze`：`No issues found`

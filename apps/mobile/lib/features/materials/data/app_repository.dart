@@ -117,6 +117,16 @@ class AppRepository implements MaterialsRepository {
   }
 
   @override
+  Future<void> deleteMaterial(String materialId) async {
+    await _authorizedRequest<void>(
+      (options) => _dio.delete<void>(
+        '/materials/$materialId',
+        options: options,
+      ),
+    );
+  }
+
+  @override
   Future<List<ReviewTask>> listReviewTasks({
     required String childId,
     String? materialId,

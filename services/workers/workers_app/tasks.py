@@ -44,6 +44,8 @@ def process_material_job(job_id: str) -> dict[str, str]:
         if row is None:
             raise ValueError("Material job not found")
         job, material = row
+        if material.status == MaterialStatus.archived.value:
+            return {"job_id": job.id, "status": "archived"}
         if job.status not in {JobStatus.queued.value, JobStatus.processing.value}:
             return {"job_id": job.id, "status": job.status}
 
@@ -61,6 +63,9 @@ def process_material_job(job_id: str) -> dict[str, str]:
                 local_paths=local_paths,
             )
         except Exception as exc:
+            db.refresh(material)
+            if material.status == MaterialStatus.archived.value:
+                return {"job_id": job.id, "status": "archived"}
             job.status = JobStatus.failed.value
             job.finished_at = None
             job.confidence_summary = f"处理失败：{exc}"
@@ -69,6 +74,9 @@ def process_material_job(job_id: str) -> dict[str, str]:
             db.add_all([job, material])
             db.commit()
             return {"job_id": job.id, "status": job.status}
+        db.refresh(material)
+        if material.status == MaterialStatus.archived.value:
+            return {"job_id": job.id, "status": "archived"}
         job.status = prepared.status.value
         job.finished_at = prepared.finished_at
         job.draft_title = prepared.draft_title
@@ -97,6 +105,8 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
         material = db.get(CourseMaterialModel, material_id)
         if material is None:
             return {"material_id": material_id, "status": "missing"}
+        if material.status == MaterialStatus.archived.value:
+            return {"material_id": material_id, "status": "archived"}
         assets = [LearningAsset(**item) for item in (material.learning_assets or [])]
         if not assets:
             return {"material_id": material_id, "status": "empty"}
@@ -111,6 +121,9 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
             )
             for asset in assets
         ]
+        db.refresh(material)
+        if material.status == MaterialStatus.archived.value:
+            return {"material_id": material_id, "status": "archived"}
         material.learning_assets = [asset.model_dump(mode="json") for asset in processing_assets]
         db.add(material)
         db.commit()
@@ -138,6 +151,8 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
             status_value = "failed"
 
         current_material = db.get(CourseMaterialModel, material_id)
+        if current_material is not None and current_material.status == MaterialStatus.archived.value:
+            return {"material_id": material_id, "status": "archived"}
         current_assets = [
             LearningAsset(**item)
             for item in ((current_material.learning_assets if current_material is not None else None) or [])

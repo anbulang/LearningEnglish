@@ -11,12 +11,28 @@ import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../profiles/data/demo_data.dart';
+import '../data/app_repository.dart';
 
-class MaterialsLibraryScreen extends ConsumerWidget {
+class MaterialsLibraryScreen extends ConsumerStatefulWidget {
   const MaterialsLibraryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MaterialsLibraryScreen> createState() =>
+      _MaterialsLibraryScreenState();
+}
+
+class _MaterialsLibraryScreenState
+    extends ConsumerState<MaterialsLibraryScreen> {
+  final Set<String> _locallyDeletedMaterialIds = <String>{};
+
+  void _hideDeletedMaterial(String materialId) {
+    setState(() {
+      _locallyDeletedMaterialIds.add(materialId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final materials = ref.watch(materialsProvider);
     final formFactor = formFactorOf(context);
 
@@ -57,7 +73,10 @@ class MaterialsLibraryScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         ...materials.when(
           data: (items) {
-            if (items.isEmpty) {
+            final visibleItems = items
+                .where((item) => !_locallyDeletedMaterialIds.contains(item.id))
+                .toList();
+            if (visibleItems.isEmpty) {
               return <Widget>[
                 StatePanel(
                   title: '还没有课程资料',
@@ -70,49 +89,63 @@ class MaterialsLibraryScreen extends ConsumerWidget {
                 ),
               ];
             }
-            return items
+            return visibleItems
                 .map(
                   (material) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: AppCard(
-                      child: InkWell(
-                        key: ValueKey<String>('material-card-${material.id}'),
-                        borderRadius: BorderRadius.circular(AppRadii.card),
-                        onTap: () => context.go(_materialDestination(material)),
-                        child: Row(
-                          children: <Widget>[
-                            LessonCoverThumbnail(
-                              title: material.title,
-                              subtitle: material.topic,
-                              icon: _libraryIcon(material.topic),
-                              accent: _libraryAccent(material.topic),
-                              assetPath:
-                                  AppIllustrations.topicFor(material.topic),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Row(
-                                    children: <Widget>[
-                                      Expanded(
-                                          child: Text(material.title,
-                                              style: AppTextStyles.cardTitle)),
-                                      MaterialStatusChip(material.status),
-                                    ],
-                                  ),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    '${material.lessonDate.month}/${material.lessonDate.day} · ${material.teacherName}',
-                                  ),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text('主题：${material.topic}',
-                                      style: AppTextStyles.helper),
-                                ],
+                    child: Dismissible(
+                      key: ValueKey<String>(
+                          'material-dismissible-${material.id}'),
+                      direction: DismissDirection.endToStart,
+                      background: const _DeleteMaterialBackground(),
+                      confirmDismiss: (_) => _confirmAndDeleteMaterial(
+                        context,
+                        ref,
+                        material,
+                        onDeleted: _hideDeletedMaterial,
+                      ),
+                      child: AppCard(
+                        child: InkWell(
+                          key: ValueKey<String>('material-card-${material.id}'),
+                          borderRadius: BorderRadius.circular(AppRadii.card),
+                          onTap: () =>
+                              context.go(_materialDestination(material)),
+                          child: Row(
+                            children: <Widget>[
+                              LessonCoverThumbnail(
+                                title: material.title,
+                                subtitle: material.topic,
+                                icon: _libraryIcon(material.topic),
+                                accent: _libraryAccent(material.topic),
+                                assetPath:
+                                    AppIllustrations.topicFor(material.topic),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                            child: Text(material.title,
+                                                style:
+                                                    AppTextStyles.cardTitle)),
+                                        MaterialStatusChip(material.status),
+                                      ],
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text(
+                                      '${material.lessonDate.month}/${material.lessonDate.day} · ${material.teacherName}',
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text('主题：${material.topic}',
+                                        style: AppTextStyles.helper),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -159,9 +192,11 @@ class MaterialsLibraryScreen extends ConsumerWidget {
       );
     }
 
-    final selected = materials.valueOrNull?.isNotEmpty == true
-        ? materials.valueOrNull!.first
-        : null;
+    final visibleMaterials = materials.valueOrNull
+        ?.where((item) => !_locallyDeletedMaterialIds.contains(item.id))
+        .toList();
+    final selected =
+        visibleMaterials?.isNotEmpty == true ? visibleMaterials!.first : null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('资料库'),
@@ -224,6 +259,88 @@ class MaterialsLibraryScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _DeleteMaterialBackground extends StatelessWidget {
+  const _DeleteMaterialBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: const Color(0xFFB3261E),
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          Icon(Icons.delete_rounded, color: AppColors.paperWhite),
+          SizedBox(width: AppSpacing.xs),
+          Text(
+            '删除',
+            style: TextStyle(
+              color: AppColors.paperWhite,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<bool> _confirmAndDeleteMaterial(
+  BuildContext context,
+  WidgetRef ref,
+  CourseMaterial material, {
+  required ValueChanged<String> onDeleted,
+}) async {
+  final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('删除这份课程资料？'),
+          content: const Text('删除后课程详情、知识点和复习任务将一起移除。'),
+          actions: <Widget>[
+            TextButton(
+              key: const ValueKey<String>('cancel-delete-material'),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              key: const ValueKey<String>('confirm-delete-material'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('删除'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
+  if (!confirmed || !context.mounted) {
+    return false;
+  }
+
+  try {
+    await ref.read(appRepositoryProvider).deleteMaterial(material.id);
+    onDeleted(material.id);
+    ref.invalidate(materialsProvider);
+    ref.invalidate(reviewTasksProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已删除课程资料')),
+      );
+    }
+    return true;
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('删除失败，请稍后重试。')),
+      );
+    }
+    return false;
   }
 }
 

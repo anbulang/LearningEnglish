@@ -6,8 +6,15 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_parent
 from app.core.db import get_db
-from app.db.models import ChildProfileModel, ParentAccountModel, PracticeSessionModel, ReviewTaskModel, WeeklyReportModel
-from app.models.contracts import PracticeSession, PracticeSessionCreate, ReviewTaskStatus
+from app.db.models import (
+    ChildProfileModel,
+    CourseMaterialModel,
+    ParentAccountModel,
+    PracticeSessionModel,
+    ReviewTaskModel,
+    WeeklyReportModel,
+)
+from app.models.contracts import MaterialStatus, PracticeSession, PracticeSessionCreate, ReviewTaskStatus
 from app.services.mappers import practice_session_from_model
 
 router = APIRouter(prefix="/practice-sessions", tags=["practice-sessions"])
@@ -29,9 +36,12 @@ def create_practice_session(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
     tasks = db.scalars(
-        select(ReviewTaskModel).where(
+        select(ReviewTaskModel)
+        .join(CourseMaterialModel, CourseMaterialModel.id == ReviewTaskModel.material_id)
+        .where(
             ReviewTaskModel.id.in_(payload.review_task_ids or [""]),
             ReviewTaskModel.child_id == payload.child_id,
+            CourseMaterialModel.status != MaterialStatus.archived.value,
         )
     ).all()
     if len(tasks) != len(payload.review_task_ids):

@@ -186,15 +186,25 @@ class LessonDetailScreen extends ConsumerWidget {
         ),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => StatePanel(
-        title: '课程详情加载失败',
-        description: describeApiError(error, fallback: '课程详情加载失败，请稍后重试。'),
-        assetPath: AppIllustrations.stateError,
-        action: FilledButton(
-          onPressed: () => ref.invalidate(materialProvider(materialId)),
-          child: const Text('重新加载'),
-        ),
-      ),
+      error: (error, _) {
+        final notFound = isNotFoundApiError(error);
+        return StatePanel(
+          title: notFound ? '课程资料不存在或已删除' : '课程详情加载失败',
+          description: notFound
+              ? '这份课程资料可能已经被删除，请回到资料库查看最新列表。'
+              : describeApiError(error, fallback: '课程详情加载失败，请稍后重试。'),
+          assetPath: AppIllustrations.stateError,
+          action: notFound
+              ? OutlinedButton(
+                  onPressed: () => context.go('/materials'),
+                  child: const Text('回到资料库'),
+                )
+              : FilledButton(
+                  onPressed: () => ref.invalidate(materialProvider(materialId)),
+                  child: const Text('重新加载'),
+                ),
+        );
+      },
     );
 
     if (!formFactor.isTablet) {

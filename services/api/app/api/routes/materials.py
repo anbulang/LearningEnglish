@@ -4,8 +4,8 @@ from datetime import date, datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_parent
@@ -17,6 +17,7 @@ from app.db.models import (
     KnowledgePackModel,
     MaterialParseJobModel,
     ParentAccountModel,
+    ParentCoachingScriptModel,
     ReviewTaskModel,
     StoredAssetModel,
 )
@@ -45,7 +46,10 @@ def list_materials(
     child_ids = db.scalars(
         select(ChildProfileModel.id).where(ChildProfileModel.parent_account_id == current_parent.id)
     ).all()
-    stmt = select(CourseMaterialModel).where(CourseMaterialModel.child_id.in_(child_ids or [""]))
+    stmt = select(CourseMaterialModel).where(
+        CourseMaterialModel.child_id.in_(child_ids or [""]),
+        CourseMaterialModel.status != MaterialStatus.archived.value,
+    )
     if child_id:
         stmt = stmt.where(CourseMaterialModel.child_id == child_id)
     items = db.scalars(stmt.order_by(CourseMaterialModel.lesson_date.desc())).all()
@@ -64,6 +68,25 @@ def get_material(
     return MaterialDetailResponse(
         material=course_material_from_model(material, parse_job_id=latest_job_ids.get(material.id, ""))
     )
+
+
+@router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_material(
+    material_id: str,
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
+) -> Response:
+    material = _get_owned_material(db, current_parent.id, material_id, include_archived=True)
+    if material.status == MaterialStatus.archived.value:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    material.status = MaterialStatus.archived.value
+    db.add(material)
+    db.execute(delete(KnowledgePackModel).where(KnowledgePackModel.material_id == material.id))
+    db.execute(delete(ParentCoachingScriptModel).where(ParentCoachingScriptModel.material_id == material.id))
+    db.execute(delete(ReviewTaskModel).where(ReviewTaskModel.material_id == material.id))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/{material_id}/learning-assets/{asset_id}/primary-accent", response_model=MaterialDetailResponse)
@@ -209,7 +232,12 @@ def create_material(
     return MaterialCreateResponse(material=course_material_from_model(material), job=material_job_from_model(job))
 
 
-def _get_owned_material(db: Session, parent_account_id: str, material_id: str) -> CourseMaterialModel:
+def _get_owned_material(
+    db: Session,
+    parent_account_id: str,
+    material_id: str,
+    include_archived: bool = False,
+) -> CourseMaterialModel:
     stmt = (
         select(CourseMaterialModel)
         .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
@@ -218,6 +246,8 @@ def _get_owned_material(db: Session, parent_account_id: str, material_id: str) -
             ChildProfileModel.parent_account_id == parent_account_id,
         )
     )
+    if not include_archived:
+        stmt = stmt.where(CourseMaterialModel.status != MaterialStatus.archived.value)
     material = db.scalar(stmt)
     if material is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
