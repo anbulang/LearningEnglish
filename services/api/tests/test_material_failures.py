@@ -296,6 +296,85 @@ def test_confirm_job_persists_learning_assets_and_enqueues_media_job(api_client,
     assert assets[0]["translation"] == "女王"
 
 
+def test_confirm_ready_job_is_idempotent(api_client, monkeypatch) -> None:
+    enqueued_material_ids: list[str] = []
+    monkeypatch.setattr(
+        "app.api.routes.material_jobs.enqueue_learning_asset_media_job",
+        lambda material_id: enqueued_material_ids.append(material_id),
+    )
+    headers, _ = auth_headers(api_client, auth_code="confirm-ready-idempotent-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, job_id = _create_material(api_client, headers, child_id)
+
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        material = db.get(CourseMaterialModel, material_id)
+        assert job is not None
+        assert material is not None
+        job.status = JobStatus.ready.value
+        job.draft_title = "Ready Qq"
+        job.draft_topic = "Phonics Qq"
+        job.draft_vocabulary = ["queen"]
+        job.draft_sentences = ["Find the queen."]
+        job.draft_learning_assets = [
+            {
+                "id": "asset_queen",
+                "text": "queen",
+                "kind": "word",
+                "translation": "女王",
+                "primary_accent": "us",
+            }
+        ]
+        material.status = MaterialStatus.ready.value
+        material.title = "Ready Qq"
+        material.topic = "Phonics Qq"
+        material.learning_assets = job.draft_learning_assets
+        db.add_all([job, material])
+        db.add(
+            KnowledgePackModel(
+                id="knowledge_existing",
+                material_id=material_id,
+                topic="Phonics Qq",
+                difficulty_band="repeat",
+                lesson_summary="已确认。",
+                review_recommendation="继续复习。",
+                vocabulary_items=[],
+                sentence_patterns=[],
+            )
+        )
+        db.add(
+            ReviewTaskModel(
+                id="task_existing",
+                child_id=child_id,
+                material_id=material_id,
+                task_type="flashcard",
+                difficulty="easy",
+                content_json={"asset_id": "asset_queen", "word": "queen"},
+                due_date=datetime.now(timezone.utc),
+                status="completed",
+            )
+        )
+        db.commit()
+
+    response = api_client.post(
+        f"/v1/material-jobs/{job_id}/confirm",
+        json={"draft_title": "Changed Title"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == JobStatus.ready.value
+    assert enqueued_material_ids == []
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        assert material is not None
+        assert material.title == "Ready Qq"
+        review_tasks = db.query(ReviewTaskModel).filter_by(material_id=material_id).all()
+        assert [task.id for task in review_tasks] == ["task_existing"]
+        assert review_tasks[0].status == "completed"
+        assert db.get(KnowledgePackModel, "knowledge_existing") is not None
+
+
 def test_confirm_job_keeps_course_ready_when_media_enqueue_fails(api_client, monkeypatch) -> None:
     def fail_enqueue(material_id: str) -> None:
         raise RuntimeError("redis unavailable")

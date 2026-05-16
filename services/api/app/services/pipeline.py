@@ -241,6 +241,7 @@ class DoubaoVisionOCRProvider:
             ocr_text=draft_ocr_text,
             vocabulary=draft_vocabulary,
             sentences=draft_sentences,
+            page_count=max(1, len(image_paths)),
         )
         return OCRDraft(
             ocr_text=draft_ocr_text,
@@ -865,16 +866,20 @@ def _fallback_image_records(
 ) -> list[MaterialImageRecord]:
     source_records = material.image_records or []
     if not source_records:
+        page_count = max(len(material.source_images), len(material.source_image_keys), 1)
         return [
             MaterialImageRecord(
                 id=f"image_{uuid4().hex[:12]}",
-                page_index=1,
-                image_title=title or material.title or "讲义页 1",
+                page_index=index,
+                url=material.source_images[index - 1] if index <= len(material.source_images) else "",
+                object_key=material.source_image_keys[index - 1] if index <= len(material.source_image_keys) else "",
+                image_title=title or material.title or f"讲义页 {index}",
                 ocr_text=ocr_text,
                 vocabulary=vocabulary,
                 sentences=sentences,
                 details=details,
             )
+            for index in range(1, page_count + 1)
         ]
     return [
         record.model_copy(
@@ -900,6 +905,7 @@ def _image_records_from_payload(
     ocr_text: str,
     vocabulary: list[str],
     sentences: list[str],
+    page_count: Optional[int] = None,
 ) -> list[MaterialImageRecord]:
     fallback = _fallback_image_records(
         material,
@@ -912,11 +918,12 @@ def _image_records_from_payload(
     if not isinstance(raw_records, list):
         return fallback
 
+    effective_page_count = max(page_count or 0, len(fallback), len(material.source_images), len(material.source_image_keys), 1)
     by_page = {record.page_index: record for record in fallback}
     for index, raw in enumerate(raw_records, start=1):
         if not isinstance(raw, dict):
             continue
-        page_index = int(raw.get("page_index") or index)
+        page_index = _coerce_page_index(raw.get("page_index"), fallback=index, page_count=effective_page_count)
         base = by_page.get(page_index) or MaterialImageRecord(
             id=f"image_{uuid4().hex[:12]}",
             page_index=page_index,
@@ -1018,6 +1025,13 @@ def _fallback_learning_assets(
     page_count: Optional[int] = None,
 ) -> list[LearningAsset]:
     candidates = [*vocabulary, *sentences]
+    if not candidates and material.ocr_text:
+        candidates = [
+            *_extract_candidate_vocabulary(material.ocr_text)[:8],
+            *_extract_candidate_sentences([material.ocr_text])[:6],
+        ]
+    if not candidates:
+        candidates = [material.title or material.topic or "待校对学习点"]
     assets: list[LearningAsset] = []
     seen: set[str] = set()
     effective_page_count = max(1, page_count or len(material.image_records))
@@ -1055,6 +1069,28 @@ def _fallback_learning_assets(
         if len(assets) == 20:
             break
     return assets
+
+
+def _coerce_page_index(value: Any, *, fallback: int, page_count: int) -> int:
+    page_index = fallback
+    if isinstance(value, int):
+        page_index = value
+    elif isinstance(value, str):
+        stripped = value.strip()
+        match = re.search(r"\d+", stripped)
+        if match:
+            page_index = int(match.group(0))
+        else:
+            try:
+                page_index = int(stripped)
+            except ValueError:
+                page_index = fallback
+    elif value is not None:
+        try:
+            page_index = int(value)
+        except (TypeError, ValueError):
+            page_index = fallback
+    return max(1, min(page_index, max(1, page_count)))
 
 
 def _source_bbox_from_raw(raw: dict[str, Any]) -> SourceBoundingBox:

@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.models.contracts import CourseMaterial, JobStatus, MaterialParseJob
+from app.models.contracts import CourseMaterial, JobStatus, MaterialImageRecord, MaterialParseJob
 from app.services.pipeline import (
     DoubaoLanguageParsingProvider,
     DoubaoProviderError,
@@ -314,6 +314,112 @@ def test_doubao_learning_assets_clamps_page_index_and_bbox_overflow(tmp_path: Pa
     assert duck_bbox.width == 0.0
     assert duck_bbox.y == 0.0
     assert duck_bbox.height == 0.5
+
+
+def test_doubao_empty_learning_assets_falls_back_to_material_title(tmp_path: Path) -> None:
+    worksheet = tmp_path / "blank.jpg"
+    worksheet.write_bytes(b"blank-image")
+    payload = {
+        "ocr_text": "",
+        "title": "",
+        "topic": "",
+        "vocabulary": [],
+        "sentences": [],
+        "learning_assets": [],
+        "warnings": [],
+        "confidence_summary": "未识别到明确词句。",
+    }
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(_completion_response(json.dumps(payload, ensure_ascii=False))),
+    )
+
+    draft = provider.extract(_material(), [worksheet])
+
+    assert len(draft.learning_assets) == 1
+    assert draft.learning_assets[0].text == "Animals Around Me"
+    assert draft.learning_assets[0].source_page_index == 1
+    assert draft.learning_assets[0].pronunciation_text == "Animals Around Me"
+
+
+def test_doubao_image_records_recover_bad_page_index_and_clamp_to_uploaded_pages(tmp_path: Path) -> None:
+    first = tmp_path / "first.jpg"
+    second = tmp_path / "second.jpg"
+    first.write_bytes(b"first-image")
+    second.write_bytes(b"second-image")
+    material = _material().model_copy(
+        update={
+            "image_records": [
+                MaterialImageRecord(id="image_first", page_index=1, url="https://cdn.test/first.jpg"),
+                MaterialImageRecord(id="image_second", page_index=2, url="https://cdn.test/second.jpg"),
+            ]
+        }
+    )
+    payload = {
+        "ocr_text": "Find the queen. Find the duck.",
+        "title": "Qq Storybook",
+        "topic": "phonics",
+        "vocabulary": ["queen", "duck"],
+        "sentences": ["Find the queen.", "Find the duck."],
+        "image_records": [
+            {"page_index": "page 1", "image_title": "Recovered page", "vocabulary": ["queen"]},
+            {"page_index": 99, "image_title": "Clamped page", "vocabulary": ["duck"]},
+        ],
+        "warnings": [],
+        "confidence_summary": "high",
+    }
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(_completion_response(json.dumps(payload, ensure_ascii=False))),
+    )
+
+    draft = provider.extract(material, [first, second])
+
+    assert [record.page_index for record in draft.image_records] == [1, 2]
+    assert [record.image_title for record in draft.image_records] == ["Recovered page", "Clamped page"]
+    assert [record.url for record in draft.image_records] == ["https://cdn.test/first.jpg", "https://cdn.test/second.jpg"]
+
+
+def test_doubao_image_records_fallback_preserves_multiple_source_images(tmp_path: Path) -> None:
+    first = tmp_path / "first.jpg"
+    second = tmp_path / "second.jpg"
+    first.write_bytes(b"first-image")
+    second.write_bytes(b"second-image")
+    material = _material().model_copy(
+        update={
+            "source_images": ["https://cdn.test/first.jpg", "https://cdn.test/second.jpg"],
+            "source_image_keys": ["materials/first.jpg", "materials/second.jpg"],
+        }
+    )
+    payload = {
+        "ocr_text": "Find the queen. Find the duck.",
+        "title": "Qq Storybook",
+        "topic": "phonics",
+        "vocabulary": ["queen", "duck"],
+        "sentences": ["Find the queen.", "Find the duck."],
+        "image_records": [],
+        "warnings": [],
+        "confidence_summary": "high",
+    }
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(_completion_response(json.dumps(payload, ensure_ascii=False))),
+    )
+
+    draft = provider.extract(material, [first, second])
+
+    assert [record.page_index for record in draft.image_records] == [1, 2]
+    assert [record.url for record in draft.image_records] == [
+        "https://cdn.test/first.jpg",
+        "https://cdn.test/second.jpg",
+    ]
+    assert [record.object_key for record in draft.image_records] == ["materials/first.jpg", "materials/second.jpg"]
 
 
 def test_learning_assets_fallback_uses_vocabulary_and_sentences() -> None:

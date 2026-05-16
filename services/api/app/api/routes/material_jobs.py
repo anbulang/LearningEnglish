@@ -54,6 +54,8 @@ def confirm_material_job(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Job is still processing")
     if job.status == JobStatus.failed.value:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Job failed; retry before confirming")
+    if job.status == JobStatus.ready.value:
+        return prepared
 
     prepared = prepared.model_copy(
         update={

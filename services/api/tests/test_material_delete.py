@@ -235,6 +235,41 @@ def test_archived_material_rejects_speaking_attempt(api_client) -> None:
         assert report.speaking_attempts == initial_speaking_attempts
 
 
+def test_speaking_attempts_route_filters_archived_material_even_if_attempt_row_exists(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="delete-archived-speaking-list-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, _ = _create_material(api_client, headers, child_id)
+    create_response = api_client.post(
+        "/v1/speaking-attempts",
+        json={
+            "child_id": child_id,
+            "material_id": material_id,
+            "prompt_text": "Read rabbit aloud.",
+            "transcript": "rabbit",
+        },
+        headers=headers,
+    )
+    assert create_response.status_code == 201
+    attempt_id = create_response.json()["id"]
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        attempt = db.get(SpeakingAttemptModel, attempt_id)
+        assert material is not None
+        assert attempt is not None
+        material.status = MaterialStatus.archived.value
+        db.add(material)
+        db.commit()
+
+    response = api_client.get(
+        "/v1/speaking-attempts",
+        params={"child_id": child_id},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert all(item["material_id"] != material_id for item in response.json())
+
+
 def test_review_tasks_route_filters_archived_material_even_if_task_row_exists(api_client) -> None:
     headers, _ = auth_headers(api_client, auth_code="delete-archived-task-parent")
     child_id = _create_child(api_client, headers)

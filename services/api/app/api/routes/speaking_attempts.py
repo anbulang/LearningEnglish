@@ -23,7 +23,11 @@ def list_speaking_attempts(
     stmt = (
         select(SpeakingAttemptModel)
         .join(ChildProfileModel, ChildProfileModel.id == SpeakingAttemptModel.child_id)
-        .where(ChildProfileModel.parent_account_id == current_parent.id)
+        .join(CourseMaterialModel, CourseMaterialModel.id == SpeakingAttemptModel.material_id)
+        .where(
+            ChildProfileModel.parent_account_id == current_parent.id,
+            CourseMaterialModel.status != MaterialStatus.archived.value,
+        )
     )
     if child_id:
         stmt = stmt.where(SpeakingAttemptModel.child_id == child_id)
