@@ -8,6 +8,7 @@ from app.db.models import (
     KnowledgePackModel,
     MaterialParseJobModel,
     ParentCoachingScriptModel,
+    PracticeSessionModel,
     ReviewTaskModel,
     SpeakingAttemptModel,
     WeeklyReportModel,
@@ -254,3 +255,42 @@ def test_review_tasks_route_filters_archived_material_even_if_task_row_exists(ap
 
     assert response.status_code == 200
     assert all(item["material_id"] != material_id for item in response.json()["items"])
+
+
+def test_archived_material_rejects_practice_session_even_if_task_row_exists(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="delete-archived-practice-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, job_id = _create_material(api_client, headers, child_id)
+    _, _, task_id = _seed_ready_derivatives(material_id, job_id, child_id)
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        task = db.get(ReviewTaskModel, task_id)
+        report = db.query(WeeklyReportModel).filter_by(child_id=child_id).one()
+        assert material is not None
+        assert task is not None
+        material.status = MaterialStatus.archived.value
+        initial_completed_sessions = report.completed_sessions
+        db.add(material)
+        db.commit()
+
+    response = api_client.post(
+        "/v1/practice-sessions",
+        json={
+            "child_id": child_id,
+            "review_task_ids": [task_id],
+            "score": 90,
+            "weak_points": ["rabbit"],
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "One or more review tasks were not found"
+    with SessionLocal() as db:
+        sessions = db.query(PracticeSessionModel).filter_by(child_id=child_id).all()
+        task = db.get(ReviewTaskModel, task_id)
+        report = db.query(WeeklyReportModel).filter_by(child_id=child_id).one()
+        assert sessions == []
+        assert task is not None
+        assert task.status == "pending"
+        assert report.completed_sessions == initial_completed_sessions
