@@ -1,144 +1,128 @@
+<div align="center">
+
 # LearningEnglish
 
-LearningEnglish is a parent-led English review app for early learners. It turns printed worksheets from live classes into structured digital review packs with guided listening, lightweight practice, and parent coaching.
+**把线下讲义变成可复习、可陪练、可追踪的家庭英语学习包。**
 
-This repository now contains a closed-pilot MVP baseline:
-- a Flutter monorepo layout for phone and tablet with guarded auth routes
-- shared Dart domain contracts and design tokens
-- a FastAPI backend with persisted auth, multipart uploads, and provider-backed OCR/parsing
-- Celery workers, PostgreSQL/Redis/MinIO local infrastructure, and Alembic migrations
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Flutter-3.22%2B-02569B.svg)](apps/mobile)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.116%2B-009688.svg)](services/api)
+[![Harness](https://img.shields.io/badge/Harness-MVP%20readiness-4B5563.svg)](docs/harness/mvp-readiness-checklist.md)
 
-## Repository Layout
-- `apps/mobile`: Flutter app scaffold for phone and tablet layouts
-- `packages/contracts`: shared Dart contracts matching the documented domain model
-- `packages/design_tokens`: Flutter design tokens derived from the design system
-- `services/api`: FastAPI service for the first vertical slice
-- `services/workers`: Celery worker scaffold and provider task boundaries
-- `infra`: local development infrastructure definitions
-- `docs`: product, design, and architecture source-of-truth documents
+<img src="apps/mobile/assets/images/heroes/home_study_desk.png" alt="LearningEnglish home study desk illustration" width="760" />
 
-## Current MVP Flow
-The implemented pilot flow covers:
-1. 微信登录家长账号
-2. 首次登录绑定手机号
-3. 创建孩子档案
-4. 上传讲义图片到后端
-5. 处理 `CourseMaterial -> MaterialParseJob -> KnowledgePack -> ReviewTask`
-6. 家长确认 OCR/解析结果
-7. 获取课程详情、复习任务、亲子陪练脚本
-8. 提交 practice session 和 speaking attempt
-9. 查看周报聚合结果
+`Flutter` mobile app + `FastAPI` API + `Celery` workers + `PostgreSQL` / `Redis` / `MinIO` local infra.
 
-The Flutter app now targets the same flow in adaptive page structure:
-- 启动恢复 / 登录 / 绑定手机号
-- 首页
-- 资料库
-- 上传扫描
-- AI 校对
-- 课程详情
-- 复习入口
-- 口语陪练
-- 亲子陪练
-- 我的
+[快速开始](#快速开始) · [MVP 主链](#mvp-主链) · [仓库地图](#仓库地图) · [验证入口](#验证入口) · [文档入口](#文档入口)
 
-## Tooling Status
-- `python3`: available locally
-- `uv`: available locally
-- `flutter`: verified locally with Flutter `3.41.6`
-- `dart`: verified locally with Dart `3.11.4`
+</div>
 
-The Flutter workspace has been bootstrapped locally and `flutter analyze` passes for `apps/mobile`.
+## 项目概览
 
-## Local Development
-### Backend
-```bash
-cd services/api
-UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
-.venv/bin/alembic upgrade head
-.venv/bin/uvicorn app.main:app --reload
-```
+LearningEnglish 是一个面向早期英语学习家庭的内测 MVP。家长拍照上传线下讲义后，系统会完成讲义存档、AI 识别、家长校对、复习任务生成、口语练习和周报聚合。
 
-### Worker
-```bash
-cd services/workers
-UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
-.venv/bin/celery -A workers_app.celery_app.celery_app worker --loglevel=info
-```
+| 能力 | 当前状态 |
+| --- | --- |
+| 讲义导入 | 支持移动端拍照/相册上传，后端保存原始图片和解析任务 |
+| AI 校对 | 默认 stub provider；可切换 Doubao / Volcengine Ark 做真实识别 |
+| 复习闭环 | `KnowledgePack`、`ReviewTask`、`PracticeSession`、`WeeklyReport` 已串联 |
+| 移动端 | Flutter 自适应手机/平板页面结构，含登录、资料库、校对、课程、复习、报告 |
+| 工程验收 | `make` 入口和 Harness evidence 目录已固定，便于反复回归 |
 
-### Infrastructure
+## 快速开始
+
+### 1. 启动本地基础设施
+
 ```bash
 cp infra/.env.example infra/.env
-docker compose -f infra/docker-compose.yml up -d
+make infra-up
 ```
 
-### Database Migration
+### 2. 安装依赖并迁移数据库
+
 ```bash
+make api-install
+make worker-install
 make api-migrate
 ```
 
-### Mobile
+### 3. 启动 API 和 worker
+
+分别打开两个终端：
+
+```bash
+make api-dev
+```
+
+```bash
+make worker-dev
+```
+
+### 4. 运行移动端
+
 ```bash
 make mobile-bootstrap
 make mobile-analyze
+
 cd apps/mobile
-flutter run
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 ```
 
-Build a local Android test APK:
-```bash
-make mobile-apk
-```
-成功时 APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`。如果返回 `/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`，这是本机全局 Flutter SDK cache 写入权限阻塞；可临时复制一份用户可写 Flutter SDK 后用 `FLUTTER=/private/tmp/learningenglish-flutter/bin/flutter make mobile-apk` 继续验证。如果随后返回 `No Android SDK found`，说明下一层 blocker 是本机 Android SDK 未安装或未配置。这些环境问题不代表 Flutter 代码或 MVP 主链失败。
+非生产环境的手机号验证码会在 API 响应中返回 `debug_code`，默认值为 `123456`。
 
-Build and export a local iOS internal/Profile IPA:
-```bash
-make mobile-ios-ipa
-```
+## MVP 主链
 
-The iOS target uses bundle id `com.anbulang.learningenglish` with Apple Developer Team `95RDXKW54K`. The local signing identity is `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`. A successful export writes the internal Profile IPA to `dist/ios/export/learning_english_mobile.ipa`. Do not install a Flutter Debug archive for normal home-screen testing; Debug builds require Flutter tooling or Xcode to launch and will crash when opened directly on iOS 14+. If `make mobile-ios-ipa` fails with provisioning errors, confirm the Xcode account can manage Team `95RDXKW54K` and that the test device is included in the generated development provisioning profile.
-
-To point the mobile app at a non-local API host:
-```bash
-cd apps/mobile
-flutter run --dart-define=API_BASE_URL=http://<host>:8000/v1
+```mermaid
+flowchart LR
+    Login["微信登录"] --> Phone["绑定手机号"]
+    Phone --> Child["创建孩子档案"]
+    Child --> Upload["上传讲义图片"]
+    Upload --> Job["AI 识别任务"]
+    Job --> Review["家长校对"]
+    Review --> Pack["生成课程包"]
+    Pack --> Practice["完成复习/口语练习"]
+    Practice --> Report["查看周报"]
 ```
 
-If Flutter is not on your `PATH`, provide it explicitly:
-```bash
-FLUTTER=/absolute/path/to/flutter make mobile-bootstrap
-FLUTTER=/absolute/path/to/flutter make mobile-analyze
+核心后端链路：
+
+```text
+ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
+-> KnowledgePack -> ReviewTask -> PracticeSession -> WeeklyReport
 ```
 
-If you are developing behind a mainland China network, set these mirror variables before running Flutter commands:
-```bash
-export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
-export PUB_HOSTED_URL=https://pub.flutter-io.cn
-```
+## 常用命令
 
-## Verification Targets
-- Backend auth + material flow: `ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob -> KnowledgePack -> ReviewTask -> PracticeSession`
-- Adaptive navigation: phone, compact tablet, full tablet breakpoints
-- Domain naming alignment with `docs/architecture/data-models.md`
-- Alembic migration: `services/api/alembic/versions/20260327_0001_init_mvp_schema.py`
+| 目标 | 命令 |
+| --- | --- |
+| 启动本地 infra | `make infra-up` |
+| 重置本地 infra | `make infra-reset` |
+| API 测试 | `make api-test` |
+| Worker 测试 | `make worker-test` |
+| Flutter 测试 | `make mobile-test` |
+| Flutter 静态检查 | `make mobile-analyze` |
+| Android debug APK | `make mobile-apk` |
+| iOS internal/Profile IPA | `make mobile-ios-ipa` |
+| MVP readiness 回归 | `HARNESS_RESET=1 make harness-mvp-readiness` |
+| 主链 smoke | `make harness-main-chain-smoke` |
+| Doubao provider smoke | `make harness-doubao-smoke` |
 
-## Short MVP Delivery Flow
-Use this when preparing a demo or internal test package:
+## 仓库地图
 
-1. `cp infra/.env.example infra/.env`
-2. `make infra-up`
-3. `make api-install && make worker-install`
-4. `make api-migrate`
-5. Start API: `make api-dev`
-6. Start worker: `make worker-dev`
-7. Validate backend: `make api-test && make worker-test`
-8. Validate mobile: `make mobile-bootstrap && make mobile-analyze`
-9. Run app locally: `cd apps/mobile && flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1`
-10. Build Android debug APK: `make mobile-apk`
+| 路径 | 内容 |
+| --- | --- |
+| [`apps/mobile`](apps/mobile) | Flutter 移动端，覆盖 phone / tablet 自适应体验 |
+| [`packages/contracts`](packages/contracts) | Dart 侧共享领域契约，和 API Pydantic models 对齐 |
+| [`packages/design_tokens`](packages/design_tokens) | Flutter 设计 token |
+| [`services/api`](services/api) | FastAPI API、SQLAlchemy models、Alembic migrations |
+| [`services/workers`](services/workers) | Celery worker 和讲义处理任务边界 |
+| [`infra`](infra) | Docker Compose 本地依赖：PostgreSQL、Redis、MinIO、API、worker |
+| [`docs`](docs) | 产品、设计、架构、Harness 验收文档 |
+| [`scripts/harness`](scripts/harness) | MVP readiness、provider smoke、模拟器截图等辅助脚本 |
 
-## Harness Engineering 验证入口
-后续需求默认使用中文文档和 Harness Engineering 验收方式。每条需求都要说明自动化命令、人工证据和证据目录。
+## 验证入口
 
-常用命令：
+后续需求默认使用中文文档和 Harness Engineering 验收方式。每条需求都应说明自动化命令、人工证据和证据目录。
 
 ```bash
 HARNESS_RESET=1 make harness-mvp-readiness
@@ -148,25 +132,24 @@ make harness-reset-ios-sim
 make harness-capture-ios-screen SCREEN=login-screen
 ```
 
-证据目录：
-- `dist/harness/mvp-readiness.log`
-- `dist/harness/HN-*/`
-- `dist/harness/screens/`
+常用 evidence 目录：
 
-Clean-state UI 验证建议顺序：
-1. 重置后端并确认数据状态。
-2. 启动 iOS simulator。
-3. 运行 `make harness-reset-ios-sim`。
-4. 用当前 API URL 运行 App。
-5. 逐页运行 `make harness-capture-ios-screen SCREEN=<name>` 留存截图。
+| 证据 | 路径 |
+| --- | --- |
+| MVP readiness 兼容日志 | `dist/harness/mvp-readiness.log` |
+| HN-001 readiness 日志 | `dist/harness/HN-001/mvp-readiness.log` |
+| Doubao smoke 日志 | `dist/harness/HN-006/doubao-smoke.log` |
+| HN 需求证据 | `dist/harness/HN-*/` |
+| UI 截图 | `dist/harness/screens/` |
 
-## Demo Login Notes
-- MVP defaults to stub providers so it can run without real WeChat, SMS, OCR, or LLM credentials.
-- In non-production environments, phone OTP responses include `debug_code`, currently `123456`.
-- Core demo path: 登录 -> 绑定手机号 -> 创建默认孩子 -> 上传讲义 -> AI 校对 -> 课程详情 -> 复习 -> 报告。
+## AI Provider
 
-## Doubao Worksheet Recognition
-AI pipeline 默认使用 `AI_PROVIDER=stub`。要运行第一条真实豆包 / 火山方舟讲义识别链路，需要在 `infra/.env` 以及 API/worker 进程环境中配置：
+默认配置使用 `AI_PROVIDER=stub`，不需要真实微信、短信、OCR 或 LLM 凭证即可跑通 MVP 主链。
+
+<details>
+<summary>启用 Doubao / Volcengine Ark 真实识别</summary>
+
+在 `infra/.env` 以及 API/worker 进程环境中配置同一组变量：
 
 ```bash
 AI_PROVIDER=doubao
@@ -178,24 +161,53 @@ AI_REQUEST_TIMEOUT_SECONDS=180
 AI_MAX_IMAGE_COUNT=5
 ```
 
-豆包调用方式已与 ReceiptLens 对齐：文本和视觉都请求 `ARK_BASE_URL/responses`，文本内容使用 `input_text`，图片使用 `input_image`。真实讲义图片会比 provider smoke 慢，建议 `AI_REQUEST_TIMEOUT_SECONDS=180` 起步；前端校对页使用后台任务轮询，不会等待这个长请求。`doubao-seed-2-0-lite-260215` 可同时用于文本和视觉 smoke；如果其他模型返回 `ModelNotOpen`，需要先在火山方舟控制台开通该模型，或改用在线推理中的 `ep-...` endpoint ID。
-
-运行 provider smoke，不会打印密钥：
+然后运行：
 
 ```bash
 make harness-doubao-smoke
 ```
 
-该命令会写入 `dist/harness/HN-006/doubao-smoke.log`。缺配置时记录 `BLOCKED: Doubao provider smoke missing required configuration`；DNS/网络不可达时记录 `BLOCKED: Doubao provider smoke network/DNS unavailable`。配置完整且 provider 可用时会出现 `text_ok`、`vision_ok`、`PASS: Doubao provider smoke`。
-2026-05-04 08:12 已用当前配置完成一次真实 smoke，通过项包含 `text_ok`、`vision_ok` 和 `PASS: Doubao provider smoke`。
+成功日志会写入 `dist/harness/HN-006/doubao-smoke.log`，并包含 `text_ok`、`vision_ok` 和 `PASS: Doubao provider smoke`。缺配置、DNS/网络不可达等情况会记录为 `BLOCKED`，不会打印密钥。
 
-Doubao 模式下 App 契约不变：上传仍创建 `CourseMaterial -> MaterialParseJob`，轮询后 job 进入 `needs_review`，家长确认后创建 `KnowledgePack` 和三类 MVP 复习任务。如果 Doubao 调用失败，job 会标记为 `failed`，并在 `confidence_summary` 中写入可读错误，后续可重试。
+</details>
 
-手动 smoke 时，用上述环境变量启动 API 和 worker，从移动端上传真实讲义照片，再确认 AI 校对页展示了抽取出的单词和句型。
+## 打包与设备
 
-## Harness Deliverables
-- Non-technical trial guide: `docs/harness/non-technical-pilot-guide.md`
-- MVP readiness checklist: `docs/harness/mvp-readiness-checklist.md`
-- Upload recognition loop requirements: `docs/harness/upload-recognition-loop.md`
-- Upload recognition implementation plan: `docs/superpowers/plans/2026-05-05-upload-recognition-loop.md`
-- iOS export options: `apps/mobile/ios/ExportOptions.internal.plist`
+```bash
+make mobile-apk
+make mobile-ios-ipa
+```
+
+iOS 目标默认使用 bundle id `com.anbulang.learningenglish` 和 Apple Developer Team `95RDXKW54K`。导出的 internal/Profile IPA 位于 `dist/ios/export/learning_english_mobile.ipa`。
+
+如果要连接非本机 API：
+
+```bash
+cd apps/mobile
+flutter run --dart-define=API_BASE_URL=http://<host>:8000/v1
+```
+
+大陆网络下运行 Flutter 命令前可设置镜像：
+
+```bash
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+export PUB_HOSTED_URL=https://pub.flutter-io.cn
+```
+
+## 文档入口
+
+| 主题 | 文档 |
+| --- | --- |
+| 系统总览 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
+| 数据模型 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
+| 后端架构 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
+| 移动端架构 | [`docs/architecture/mobile-architecture.md`](docs/architecture/mobile-architecture.md) |
+| MVP readiness | [`docs/harness/mvp-readiness-checklist.md`](docs/harness/mvp-readiness-checklist.md) |
+| 上传识别链路 | [`docs/harness/upload-recognition-loop.md`](docs/harness/upload-recognition-loop.md) |
+| 非技术试点指南 | [`docs/harness/non-technical-pilot-guide.md`](docs/harness/non-technical-pilot-guide.md) |
+| API 服务 | [`services/api/README.md`](services/api/README.md) |
+| Worker 服务 | [`services/workers/README.md`](services/workers/README.md) |
+
+## License
+
+LearningEnglish is licensed under [Apache License 2.0](LICENSE).
