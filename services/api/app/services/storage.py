@@ -43,6 +43,29 @@ class LocalStorageService:
             url=url,
         )
 
+    def save_bytes(
+        self,
+        *,
+        owner_type: str,
+        owner_id: str,
+        object_key: str,
+        content_type: str,
+        payload: bytes,
+    ) -> StoredAssetModel:
+        target = self.settings.local_storage_path / object_key
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(payload)
+        url = f"{self.settings.public_base_url.rstrip('/')}/uploads/{object_key}"
+        return StoredAssetModel(
+            owner_type=owner_type,
+            owner_id=owner_id,
+            bucket=self.settings.storage_bucket,
+            object_key=object_key,
+            content_type=content_type,
+            size_bytes=len(payload),
+            url=url,
+        )
+
     def resolve_local_path(self, asset: StoredAssetModel) -> Path:
         return self.settings.local_storage_path / asset.object_key
 
@@ -80,6 +103,32 @@ class S3StorageService:
             bucket=self.settings.storage_bucket,
             object_key=object_key,
             content_type=upload.content_type or "application/octet-stream",
+            size_bytes=len(payload),
+            url=url,
+        )
+
+    def save_bytes(
+        self,
+        *,
+        owner_type: str,
+        owner_id: str,
+        object_key: str,
+        content_type: str,
+        payload: bytes,
+    ) -> StoredAssetModel:
+        self.client.put_object(
+            Bucket=self.settings.storage_bucket,
+            Key=object_key,
+            Body=payload,
+            ContentType=content_type,
+        )
+        url = f"{self.settings.public_base_url.rstrip('/')}/uploads/{object_key}"
+        return StoredAssetModel(
+            owner_type=owner_type,
+            owner_id=owner_id,
+            bucket=self.settings.storage_bucket,
+            object_key=object_key,
+            content_type=content_type,
             size_bytes=len(payload),
             url=url,
         )
