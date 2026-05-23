@@ -59,7 +59,7 @@ def test_build_reference_image_crops_source_bbox(monkeypatch, tmp_path: Path) ->
         source_bbox=SourceBoundingBox(x=0.1, y=0.25, width=0.5, height=0.5),
     )
 
-    reference = build_reference_image(asset=asset, source_assets=[stored], work_dir=tmp_path / "refs")
+    reference = build_reference_image(asset, [stored], tmp_path / "refs")
 
     assert reference is not None
     assert reference.exists()

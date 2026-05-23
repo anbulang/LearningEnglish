@@ -10,12 +10,7 @@ from app.db.models import StoredAssetModel
 from app.models.contracts import LearningAsset
 
 
-def build_reference_image(
-    *,
-    asset: LearningAsset,
-    source_assets: list[StoredAssetModel],
-    work_dir: Path,
-) -> Optional[Path]:
+def build_reference_image(asset: LearningAsset, source_assets: list[StoredAssetModel], work_dir: Path) -> Optional[Path]:
     if asset.source_bbox is None:
         return None
     if asset.source_page_index < 1 or asset.source_page_index > len(source_assets):
