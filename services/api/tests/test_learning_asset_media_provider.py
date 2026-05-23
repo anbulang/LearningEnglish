@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from pathlib import Path
 from typing import Callable
 
@@ -11,7 +12,9 @@ import pytest
 from app.core.settings import get_settings
 from app.models.contracts import LearningAsset
 from app.services.learning_asset_media import (
+    MediaProviderBundle,
     MediaProviderConfigurationError,
+    MediaProviderError,
     OpenAIImageGenerationProvider,
     OpenAITTSProvider,
     build_media_provider_bundle,
@@ -27,6 +30,14 @@ class FakeTransport(httpx.BaseTransport):
         request.read()
         self.requests.append(request)
         return self.handler(request)
+
+
+class CloseableProvider:
+    def __init__(self) -> None:
+        self.close_count = 0
+
+    def close(self) -> None:
+        self.close_count += 1
 
 
 def _clear_media_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -125,7 +136,8 @@ def test_openai_image_generation_with_reference_calls_edits(tmp_path: Path) -> N
         assert b"Color the reference image." in request.content
         assert b'name="size"' in request.content
         assert b"1024x1024" in request.content
-        assert b'name="image[]"' in request.content
+        assert b'name="image"' in request.content
+        assert b'name="image[]"' not in request.content
         assert b"reference-image" in request.content
         return httpx.Response(200, json={"data": [{"b64_json": base64.b64encode(b"edited").decode()}]})
 
@@ -148,6 +160,55 @@ def test_openai_image_generation_with_reference_calls_edits(tmp_path: Path) -> N
     assert media.payload == b"edited"
     assert media.content_type == "image/png"
     assert media.extension == ".png"
+
+
+@pytest.mark.parametrize(
+    ("response", "match"),
+    [
+        (httpx.Response(500, text="server error"), "OpenAI image generation failed"),
+        (httpx.Response(200, content=b"not-json"), "OpenAI image generation failed"),
+        (httpx.Response(200, json={"data": [{}]}), "OpenAI image response missing data[0].b64_json"),
+        (httpx.Response(200, json={"data": [{"b64_json": "not base64"}]}), "OpenAI image response has invalid base64"),
+    ],
+)
+def test_openai_image_generation_wraps_provider_failures(response: httpx.Response, match: str) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return response
+
+    client = httpx.Client(transport=FakeTransport(handler))
+    provider = OpenAIImageGenerationProvider(
+        api_key="sk-test",
+        base_url="https://api.openai.test/v1",
+        model="gpt-image-test",
+        client=client,
+    )
+
+    with pytest.raises(MediaProviderError, match=re.escape(match)):
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
+
+
+def test_openai_image_generation_wraps_network_errors() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection failed", request=request)
+
+    client = httpx.Client(transport=FakeTransport(handler))
+    provider = OpenAIImageGenerationProvider(
+        api_key="sk-test",
+        base_url="https://api.openai.test/v1",
+        model="gpt-image-test",
+        client=client,
+    )
+
+    with pytest.raises(MediaProviderError, match="OpenAI image generation failed"):
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
 
 
 def test_openai_tts_synthesize_uk_uses_speech_endpoint_and_cedar_voice() -> None:
@@ -178,3 +239,43 @@ def test_openai_tts_synthesize_uk_uses_speech_endpoint_and_cedar_voice() -> None
     assert media.payload == b"mp3-bytes"
     assert media.content_type == "audio/mpeg"
     assert media.extension == ".mp3"
+
+
+def test_openai_tts_synthesize_rejects_unknown_accent() -> None:
+    provider = OpenAITTSProvider(
+        api_key="sk-test",
+        base_url="https://api.openai.test/v1",
+        model="gpt-4o-mini-tts",
+        us_voice="coral",
+        uk_voice="cedar",
+        client=httpx.Client(transport=FakeTransport(lambda request: httpx.Response(200, content=b"unused"))),
+    )
+
+    with pytest.raises(MediaProviderError, match="Unsupported TTS accent"):
+        provider.synthesize(text="queen", accent="au")
+
+
+def test_openai_tts_synthesize_wraps_http_failures() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, text="rate limited")
+
+    provider = OpenAITTSProvider(
+        api_key="sk-test",
+        base_url="https://api.openai.test/v1",
+        model="gpt-4o-mini-tts",
+        us_voice="coral",
+        uk_voice="cedar",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="OpenAI TTS generation failed"):
+        provider.synthesize(text="queen", accent="uk")
+
+
+def test_media_provider_bundle_close_closes_unique_providers_once() -> None:
+    shared_provider = CloseableProvider()
+    bundle = MediaProviderBundle(image_provider=shared_provider, tts_provider=shared_provider, mode="mock")
+
+    bundle.close()
+
+    assert shared_provider.close_count == 1

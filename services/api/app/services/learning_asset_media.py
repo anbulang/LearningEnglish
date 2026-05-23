@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +38,17 @@ class MediaProviderBundle:
     image_provider: ImageGenerationProvider
     tts_provider: TTSProvider
     mode: str
+
+    def close(self) -> None:
+        seen: set[int] = set()
+        for provider in (self.image_provider, self.tts_provider):
+            provider_id = id(provider)
+            if provider_id in seen:
+                continue
+            seen.add(provider_id)
+            close = getattr(provider, "close", None)
+            if callable(close):
+                close()
 
 
 class ImageGenerationProvider(Protocol):
@@ -87,28 +99,42 @@ class OpenAIImageGenerationProvider:
     ) -> GeneratedMedia:
         del asset
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        if reference_image_path is None:
-            response = self._client.post(
-                f"{self.base_url}/images/generations",
-                headers=headers,
-                json={"model": self.model, "prompt": prompt, "size": "1024x1024"},
-            )
-        else:
-            with Path(reference_image_path).open("rb") as image_file:
+        try:
+            if reference_image_path is None:
                 response = self._client.post(
-                    f"{self.base_url}/images/edits",
+                    f"{self.base_url}/images/generations",
                     headers=headers,
-                    data={"model": self.model, "prompt": prompt, "size": "1024x1024"},
-                    files={"image[]": (Path(reference_image_path).name, image_file, "image/png")},
+                    json={"model": self.model, "prompt": prompt, "size": "1024x1024"},
                 )
-        response.raise_for_status()
-        payload = response.json()
+            else:
+                image_path = Path(reference_image_path)
+                with image_path.open("rb") as image_file:
+                    response = self._client.post(
+                        f"{self.base_url}/images/edits",
+                        headers=headers,
+                        data={"model": self.model, "prompt": prompt, "size": "1024x1024"},
+                        files={"image": (image_path.name, image_file, "image/png")},
+                    )
+            response.raise_for_status()
+            payload = response.json()
+        except httpx.HTTPError as exc:
+            raise MediaProviderError("OpenAI image generation failed") from exc
+        except (OSError, ValueError) as exc:
+            raise MediaProviderError("OpenAI image generation failed") from exc
+
         try:
             image_b64 = payload["data"][0]["b64_json"]
         except (KeyError, IndexError, TypeError) as exc:
             raise MediaProviderError("OpenAI image response missing data[0].b64_json") from exc
+        if not isinstance(image_b64, str):
+            raise MediaProviderError("OpenAI image response missing data[0].b64_json")
+
+        try:
+            image_payload = base64.b64decode(image_b64, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise MediaProviderError("OpenAI image response has invalid base64") from exc
         return GeneratedMedia(
-            payload=base64.b64decode(image_b64),
+            payload=image_payload,
             content_type="image/png",
             extension=".png",
         )
@@ -141,19 +167,24 @@ class OpenAITTSProvider:
 
     def synthesize(self, text: str, accent: str) -> GeneratedMedia:
         accent_key = accent.strip().lower()
+        if accent_key not in {"us", "uk"}:
+            raise MediaProviderError(f"Unsupported TTS accent: {accent}")
         voice = self.uk_voice if accent_key == "uk" else self.us_voice
         pronunciation = "British English pronunciation" if accent_key == "uk" else "American English pronunciation"
-        response = self._client.post(
-            f"{self.base_url}/audio/speech",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={
-                "model": self.model,
-                "voice": voice,
-                "input": text,
-                "instructions": f"Use clear {pronunciation} for a young English learner.",
-            },
-        )
-        response.raise_for_status()
+        try:
+            response = self._client.post(
+                f"{self.base_url}/audio/speech",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "voice": voice,
+                    "input": text,
+                    "instructions": f"Use clear {pronunciation} for a young English learner.",
+                },
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise MediaProviderError("OpenAI TTS generation failed") from exc
         return GeneratedMedia(payload=response.content, content_type="audio/mpeg", extension=".mp3")
 
     def close(self) -> None:
