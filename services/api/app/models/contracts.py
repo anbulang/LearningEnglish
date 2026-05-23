@@ -202,12 +202,15 @@ class LearningAsset(BaseModel):
     generated_image_status: MediaGenerationStatus = MediaGenerationStatus.pending
     generated_image_url: str = ""
     generated_image_object_key: str = ""
+    generated_image_error: str = ""
     tts_us_status: MediaGenerationStatus = MediaGenerationStatus.pending
     tts_us_url: str = ""
     tts_us_object_key: str = ""
+    tts_us_error: str = ""
     tts_uk_status: MediaGenerationStatus = MediaGenerationStatus.pending
     tts_uk_url: str = ""
     tts_uk_object_key: str = ""
+    tts_uk_error: str = ""
     primary_accent: PrimaryAccent = PrimaryAccent.us
 
 

@@ -52,17 +52,21 @@ class LearningAsset {
     this.generatedImageStatus = 'pending',
     this.generatedImageUrl = '',
     this.generatedImageObjectKey = '',
+    this.generatedImageError = '',
     this.ttsUsStatus = 'pending',
     this.ttsUsUrl = '',
     this.ttsUsObjectKey = '',
+    this.ttsUsError = '',
     this.ttsUkStatus = 'pending',
     this.ttsUkUrl = '',
     this.ttsUkObjectKey = '',
+    this.ttsUkError = '',
     this.primaryAccent = 'us',
   });
 
   final String difficulty;
   final String generatedImageObjectKey;
+  final String generatedImageError;
   final String generatedImageStatus;
   final String generatedImageUrl;
   final String id;
@@ -78,9 +82,11 @@ class LearningAsset {
   final String text;
   final String translation;
   final String ttsUkObjectKey;
+  final String ttsUkError;
   final String ttsUkStatus;
   final String ttsUkUrl;
   final String ttsUsObjectKey;
+  final String ttsUsError;
   final String ttsUsStatus;
   final String ttsUsUrl;
 
@@ -106,12 +112,15 @@ class LearningAsset {
       generatedImageUrl: json['generated_image_url'] as String? ?? '',
       generatedImageObjectKey:
           json['generated_image_object_key'] as String? ?? '',
+      generatedImageError: json['generated_image_error'] as String? ?? '',
       ttsUsStatus: json['tts_us_status'] as String? ?? 'pending',
       ttsUsUrl: json['tts_us_url'] as String? ?? '',
       ttsUsObjectKey: json['tts_us_object_key'] as String? ?? '',
+      ttsUsError: json['tts_us_error'] as String? ?? '',
       ttsUkStatus: json['tts_uk_status'] as String? ?? 'pending',
       ttsUkUrl: json['tts_uk_url'] as String? ?? '',
       ttsUkObjectKey: json['tts_uk_object_key'] as String? ?? '',
+      ttsUkError: json['tts_uk_error'] as String? ?? '',
       primaryAccent: json['primary_accent'] as String? ?? 'us',
     );
   }
@@ -132,12 +141,15 @@ class LearningAsset {
         'generated_image_status': generatedImageStatus,
         'generated_image_url': generatedImageUrl,
         'generated_image_object_key': generatedImageObjectKey,
+        'generated_image_error': generatedImageError,
         'tts_us_status': ttsUsStatus,
         'tts_us_url': ttsUsUrl,
         'tts_us_object_key': ttsUsObjectKey,
+        'tts_us_error': ttsUsError,
         'tts_uk_status': ttsUkStatus,
         'tts_uk_url': ttsUkUrl,
         'tts_uk_object_key': ttsUkObjectKey,
+        'tts_uk_error': ttsUkError,
         'primary_accent': primaryAccent,
       };
 }

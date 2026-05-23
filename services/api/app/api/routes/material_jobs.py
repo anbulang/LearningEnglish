@@ -182,12 +182,16 @@ def _get_owned_job(db: Session, parent_account_id: str, job_id: str) -> tuple[Ma
 
 
 def _media_failed_learning_assets(assets: list[LearningAsset]) -> list[dict]:
+    error_message = "媒体生成排队失败，请稍后重试。"
     return [
         asset.model_copy(
             update={
                 "generated_image_status": MediaGenerationStatus.failed,
+                "generated_image_error": error_message,
                 "tts_us_status": MediaGenerationStatus.failed,
+                "tts_us_error": error_message,
                 "tts_uk_status": MediaGenerationStatus.failed,
+                "tts_uk_error": error_message,
             }
         ).model_dump(mode="json")
         for asset in assets

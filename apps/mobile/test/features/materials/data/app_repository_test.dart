@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_mobile/features/materials/data/app_repository.dart';
 
 import '../../../helpers/fake_dio_adapter.dart';
@@ -273,6 +274,24 @@ void main() {
         asset.ttsUkUrl,
         'http://127.0.0.1:8000/uploads/mock-media/hn014/tts/uk/queen.m4a',
       );
+    });
+
+    test('parses learning asset media error fields', () {
+      final asset = LearningAsset.fromJson(<String, dynamic>{
+        'id': 'asset_queen',
+        'text': 'queen',
+        'kind': 'word',
+        'generated_image_status': 'failed',
+        'generated_image_error': '图片生成失败：provider timeout',
+        'tts_us_status': 'failed',
+        'tts_us_error': '美式发音生成失败：provider timeout',
+        'tts_uk_status': 'failed',
+        'tts_uk_error': '英式发音生成失败：provider timeout',
+      });
+
+      expect(asset.generatedImageError, '图片生成失败：provider timeout');
+      expect(asset.ttsUsError, '美式发音生成失败：provider timeout');
+      expect(asset.ttsUkError, '英式发音生成失败：provider timeout');
     });
 
     test('keeps non-runtime localhost media URLs unchanged', () async {

@@ -307,3 +307,34 @@
 
 **证据位置：**
 - `dist/harness/HN-015/`
+
+### HN-016：真实媒体生成 Provider
+
+**目标：** 家长确认讲义后，后台用真实 provider 为每条学习资产生成彩色配图、美式 TTS 和英式 TTS，并保存到 storage。
+
+**范围内：**
+- `MEDIA_PROVIDER=real` 时使用真实外部 provider，不静默回退 mock。
+- 图片、US TTS、UK TTS 独立生成和独立失败。
+- 生成文件写入 storage 后回填 `material.learning_assets`、`KnowledgePack` 和 `ReviewTask`。
+- 移动端课程详情展示生成中、已生成和失败原因。
+
+**范围外：**
+- 孩子录音评分。
+- 家长编辑 prompt 或 voice。
+- 历史 mock 媒体迁移。
+
+**验收标准：**
+- 至少一份 Qq/Rr 讲义确认后，`material.learning_assets` 含 `generated_image_url`、`tts_us_url`、`tts_uk_url`。
+- storage 中存在对应图片和两份音频对象。
+- 单项失败不会阻塞其他媒体成功。
+- `MEDIA_PROVIDER=real` 缺少 `OPENAI_API_KEY` 时媒体状态为 `failed`，不展示 mock URL。
+- 课程详情显示中文失败原因，不展示 provider 原始英文堆栈。
+
+**Harness：**
+- 自动化：`services/api/.venv/bin/python -m pytest services/api/tests/test_learning_asset_media_provider.py services/api/tests/test_storage_media_assets.py -q`
+- 自动化：`services/workers/.venv/bin/python -m pytest services/workers/tests/test_material_job_task.py -q`
+- 自动化：`cd apps/mobile && flutter test test/features/lessons/presentation/lesson_detail_media_test.dart`
+- 人工：真机或模拟器确认课程后保存 material JSON、media job 日志和课程详情截图。
+
+**证据位置：**
+- `dist/harness/HN-016/`

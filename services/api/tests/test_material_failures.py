@@ -422,6 +422,52 @@ def test_confirm_job_keeps_course_ready_when_media_enqueue_fails(api_client, mon
     assert material_payload["learning_assets"][0]["tts_uk_status"] == "failed"
 
 
+def test_confirm_job_marks_media_enqueue_errors_on_learning_assets(api_client, monkeypatch) -> None:
+    def fail_enqueue(material_id: str) -> None:
+        raise RuntimeError("redis unavailable")
+
+    monkeypatch.setattr("app.api.routes.material_jobs.enqueue_learning_asset_media_job", fail_enqueue)
+    headers, _ = auth_headers(api_client, auth_code="confirm-media-error-backfill-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, job_id = _create_material(api_client, headers, child_id)
+
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        material = db.get(CourseMaterialModel, material_id)
+        assert job is not None
+        assert material is not None
+        job.status = JobStatus.needs_review.value
+        job.draft_title = "Qq Queen"
+        job.draft_topic = "Phonics Qq"
+        job.draft_vocabulary = ["queen"]
+        job.draft_sentences = ["Find the queen."]
+        job.draft_learning_assets = [
+            {
+                "id": "asset_queen",
+                "text": "queen",
+                "kind": "word",
+                "translation": "女王",
+                "primary_accent": "us",
+            }
+        ]
+        material.status = MaterialStatus.needs_review.value
+        db.add_all([job, material])
+        db.commit()
+
+    response = api_client.post(f"/v1/material-jobs/{job_id}/confirm", json={}, headers=headers)
+
+    assert response.status_code == 200
+    material_response = api_client.get(f"/v1/materials/{material_id}", headers=headers)
+    assert material_response.status_code == 200
+    asset = material_response.json()["material"]["learning_assets"][0]
+    assert asset["generated_image_status"] == "failed"
+    assert "媒体生成排队失败" in asset["generated_image_error"]
+    assert asset["tts_us_status"] == "failed"
+    assert "媒体生成排队失败" in asset["tts_us_error"]
+    assert asset["tts_uk_status"] == "failed"
+    assert "媒体生成排队失败" in asset["tts_uk_error"]
+
+
 def test_update_learning_asset_primary_accent(api_client) -> None:
     headers, _ = auth_headers(api_client, auth_code="primary-accent-parent")
     child_id = _create_child(api_client, headers)
@@ -438,7 +484,9 @@ def test_update_learning_asset_primary_accent(api_client) -> None:
                 "kind": "word",
                 "translation": "女王",
                 "primary_accent": "us",
+                "tts_us_status": "ready",
                 "tts_us_url": "http://testserver/mock-media/hn014/tts/us/queen.m4a",
+                "tts_uk_status": "ready",
                 "tts_uk_url": "http://testserver/mock-media/hn014/tts/uk/queen.m4a",
             }
         ]
@@ -507,6 +555,76 @@ def test_update_learning_asset_primary_accent(api_client) -> None:
         headers=headers,
     )
     assert missing_response.status_code == 404
+
+
+def test_update_primary_accent_rejects_unavailable_audio(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="primary-accent-unavailable-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, _ = _create_material(api_client, headers, child_id)
+
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        assert material is not None
+        material.status = MaterialStatus.ready.value
+        material.learning_assets = [
+            {
+                "id": "asset_queen",
+                "text": "queen",
+                "kind": "word",
+                "translation": "女王",
+                "primary_accent": "us",
+                "tts_us_status": "ready",
+                "tts_us_url": "http://testserver/mock-media/hn014/tts/us/queen.m4a",
+                "tts_uk_status": "failed",
+                "tts_uk_error": "英式发音生成失败",
+            }
+        ]
+        db.add(material)
+        db.commit()
+
+    response = api_client.patch(
+        f"/v1/materials/{material_id}/learning-assets/asset_queen/primary-accent",
+        json={"primary_accent": "uk"},
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "英式发音暂不可用"
+
+
+def test_update_primary_accent_allows_legacy_audio_urls_without_status(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="primary-accent-legacy-audio-parent")
+    child_id = _create_child(api_client, headers)
+    material_id, _ = _create_material(api_client, headers, child_id)
+
+    with SessionLocal() as db:
+        material = db.get(CourseMaterialModel, material_id)
+        assert material is not None
+        material.status = MaterialStatus.ready.value
+        material.learning_assets = [
+            {
+                "id": "asset_queen",
+                "text": "queen",
+                "kind": "word",
+                "translation": "女王",
+                "primary_accent": "us",
+                "tts_us_url": "http://testserver/mock-media/hn014/tts/us/queen.m4a",
+                "tts_uk_url": "http://testserver/mock-media/hn014/tts/uk/queen.m4a",
+            }
+        ]
+        db.add(material)
+        db.commit()
+
+    response = api_client.patch(
+        f"/v1/materials/{material_id}/learning-assets/asset_queen/primary-accent",
+        json={"primary_accent": "uk"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    asset = response.json()["material"]["learning_assets"][0]
+    assert asset["id"] == "asset_queen"
+    assert asset["primary_accent"] == "uk"
 
 
 def test_polling_job_marks_failed_when_pipeline_errors(api_client) -> None:

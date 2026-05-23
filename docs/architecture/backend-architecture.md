@@ -59,7 +59,7 @@
   - 回写 `draft_image_records`、`draft_learning_assets`
   - 将资料推进到 `needs_review`
 - `materials.process_learning_asset_media`
-  - 对已确认的学习资产补齐 mock 配图和英美音 TTS
+  - 对已确认的学习资产补齐配图和英美音 TTS
   - 回填 `CourseMaterial`、`KnowledgePack`、`ReviewTask`
 - `reporting.aggregate_weekly_report`
   - 生成轻量推荐语
@@ -103,9 +103,9 @@
   - `StubLanguageParsingProvider`
   - `DoubaoLanguageParsingProvider`
 - 学习资产媒体：
-  - `HN014MockMediaProvider`
+  - Learning Asset Media Provider（mock / OpenAI image / OpenAI TTS）
 
-目前真实外部依赖主要集中在 Doubao；媒体生成仍使用仓库内 mock 资源，不接真实图片/TTS 服务。
+目前真实外部依赖主要集中在 Doubao 和可配置媒体 provider。HN-016 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用；本地测试默认仍使用 mock provider。
 
 ## 存储约定
 
@@ -116,6 +116,6 @@
 
 ## 当前限制
 
-- 真正的 OCR、语音评分、真实 TTS 还没有全部生产化。
+- 真正的 OCR、语音评分和真实媒体生成还没有全部生产化。
 - 周报聚合仍是轻量逻辑，不是完整学习分析系统。
 - 任务队列默认面向本地环境验证，尚未形成生产级重试、监控和告警规范。

@@ -30,6 +30,7 @@ from app.models.contracts import (
     MaterialDetailResponse,
     MaterialStatus,
     MediaGenerationStatus,
+    PrimaryAccent,
 )
 from app.services.mappers import course_material_from_model, material_job_from_model
 from app.services.job_queue import enqueue_material_job
@@ -103,6 +104,10 @@ def update_learning_asset_primary_accent(
     for raw_asset in material.learning_assets or []:
         asset = LearningAsset(**raw_asset)
         if asset.id == asset_id:
+            if payload.primary_accent == PrimaryAccent.uk and not _audio_available(asset, PrimaryAccent.uk):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="英式发音暂不可用")
+            if payload.primary_accent == PrimaryAccent.us and not _audio_available(asset, PrimaryAccent.us):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="美式发音暂不可用")
             asset = asset.model_copy(update={"primary_accent": payload.primary_accent})
             found = True
         updated_assets.append(asset)
@@ -294,6 +299,12 @@ def _with_primary_audio(item: dict, asset: Optional[LearningAsset]) -> dict:
     updated = dict(item)
     updated["audio_url"] = audio_url
     return updated
+
+
+def _audio_available(asset: LearningAsset, accent: PrimaryAccent) -> bool:
+    if accent == PrimaryAccent.uk:
+        return bool(asset.tts_uk_url) and asset.tts_uk_status != MediaGenerationStatus.failed
+    return bool(asset.tts_us_url) and asset.tts_us_status != MediaGenerationStatus.failed
 
 
 def media_failed_learning_assets(assets: list[LearningAsset]) -> list[dict]:
