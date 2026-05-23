@@ -152,6 +152,52 @@ void main() {
     expect(find.text('lesson:material_1'), findsOneWidget);
   });
 
+  testWidgets('AI review page auto refreshes processing jobs', (tester) async {
+    _useTallPhoneViewport(tester);
+    final repository = _FakeAppRepository()
+      ..jobStatuses = <JobStatus>[
+        JobStatus.processing,
+        JobStatus.processing,
+        JobStatus.processing,
+        JobStatus.needsReview,
+      ];
+    final router = GoRouter(
+      initialLocation: '/materials/review/job_1?materialId=material_1',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/materials/review/:jobId',
+          builder: (context, state) => MaterialReviewScreen(
+            jobId: state.pathParameters['jobId'] ?? '',
+            materialId: state.uri.queryParameters['materialId'] ?? '',
+          ),
+        ),
+      ],
+    );
+
+    await _pumpTestApp(
+      tester,
+      router: router,
+      repository: repository,
+    );
+
+    expect(find.text('AI 正在处理中'), findsOneWidget);
+    expect(repository.getMaterialJobCalls, 1);
+
+    await tester.pump(const Duration(seconds: 4));
+    expect(repository.getMaterialJobCalls, 2);
+    expect(find.text('AI 正在处理中'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+    expect(repository.getMaterialJobCalls, 3);
+    expect(find.text('AI 正在处理中'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+
+    expect(repository.getMaterialJobCalls, 4);
+    expect(find.text('AI 识别结果'), findsOneWidget);
+  });
+
   testWidgets('AI review page shows learning assets with source page label',
       (tester) async {
     _useTallPhoneViewport(tester);
@@ -308,6 +354,8 @@ class _FakeAppRepository extends AppRepository {
 
   var uploadCalls = 0;
   var confirmCalls = 0;
+  var getMaterialJobCalls = 0;
+  List<JobStatus>? jobStatuses;
   var failPrimaryAccentUpdate = false;
 
   @override
@@ -328,6 +376,12 @@ class _FakeAppRepository extends AppRepository {
 
   @override
   Future<MaterialParseJob> getMaterialJob(String jobId) async {
+    getMaterialJobCalls += 1;
+    final statuses = jobStatuses;
+    if (statuses != null && statuses.isNotEmpty) {
+      final index = (getMaterialJobCalls - 1).clamp(0, statuses.length - 1);
+      return _materialJob(status: statuses[index]);
+    }
     return _materialJob(status: JobStatus.needsReview);
   }
 

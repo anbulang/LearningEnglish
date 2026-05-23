@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
+import '../../../core/widgets/remote_asset_image.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
@@ -29,8 +32,37 @@ class MaterialReviewScreen extends ConsumerStatefulWidget {
 }
 
 class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
+  static const _pollInterval = Duration(seconds: 3);
+
   bool _submitting = false;
   String? _actionError;
+  Timer? _pollTimer;
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _syncPolling(JobStatus status) {
+    final shouldPoll =
+        status == JobStatus.processing || status == JobStatus.queued;
+    if (!shouldPoll) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      return;
+    }
+    if (_pollTimer?.isActive ?? false) {
+      return;
+    }
+    _pollTimer = Timer(_pollInterval, () {
+      _pollTimer = null;
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(materialJobProvider(widget.jobId));
+    });
+  }
 
   Future<void> _confirm(MaterialParseJob job) async {
     final router = GoRouter.of(context);
@@ -103,6 +135,7 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
 
     final extracted = jobAsync.when(
       data: (job) {
+        _syncPolling(job.status);
         if (job.status == JobStatus.processing ||
             job.status == JobStatus.queued) {
           return Column(
@@ -110,7 +143,7 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
               const IllustratedHeroCard(
                 eyebrow: 'AI 理解中',
                 title: '讲义正在慢慢变成可复习的小课包',
-                description: '系统会先识别课题、单词和句型，再交给家长确认。这个阶段只需要稍后刷新看结果。',
+                description: '系统会先识别课题、单词和句型，再交给家长确认。页面会自动刷新处理结果。',
                 accent: AppColors.skyBlue,
                 illustration: Icons.psychology_alt_rounded,
                 assetPath: AppIllustrations.heroAiProcessing,
@@ -122,7 +155,7 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
               const SizedBox(height: AppSpacing.md),
               StatePanel(
                 title: 'AI 正在处理中',
-                description: '讲义已上传成功，正在提取单词和句型。稍后刷新即可查看结果。',
+                description: '讲义已上传成功，正在提取单词和句型。处理完成后会自动进入校对内容。',
                 assetPath: AppIllustrations.heroAiProcessing,
                 action: FilledButton(
                   onPressed: _submitting
@@ -589,13 +622,11 @@ class _SourceCropPreview extends StatelessWidget {
     if (bbox == null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        child: Image.network(
-          record.url,
+        child: RemoteAssetImage(
+          url: record.url,
           width: 72,
           height: 72,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              const _CropPlaceholder(icon: Icons.image_not_supported_outlined),
+          errorIcon: Icons.image_not_supported_outlined,
         ),
       );
     }
@@ -619,15 +650,12 @@ class _SourceCropPreview extends StatelessWidget {
             maxHeight: scaledHeight,
             child: Transform.translate(
               offset: Offset(-x * scaledWidth, -y * scaledHeight),
-              child: Image.network(
-                record.url,
+              child: RemoteAssetImage(
+                url: record.url,
                 width: scaledWidth,
                 height: scaledHeight,
                 fit: BoxFit.fill,
-                errorBuilder: (context, error, stackTrace) =>
-                    const _CropPlaceholder(
-                  icon: Icons.image_not_supported_outlined,
-                ),
+                errorIcon: Icons.image_not_supported_outlined,
               ),
             ),
           ),

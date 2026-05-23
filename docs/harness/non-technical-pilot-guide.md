@@ -2,6 +2,8 @@
 
 适用对象：内部测试同学、产品同学、需要完整体验 MVP 主链的非开发人员。
 
+当前版本说明：本文已按 2026-05-23 仓库现状更新，重点反映 AI 校对页自动轮询、真机补测结果和 Doubao 代理配置注意事项。
+
 ## 1. 你会体验到什么
 这次试用的目标是验证一条完整链路：
 
@@ -26,7 +28,7 @@
 
 ```bash
 cd /Users/chaucermini/Code/LearningEnglish
-cp infra/.env.example infra/.env
+cp infra/env/local.example.env infra/.env
 make infra-up
 make api-install
 make worker-install
@@ -103,7 +105,6 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 - 进入“资料库”或首页
 - 点击“上传讲义”
 - 至少选择 1 张图片
-- 保持默认课程标题、老师名、主题也可以
 - 点击“完成上传”
 
 检查点：
@@ -166,11 +167,13 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 - 重新点击“获取验证码”
 
 ### 上传后一直处理中
-通常是 worker 没有启动。
+通常是 worker 没有启动，或者 Doubao 所在网络环境需要系统代理但 API/worker 没有启用 `AI_HTTP_TRUST_ENV=true`。
 
 处理办法：
 - 确认 worker 已启动
-- 在 AI 校对页点击“刷新结果”
+- 先等待几秒，AI 校对页会自动轮询最新状态
+- 如当前网络依赖代理，让开发同学确认 API 和 worker 进程环境里已显式配置 `AI_HTTP_TRUST_ENV=true`
+- 如仍未更新，再在 AI 校对页点击“刷新结果”
 
 ### AI 校对显示处理失败
 如果开启了豆包模式，通常是火山方舟配置不完整、API Key 无效、endpoint/model 名称错误或网络超时。

@@ -12,6 +12,7 @@ import '../../../core/widgets/state_panel.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
+import 'material_navigation.dart';
 
 class MaterialsLibraryScreen extends ConsumerStatefulWidget {
   const MaterialsLibraryScreen({super.key});
@@ -109,7 +110,7 @@ class _MaterialsLibraryScreenState
                           key: ValueKey<String>('material-card-${material.id}'),
                           borderRadius: BorderRadius.circular(AppRadii.card),
                           onTap: () =>
-                              context.go(_materialDestination(material)),
+                              context.go(materialDestination(material)),
                           child: Row(
                             children: <Widget>[
                               LessonCoverThumbnail(
@@ -247,8 +248,12 @@ class _MaterialsLibraryScreenState
                             alignment: Alignment.bottomLeft,
                             child: FilledButton(
                               onPressed: () =>
-                                  context.go('/lessons/${selected.id}'),
-                              child: const Text('查看课程详情'),
+                                  context.go(materialDestination(selected)),
+                              child: Text(
+                                selected.status == MaterialStatus.ready
+                                    ? '查看课程详情'
+                                    : '查看 AI 校对',
+                              ),
                             ),
                           ),
                         ],
@@ -368,11 +373,4 @@ IconData _libraryIcon(String topic) {
     return Icons.record_voice_over_rounded;
   }
   return Icons.menu_book_rounded;
-}
-
-String _materialDestination(CourseMaterial material) {
-  if (material.status == MaterialStatus.ready || material.parseJobId.isEmpty) {
-    return '/lessons/${material.id}';
-  }
-  return '/materials/review/${material.parseJobId}?materialId=${material.id}';
 }

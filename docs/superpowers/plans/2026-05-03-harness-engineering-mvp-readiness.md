@@ -130,8 +130,8 @@ if [[ "$RESET" == "1" ]]; then
 fi
 
 if [[ ! -f "$ROOT/infra/.env" ]]; then
-  cp "$ROOT/infra/.env.example" "$ROOT/infra/.env"
-  log "Copied infra/.env.example to infra/.env"
+  cp "$ROOT/infra/env/local.example.env" "$ROOT/infra/.env"
+  log "Copied infra/env/local.example.env to infra/.env"
 fi
 
 run_step "Infrastructure" make -C "$ROOT" infra-up

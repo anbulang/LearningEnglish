@@ -4,72 +4,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:learning_english_contracts/contracts.dart';
+import 'package:learning_english_mobile/features/home/presentation/home_screen.dart';
 import 'package:learning_english_mobile/features/materials/data/app_repository.dart';
-import 'package:learning_english_mobile/features/materials/presentation/materials_library_screen.dart';
 import 'package:learning_english_mobile/features/profiles/data/demo_data.dart';
 
 void main() {
-  testWidgets('non-ready material opens AI review route', (tester) async {
-    final repository = _FakeAppRepository(
+  testWidgets('recent non-ready material opens AI review instead of lesson',
+      (tester) async {
+    final repository = _FakeHomeRepository(
       materials: <CourseMaterial>[
-        _courseMaterial(
-          status: MaterialStatus.failed,
-          parseJobId: 'job_failed',
-        ),
+        _material(status: MaterialStatus.needsReview),
       ],
     );
 
-    await _pumpLibrary(tester, repository);
+    await _pumpHome(tester, repository);
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('material-card-material_1')));
+    await tester.tap(find.text('待识别讲义').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('review:job_failed:material_1'), findsOneWidget);
+    expect(find.text('review:job_1:material_1'), findsOneWidget);
   });
 
-  testWidgets('needs-review material opens AI review route', (tester) async {
-    final repository = _FakeAppRepository(
+  testWidgets('start review skips non-ready material and uses ready material',
+      (tester) async {
+    final repository = _FakeHomeRepository(
       materials: <CourseMaterial>[
-        _courseMaterial(
-          status: MaterialStatus.needsReview,
-          parseJobId: 'job_needs_review',
-        ),
+        _material(id: 'material_processing', status: MaterialStatus.processing),
+        _material(id: 'material_ready', status: MaterialStatus.ready),
       ],
     );
 
-    await _pumpLibrary(tester, repository);
+    await _pumpHome(tester, repository);
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('material-card-material_1')));
+    await tester.tap(find.text('开始复习'));
     await tester.pumpAndSettle();
 
-    expect(find.text('review:job_needs_review:material_1'), findsOneWidget);
-  });
-
-  testWidgets('ready material opens lesson detail route', (tester) async {
-    final repository = _FakeAppRepository(
-      materials: <CourseMaterial>[
-        _courseMaterial(
-          status: MaterialStatus.ready,
-          parseJobId: 'job_ready',
-        ),
-      ],
-    );
-
-    await _pumpLibrary(tester, repository);
-
-    await tester
-        .tap(find.byKey(const ValueKey<String>('material-card-material_1')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('lesson:material_1'), findsOneWidget);
+    expect(find.text('review-session:material_ready'), findsOneWidget);
   });
 }
 
-Future<void> _pumpLibrary(
+Future<void> _pumpHome(
   WidgetTester tester,
-  _FakeAppRepository repository,
+  _FakeHomeRepository repository,
 ) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(390, 1600);
@@ -77,11 +53,11 @@ Future<void> _pumpLibrary(
   addTearDown(tester.view.resetDevicePixelRatio);
 
   final router = GoRouter(
-    initialLocation: '/materials',
+    initialLocation: '/home',
     routes: <RouteBase>[
       GoRoute(
-        path: '/materials',
-        builder: (context, state) => const MaterialsLibraryScreen(),
+        path: '/home',
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/materials/review/:jobId',
@@ -94,6 +70,17 @@ Future<void> _pumpLibrary(
         path: '/lessons/:materialId',
         builder: (context, state) =>
             Text('lesson:${state.pathParameters['materialId']}'),
+      ),
+      GoRoute(
+        path: '/review',
+        builder: (context, state) => const Text('review'),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'session/:materialId',
+            builder: (context, state) =>
+                Text('review-session:${state.pathParameters['materialId']}'),
+          ),
+        ],
       ),
     ],
   );
@@ -110,8 +97,8 @@ Future<void> _pumpLibrary(
   await tester.pumpAndSettle();
 }
 
-class _FakeAppRepository extends AppRepository {
-  _FakeAppRepository({required this.materials})
+class _FakeHomeRepository extends AppRepository {
+  _FakeHomeRepository({required this.materials})
       : super(
           Dio(),
           accessToken: () => 'access-token',
@@ -123,6 +110,29 @@ class _FakeAppRepository extends AppRepository {
   @override
   Future<List<CourseMaterial>> listMaterials({required String childId}) async {
     return materials;
+  }
+
+  @override
+  Future<List<ReviewTask>> listReviewTasks({
+    required String childId,
+    String? materialId,
+  }) async {
+    return const <ReviewTask>[];
+  }
+
+  @override
+  Future<WeeklyReport> getWeeklyReport({required String childId}) async {
+    return WeeklyReport(
+      id: 'report_1',
+      childId: childId,
+      weekStart: DateTime(2026, 5, 18),
+      weekEnd: DateTime(2026, 5, 24),
+      completedSessions: 0,
+      reviewedWords: 0,
+      speakingAttempts: 0,
+      weakItems: const <String>[],
+      recommendedActions: const <String>[],
+    );
   }
 }
 
@@ -139,14 +149,14 @@ ChildProfile _childProfile() {
   );
 }
 
-CourseMaterial _courseMaterial({
+CourseMaterial _material({
+  String id = 'material_1',
   required MaterialStatus status,
-  required String parseJobId,
 }) {
   return CourseMaterial(
-    id: 'material_1',
+    id: id,
     childId: 'child_1',
-    parseJobId: parseJobId,
+    parseJobId: 'job_1',
     teacherName: '外教课',
     lessonDate: DateTime(2026, 5, 5),
     title: '待识别讲义',
