@@ -374,6 +374,8 @@ def test_process_learning_asset_media_generates_and_stores_provider_media(monkey
     result = process_learning_asset_media("material_media")
     assert result["status"] == "ready"
     assert bundle.closed is True
+    second_result = process_learning_asset_media("material_media")
+    assert second_result["status"] == "ready"
 
     db = SessionLocal()
     try:
@@ -392,6 +394,7 @@ def test_process_learning_asset_media_generates_and_stores_provider_media(monkey
         stored_assets = db.scalars(
             select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
         ).all()
+        assert len(stored_assets) == 3
         assert {row.object_key for row in stored_assets} == {
             "generated/media/material_media/asset_queen/image.png",
             "generated/media/material_media/asset_queen/tts-us.mp3",
@@ -405,6 +408,56 @@ def test_process_learning_asset_media_generates_and_stores_provider_media(monkey
         assert review_task is not None
         assert review_task.content_json["image_url"] == image_url
         assert review_task.content_json["audio_url"] == tts_us_url
+    finally:
+        db.close()
+
+
+def test_process_learning_asset_media_preserves_hn014_mock_manifest_urls() -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_mock", "asset_queen", "queen")
+
+    result = process_learning_asset_media("material_media_mock")
+    assert result["status"] == "ready"
+
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_media_mock")
+        assert material is not None
+        asset = material.learning_assets[0]
+        assert asset["generated_image_status"] == "ready"
+        assert asset["generated_image_url"] == "http://testserver/mock-media/hn014/images/queen.svg"
+        assert asset["generated_image_object_key"] == "mock_media/hn014/images/queen.svg"
+        assert asset["source_bbox"] == {"x": 0.05, "y": 0.14, "width": 0.43, "height": 0.35}
+        assert asset["tts_us_url"] == "http://testserver/mock-media/hn014/tts/us/queen.m4a"
+        assert asset["tts_uk_url"] == "http://testserver/mock-media/hn014/tts/uk/queen.m4a"
+        stored_assets = db.scalars(
+            select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
+        ).all()
+        assert stored_assets == []
+    finally:
+        db.close()
+
+
+def test_process_learning_asset_media_fails_unknown_hn014_mock_asset() -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_mock_unknown", "asset_unknown", "not-in-manifest")
+
+    result = process_learning_asset_media("material_media_mock_unknown")
+    assert result["status"] == "failed"
+
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_media_mock_unknown")
+        assert material is not None
+        asset = material.learning_assets[0]
+        assert asset["generated_image_status"] == "failed"
+        assert asset["tts_us_status"] == "failed"
+        assert asset["tts_uk_status"] == "failed"
+        assert "HN-014 mock media asset not found" in asset["generated_image_error"]
     finally:
         db.close()
 
@@ -444,6 +497,48 @@ def test_process_learning_asset_media_keeps_tts_when_image_generation_fails(monk
         assert "图片生成失败" in asset["generated_image_error"]
         assert asset["tts_us_status"] == "ready"
         assert asset["tts_uk_status"] == "ready"
+    finally:
+        db.close()
+
+
+def test_process_learning_asset_media_stops_saving_when_archived_during_generation(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_archive_mid_generation", "asset_queen", "queen")
+
+    class ArchivingImageProvider:
+        def generate(self, asset, prompt, reference_image_path):
+            with SessionLocal() as db:
+                material = db.get(CourseMaterialModel, "material_media_archive_mid_generation")
+                assert material is not None
+                material.status = MaterialStatus.archived.value
+                db.add(material)
+                db.commit()
+            return GeneratedMedia(b"image-bytes", "image/png", ".png")
+
+    class FakeTTSProvider:
+        def synthesize(self, text, accent):
+            return GeneratedMedia(f"{accent}-audio".encode(), "audio/mpeg", ".mp3")
+
+    class FakeBundle:
+        image_provider = ArchivingImageProvider()
+        tts_provider = FakeTTSProvider()
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", lambda: FakeBundle())
+
+    result = process_learning_asset_media("material_media_archive_mid_generation")
+    assert result == {"material_id": "material_media_archive_mid_generation", "status": "archived"}
+
+    db = SessionLocal()
+    try:
+        stored_assets = db.scalars(
+            select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
+        ).all()
+        assert stored_assets == []
     finally:
         db.close()
 

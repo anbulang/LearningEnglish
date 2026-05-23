@@ -141,84 +141,95 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
         bundle = build_media_provider_bundle()
         updated_assets: list[LearningAsset] = []
         try:
-            with tempfile.TemporaryDirectory(prefix=f"media-{material_id}-") as temp_dir:
-                work_dir = Path(temp_dir)
-                for asset in processing_assets:
-                    reference_image_path = _build_reference_image(asset, source_assets, work_dir, storage=storage)
-                    updated_asset = asset
+            if _should_apply_mock_manifest(bundle):
+                updated_assets = bundle.image_provider.apply(processing_assets)
+            else:
+                with tempfile.TemporaryDirectory(prefix=f"media-{material_id}-") as temp_dir:
+                    work_dir = Path(temp_dir)
+                    for asset in processing_assets:
+                        reference_image_path = _build_reference_image(asset, source_assets, work_dir, storage=storage)
+                        updated_asset = asset
 
-                    try:
-                        generated_image = bundle.image_provider.generate(
-                            asset,
-                            _image_prompt(asset),
-                            reference_image_path,
-                        )
-                        image_asset = storage.save_bytes(
-                            owner_type="generated_media",
-                            owner_id=material.id,
-                            object_key=_media_object_key(
-                                material.id,
-                                asset.id,
-                                "image",
-                                generated_image.extension,
-                            ),
-                            content_type=generated_image.content_type,
-                            payload=generated_image.payload,
-                        )
-                        db.add(image_asset)
-                        updated_asset = updated_asset.model_copy(
-                            update={
-                                "generated_image_status": MediaGenerationStatus.ready,
-                                "generated_image_url": image_asset.url,
-                                "generated_image_object_key": image_asset.object_key,
-                                "generated_image_error": "",
-                            }
-                        )
-                    except Exception as exc:
-                        updated_asset = updated_asset.model_copy(
-                            update={
-                                "generated_image_status": MediaGenerationStatus.failed,
-                                "generated_image_error": f"图片生成失败：{exc}",
-                            }
-                        )
-
-                    for accent in ("us", "uk"):
                         try:
-                            generated_audio = bundle.tts_provider.synthesize(
-                                _pronunciation_text(asset),
-                                accent,
+                            generated_image = bundle.image_provider.generate(
+                                asset,
+                                _image_prompt(asset),
+                                reference_image_path,
                             )
-                            audio_asset = storage.save_bytes(
-                                owner_type="generated_media",
+                            _ensure_material_not_archived(db, material.id)
+                            image_asset = _save_generated_media_asset(
+                                db,
+                                storage,
                                 owner_id=material.id,
                                 object_key=_media_object_key(
                                     material.id,
                                     asset.id,
-                                    f"tts-{accent}",
-                                    generated_audio.extension,
+                                    "image",
+                                    generated_image.extension,
                                 ),
-                                content_type=generated_audio.content_type,
-                                payload=generated_audio.payload,
+                                content_type=generated_image.content_type,
+                                payload=generated_image.payload,
                             )
-                            db.add(audio_asset)
                             updated_asset = updated_asset.model_copy(
                                 update={
-                                    f"tts_{accent}_status": MediaGenerationStatus.ready,
-                                    f"tts_{accent}_url": audio_asset.url,
-                                    f"tts_{accent}_object_key": audio_asset.object_key,
-                                    f"tts_{accent}_error": "",
+                                    "generated_image_status": MediaGenerationStatus.ready,
+                                    "generated_image_url": image_asset.url,
+                                    "generated_image_object_key": image_asset.object_key,
+                                    "generated_image_error": "",
                                 }
                             )
+                        except _ArchivedDuringMediaGeneration:
+                            raise
                         except Exception as exc:
                             updated_asset = updated_asset.model_copy(
                                 update={
-                                    f"tts_{accent}_status": MediaGenerationStatus.failed,
-                                    f"tts_{accent}_error": f"{accent.upper()} 音频生成失败：{exc}",
+                                    "generated_image_status": MediaGenerationStatus.failed,
+                                    "generated_image_error": f"图片生成失败：{exc}",
                                 }
                             )
 
-                    updated_assets.append(updated_asset)
+                        for accent in ("us", "uk"):
+                            try:
+                                generated_audio = bundle.tts_provider.synthesize(
+                                    _pronunciation_text(asset),
+                                    accent,
+                                )
+                                _ensure_material_not_archived(db, material.id)
+                                audio_asset = _save_generated_media_asset(
+                                    db,
+                                    storage,
+                                    owner_id=material.id,
+                                    object_key=_media_object_key(
+                                        material.id,
+                                        asset.id,
+                                        f"tts-{accent}",
+                                        generated_audio.extension,
+                                    ),
+                                    content_type=generated_audio.content_type,
+                                    payload=generated_audio.payload,
+                                )
+                                updated_asset = updated_asset.model_copy(
+                                    update={
+                                        f"tts_{accent}_status": MediaGenerationStatus.ready,
+                                        f"tts_{accent}_url": audio_asset.url,
+                                        f"tts_{accent}_object_key": audio_asset.object_key,
+                                        f"tts_{accent}_error": "",
+                                    }
+                                )
+                            except _ArchivedDuringMediaGeneration:
+                                raise
+                            except Exception as exc:
+                                updated_asset = updated_asset.model_copy(
+                                    update={
+                                        f"tts_{accent}_status": MediaGenerationStatus.failed,
+                                        f"tts_{accent}_error": f"{accent.upper()} 音频生成失败：{exc}",
+                                    }
+                                )
+
+                        updated_assets.append(updated_asset)
             status_value = _status_for_assets(updated_assets)
+        except _ArchivedDuringMediaGeneration:
+            return {"material_id": material_id, "status": "archived"}
         finally:
             bundle.close()
 
@@ -239,6 +250,51 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
         return {"material_id": material_id, "status": status_value}
     finally:
         db.close()
+
+
+class _ArchivedDuringMediaGeneration(Exception):
+    pass
+
+
+def _should_apply_mock_manifest(bundle) -> bool:
+    return getattr(bundle, "mode", "") == "mock" and callable(getattr(bundle.image_provider, "apply", None))
+
+
+def _ensure_material_not_archived(db, material_id: str) -> None:
+    db.expire_all()
+    material = db.get(CourseMaterialModel, material_id)
+    if material is not None and material.status == MaterialStatus.archived.value:
+        raise _ArchivedDuringMediaGeneration()
+
+
+def _save_generated_media_asset(
+    db,
+    storage,
+    *,
+    owner_id: str,
+    object_key: str,
+    content_type: str,
+    payload: bytes,
+) -> StoredAssetModel:
+    saved = storage.save_bytes(
+        owner_type="generated_media",
+        owner_id=owner_id,
+        object_key=object_key,
+        content_type=content_type,
+        payload=payload,
+    )
+    existing = db.scalar(select(StoredAssetModel).where(StoredAssetModel.object_key == saved.object_key))
+    if existing is None:
+        db.add(saved)
+        return saved
+    existing.owner_type = saved.owner_type
+    existing.owner_id = saved.owner_id
+    existing.bucket = saved.bucket
+    existing.content_type = saved.content_type
+    existing.size_bytes = saved.size_bytes
+    existing.url = saved.url
+    db.add(existing)
+    return existing
 
 
 def _backfill_generated_media(db, material_id: str, assets: list[LearningAsset]) -> None:
