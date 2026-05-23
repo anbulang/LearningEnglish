@@ -4,15 +4,31 @@
 
 2026-05-05 真机验证中，用户在 iPhone 真机上传讲义后反馈“不能识别”，同时指出上传页要求填写课程标题、老师名、主题的表单不符合预期。用户期望的主流程是：直接拍照或选择讲义图片，由系统识别标题、主题、词汇和句型，家长只在 AI 草稿阶段做校对。
 
-当前实现更接近开发期表单：
+这份文档保留了问题来源、需求拆解和 Harness 验收要求。需要注意：HN-008 到 HN-015 当前已经基本落地，下面的“当时现状”主要用于解释为什么会产生这批需求，不代表仓库此刻仍停留在那个阶段。
+
+当前仍未收口的部分主要有两类：
+
+- 人工截图证据还没全部补齐，尤其是 AI 校对页、课程详情页和删除成功页。
+- Doubao 真识别在部分网络环境下仍可能受代理继承影响；如果 shell 已配置 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 但 worker 仍无法访问外网，需要额外设置 `AI_HTTP_TRUST_ENV=true`。
+
+## 触发问题时的旧现状
 
 1. 上传页先让用户选择图片。
 2. 用户还要填写课程标题、老师名、主题。
 3. 后端创建 `CourseMaterial` 和 `MaterialParseJob`。
-4. 识别只在前端请求 `/material-jobs/{jobId}` 时同步触发。
+4. 识别当时没有稳定地通过后台队列自动推进到可校对状态。
 5. 如果用户从资料库点进课程详情，前端会请求 `/knowledge-packs/{materialId}`；未确认生成知识包前会返回 `404`。
 
 这会让真实用户误以为“上传后没有识别”。
+
+## 当前收敛状态
+
+- 上传页已经改为拍照/相册优先，不再要求先填表单。
+- 上传后会创建后台 job，并进入 AI 校对页。
+- AI 校对页会对 `queued` / `processing` 自动轮询。
+- 首页与资料库对未完成资料统一进入 AI 校对页。
+- `failed`、`needs_review`、`ready`、`archived` 的状态收敛已经体现在 API、Flutter 路由和 Harness 文档中。
+- HN-012、HN-013、HN-014、HN-015 都已经有代码和证据落点，剩余主要是截图补齐和下一阶段能力建设。
 
 ## 真机问题记录
 
@@ -79,6 +95,7 @@
 **验收标准：**
 - `processing`、`needs_review`、`failed` 材料不会直接请求 `knowledge-packs`。
 - 未确认的材料从资料库点击后进入 AI 状态页。
+- AI 状态页在 `queued` 或 `processing` 时自动轮询 job，不依赖家长手动点击刷新。
 - ready 材料仍进入课程详情。
 
 **Harness：**
@@ -87,6 +104,12 @@
 
 **证据位置：**
 - `dist/harness/HN-009/`
+
+**2026-05-22 补测记录：**
+- 真机上传后用户反馈 AI 校对页一直停留在处理中。
+- 根因：移动端 `MaterialReviewScreen` 只在进入页面时读取一次 job，`queued/processing` 状态没有自动轮询；worker 完成后页面不会自动切换到家长校对态。
+- 修复：AI 校对页在 `queued/processing` 状态下每 3 秒刷新 `materialJobProvider`，进入 `needs_review`、`ready` 或 `failed` 后停止轮询。
+- 回归：`flutter test test/features/materials/presentation/scan_review_navigation_test.dart --plain-name "AI review page auto refreshes processing jobs"`。
 
 ### HN-010：识别失败时 material 和 job 状态一致
 
@@ -147,7 +170,7 @@
 
 **目标：** 真机验证不只记录“能安装启动”，还要记录上传识别链路的结果。
 
-**当前状态：** 已能构建 Profile 包、安装并启动真机；拍照入口曾因 iOS 隐私用途说明缺失直接闪退，已补齐权限配置并重新安装启动。真机上传识别结果仍缺少一次完整的 material/job 证据。
+**当前状态：** 已能构建 Profile 包、安装并启动真机；拍照入口曾因 iOS 隐私用途说明缺失直接闪退，已补齐权限配置并重新安装启动。2026-05-22 已补齐一次重新安装 App 后的真机上传识别 material/job 证据。
 
 **范围内：**
 - 记录真机 API base URL。
@@ -181,11 +204,32 @@
 - 证据：`dist/harness/HN-012/Runner-2026-05-05-154100.ips`。
 - 当前未完成：重新启动后 API 只记录到 `healthz`、`auth/refresh`、`materials`、`review-tasks`、`reports/weekly` 首页请求；尚未记录新的 `POST /v1/materials` 上传请求。
 
+**2026-05-22 真机补测记录：**
+- 设备：`Chaucer`，`19586D29-7FF4-5289-8B83-30AA8C3F273D`。
+- API base URL：`http://192.168.2.15:8000/v1`。
+- 构建：`flutter build ios --profile --dart-define=API_BASE_URL=http://192.168.2.15:8000/v1` 成功，产物为 `apps/mobile/build/ios/iphoneos/Runner.app`。
+- 安装：`xcrun devicectl device install app --device 19586D29-7FF4-5289-8B83-30AA8C3F273D build/ios/iphoneos/Runner.app --timeout 120` 成功。
+- 启动：`xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F273D --terminate-existing com.anbulang.learningenglish --timeout 60` 成功。
+- 真机来源 IP：`192.168.2.16`。
+- API 日志：`POST /v1/auth/wechat/login` 返回 `200 OK`，`POST /v1/children` 返回 `201 Created`，`POST /v1/materials` 返回 `201 Created`。
+- worker 日志：收到 `materials.process_material_job`，调用 Doubao `/responses` 返回 `200 OK`，最终 `job_d5219576911b` 进入 `needs_review`。
+- 结果：`material_d23e45e7b76f` 状态为 `needs_review`；`job.draft_image_records` 为 4 条，`job.draft_learning_assets` 为 12 条。
+- 证据：`dist/harness/HN-012/real-device-summary.json`、`real-device-job-final.json`、`real-device-material-detail.json`、`real-device-material-list.json`。
+
+**2026-05-22 真机 AI 校对轮询补测：**
+- API base URL：`http://192.168.2.15:8000/v1`，真机来源 IP 为 `192.168.2.16`。
+- 修复点：AI 校对页对 `queued` / `processing` job 每 3 秒自动刷新；首页、资料库列表和平板预览统一按资料状态路由，未完成资料进入 AI 校对页，只有 `ready` 资料进入课程详情。
+- API 日志：真机删除旧资料后重新上传，`POST /v1/materials` 返回 `201 Created`，随后自动轮询 `GET /v1/material-jobs/job_7ec0b76ec07b`。
+- worker 日志：`materials.process_material_job` 调用 Doubao `/responses` 返回 `200 OK`，最终 `job_7ec0b76ec07b` 进入 `needs_review`，耗时约 69 秒。
+- 代理诊断：worker 日志显示 `AI_HTTP_TRUST_ENV=false`，环境里存在 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`，但 AI HTTP client 不继承系统代理。
+- 结果：`material_d01ce38fc51f` 状态为 `needs_review`；`job.draft_image_records` 为 2 条，`job.draft_learning_assets` 为 12 条，图片来源为 `gallery`。
+- 证据：`dist/harness/HN-012/real-device-ai-review-job-2026-05-22.json`、`dist/harness/HN-012/real-device-ai-review-material-2026-05-22.json`。
+
 ### HN-013：图片级讲义记录与解析留存
 
 **目标：** 每次拍照或相册选择都要形成可追溯的图片页记录。图片除了参与 AI 解析之外，还要长期保留对应的标题、OCR 文本、单词、句子和细节说明。
 
-**当前状态：** 后端合约已增加 `MaterialImageRecord`；上传、AI 校对和课程详情链路可返回图片级记录。真机上传证据仍并入 `HN-012` 后续补测。
+**当前状态：** 后端合约已增加 `MaterialImageRecord`；上传、AI 校对和课程详情链路可返回图片级记录。2026-05-22 真机上传证据已随 `HN-012` 补齐，本次 material/job 均返回 4 条图片级记录。
 
 **范围内：**
 - 上传时记录每张图片的 `page_index`、`source_type`、原始文件名、URL、object key、content type 和大小。

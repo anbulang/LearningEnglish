@@ -726,7 +726,7 @@ def _post_chat_json(
     if not isinstance(content, str) or not content.strip():
         raise DoubaoProviderError("Doubao response contained empty content")
     try:
-        payload = json.loads(_strip_json_fence(content))
+        payload = json.loads(_extract_json_object_text(content))
     except json.JSONDecodeError as exc:
         raise DoubaoProviderError("Doubao response content must be valid JSON") from exc
     if not isinstance(payload, dict):
@@ -819,6 +819,51 @@ def _strip_json_fence(content: str) -> str:
         stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
         stripped = re.sub(r"\s*```$", "", stripped)
     return stripped.strip()
+
+
+def _extract_json_object_text(content: str) -> str:
+    stripped = _strip_json_fence(content)
+    fenced = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", stripped)
+    if fenced:
+        candidate = fenced.group(1).strip()
+        if candidate.startswith("{"):
+            return candidate
+
+    if stripped.startswith("{"):
+        return stripped
+
+    balanced = _first_balanced_json_object(stripped)
+    return balanced or stripped
+
+
+def _first_balanced_json_object(content: str) -> str:
+    start = content.find("{")
+    if start < 0:
+        return ""
+
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(content)):
+        char = content[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return content[start : index + 1].strip()
+    return ""
 
 
 def _image_data_url(path: Path) -> str:

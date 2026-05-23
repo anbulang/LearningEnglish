@@ -120,6 +120,38 @@ def test_doubao_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) ->
     assert "bird" in draft.confidence_summary
 
 
+def test_doubao_vision_provider_extracts_json_from_wrapped_response(tmp_path: Path) -> None:
+    worksheet = tmp_path / "worksheet.jpg"
+    worksheet.write_bytes(b"fake-image")
+    payload = {
+        "ocr_text": "Find the queen. Quick!",
+        "title": "Quick!",
+        "topic": "Qq phonics",
+        "vocabulary": ["queen"],
+        "sentences": ["Find the queen. Quick!"],
+        "warnings": [],
+        "confidence_summary": "识别清晰。",
+    }
+    wrapped = (
+        "下面是结构化结果：\n"
+        "```json\n"
+        f"{json.dumps(payload, ensure_ascii=False)}\n"
+        "```\n"
+        "请家长确认。"
+    )
+    provider = DoubaoVisionOCRProvider(
+        api_key="ark-key",
+        base_url="https://ark.test/api/v3",
+        model_or_endpoint="doubao-vision-test",
+        client=_client_for_response(_completion_response(wrapped)),
+    )
+
+    draft = provider.extract(_material(), [worksheet])
+
+    assert draft.title == "Quick!"
+    assert draft.vocabulary == ["queen"]
+
+
 def test_doubao_vision_provider_normalizes_list_title_and_topic(tmp_path: Path) -> None:
     worksheet = tmp_path / "worksheet.jpg"
     worksheet.write_bytes(b"fake-image")

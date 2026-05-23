@@ -10,6 +10,7 @@ import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../materials/data/app_repository.dart';
+import '../../materials/presentation/material_navigation.dart';
 import '../../profiles/data/demo_data.dart';
 import '../../session/data/session_controller.dart';
 
@@ -81,12 +82,12 @@ class HomeScreen extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () {
                 final loadedMaterials = materials.valueOrNull;
-                final firstMaterial =
-                    loadedMaterials != null && loadedMaterials.isNotEmpty
-                        ? loadedMaterials.first
-                        : null;
-                if (firstMaterial != null) {
-                  context.go('/review/session/${firstMaterial.id}');
+                final readyMaterial = firstReadyMaterial(loadedMaterials);
+                if (readyMaterial != null) {
+                  context.go('/review/session/${readyMaterial.id}');
+                } else if (loadedMaterials != null &&
+                    loadedMaterials.isNotEmpty) {
+                  context.go(materialDestination(loadedMaterials.first));
                 } else {
                   context.go('/review');
                 }
@@ -164,7 +165,8 @@ class HomeScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(AppRadii.card),
-                          onTap: () => context.go('/lessons/${material.id}'),
+                          onTap: () =>
+                              context.go(materialDestination(material)),
                           child: Row(
                             children: <Widget>[
                               LessonCoverThumbnail(

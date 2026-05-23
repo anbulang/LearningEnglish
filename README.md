@@ -34,7 +34,7 @@ LearningEnglish 是一个面向早期英语学习家庭的内测 MVP。家长拍
 ### 1. 启动本地基础设施
 
 ```bash
-cp infra/.env.example infra/.env
+cp infra/env/local.example.env infra/.env
 make infra-up
 ```
 
@@ -169,6 +169,14 @@ make harness-doubao-smoke
 
 成功日志会写入 `dist/harness/HN-006/doubao-smoke.log`，并包含 `text_ok`、`vision_ok` 和 `PASS: Doubao provider smoke`。缺配置、DNS/网络不可达等情况会记录为 `BLOCKED`，不会打印密钥。
 
+如果 API/worker 运行在需要继承系统代理的网络环境，还要显式配置：
+
+```bash
+AI_HTTP_TRUST_ENV=true
+```
+
+默认值是 `false`。这意味着即使 shell 里已经有 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`，AI HTTP client 也不会自动继承；在公司网络、代理网络或特定 Wi-Fi 下，这通常会直接影响 Doubao 连通性。
+
 </details>
 
 ## 打包与设备
@@ -198,6 +206,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 文档 |
 | --- | --- |
+| 项目进度与 ToDo | [`docs/project/2026-05-23-status-and-todo.md`](docs/project/2026-05-23-status-and-todo.md) |
 | 系统总览 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
