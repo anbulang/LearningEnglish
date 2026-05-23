@@ -4,6 +4,8 @@ import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from sqlalchemy import select
+
 
 _TEST_ROOT = tempfile.mkdtemp(prefix="learning-english-worker-test-")
 os.environ["APP_ENV"] = "testing"
@@ -31,8 +33,111 @@ from app.db.models import (
     StoredAssetModel,
 )
 from app.models.contracts import JobStatus, LearningAsset, MaterialStatus, MediaGenerationStatus
+from app.services.learning_asset_media import GeneratedMedia
 from workers_app.celery_app import celery_app
 from workers_app.tasks import process_learning_asset_media, process_material_job
+
+
+def _seed_media_material(material_id: str, asset_id: str, text: str) -> None:
+    uploads_root = os.environ["LOCAL_STORAGE_PATH"]
+    object_key = f"material/{material_id}/source.png"
+    os.makedirs(f"{uploads_root}/material/{material_id}", exist_ok=True)
+    with open(f"{uploads_root}/{object_key}", "wb") as handle:
+        handle.write(b"not a real image")
+
+    db = SessionLocal()
+    try:
+        parent = ParentAccountModel(
+            id=f"parent_{material_id}",
+            display_name="家长",
+            wechat_union_id=f"wechat_union_{material_id}",
+            wechat_open_id=f"wechat_open_{material_id}",
+        )
+        child = ChildProfileModel(
+            id=f"child_{material_id}",
+            parent_account_id=parent.id,
+            name="Mia",
+            age=6,
+            level="starter",
+            learning_goal="稳定复习",
+            preferred_review_duration_minutes=10,
+            parent_notes="",
+        )
+        material = CourseMaterialModel(
+            id=material_id,
+            child_id=child.id,
+            teacher_name="Emma",
+            lesson_date=date(2026, 3, 25),
+            title=f"{text.title()} Practice",
+            topic="Phonics",
+            status=MaterialStatus.ready.value,
+            uploaded_at=datetime.now(timezone.utc),
+            source_images=[f"http://testserver/uploads/{object_key}"],
+            source_image_keys=[object_key],
+            normalized_image_keys=[object_key],
+            learning_assets=[
+                {
+                    "id": asset_id,
+                    "text": text,
+                    "kind": "word",
+                    "translation": "练习词",
+                    "primary_accent": "us",
+                    "pronunciation_text": text,
+                    "image_prompt": f"A child-friendly flashcard image for {text}.",
+                }
+            ],
+        )
+        source_asset = StoredAssetModel(
+            id=f"source_{material_id}",
+            owner_type="material",
+            owner_id=material.id,
+            bucket="learning-english",
+            object_key=object_key,
+            content_type="image/png",
+            size_bytes=16,
+            url=f"http://testserver/uploads/{object_key}",
+        )
+        knowledge_pack = KnowledgePackModel(
+            id=f"knowledge_{material_id}",
+            material_id=material.id,
+            topic="Phonics",
+            difficulty_band="repeat",
+            lesson_summary=f"复习 {text}。",
+            review_recommendation="先看图听音。",
+            vocabulary_items=[
+                {
+                    "id": f"word_{asset_id}",
+                    "knowledge_pack_id": f"knowledge_{material_id}",
+                    "word": text,
+                    "meaning_cn": "练习词",
+                    "image_url": "",
+                    "audio_url": "",
+                    "example_sentence": "",
+                }
+            ],
+            sentence_patterns=[],
+        )
+        review_task = ReviewTaskModel(
+            id=f"task_{asset_id}",
+            child_id=child.id,
+            material_id=material.id,
+            task_type="flashcard",
+            difficulty="easy",
+            content_json={
+                "asset_id": asset_id,
+                "prompt": f"看图跟读：{text}",
+                "word": text,
+                "translation": "练习词",
+                "image_url": "",
+                "audio_url": "",
+            },
+            due_date=datetime.now(timezone.utc),
+            status="pending",
+        )
+        db.add_all([parent, child, material, source_asset, knowledge_pack, review_task])
+        db.commit()
+    finally:
+        db.close()
 
 
 def test_material_job_task_is_registered() -> None:
@@ -236,111 +341,109 @@ def test_process_material_job_marks_failed_when_provider_errors(monkeypatch) -> 
         db.close()
 
 
-def test_process_learning_asset_media_fills_mock_urls() -> None:
+def test_process_learning_asset_media_generates_and_stores_provider_media(monkeypatch) -> None:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    db = SessionLocal()
-    try:
-        parent = ParentAccountModel(
-            id="parent_media",
-            display_name="家长",
-            wechat_union_id="wechat_union_media",
-            wechat_open_id="wechat_open_media",
-        )
-        child = ChildProfileModel(
-            id="child_media",
-            parent_account_id=parent.id,
-            name="Mia",
-            age=6,
-            level="starter",
-            learning_goal="稳定复习",
-            preferred_review_duration_minutes=10,
-            parent_notes="",
-        )
-        material = CourseMaterialModel(
-            id="material_media",
-            child_id=child.id,
-            teacher_name="Emma",
-            lesson_date=date(2026, 3, 25),
-            title="Qq Queen",
-            topic="Phonics Qq",
-            status=MaterialStatus.ready.value,
-            uploaded_at=datetime.now(timezone.utc),
-            learning_assets=[
-                {
-                    "id": "asset_queen",
-                    "text": "queen",
-                    "kind": "word",
-                    "translation": "女王",
-                    "primary_accent": "us",
-                }
-            ],
-        )
-        knowledge_pack = KnowledgePackModel(
-            id="knowledge_media",
-            material_id=material.id,
-            topic="Phonics Qq",
-            difficulty_band="repeat",
-            lesson_summary="复习 queen。",
-            review_recommendation="先看图听音。",
-            vocabulary_items=[
-                {
-                    "id": "word_queen",
-                    "knowledge_pack_id": "knowledge_media",
-                    "word": "queen",
-                    "meaning_cn": "女王",
-                    "image_url": "",
-                    "audio_url": "",
-                    "example_sentence": "",
-                }
-            ],
-            sentence_patterns=[],
-        )
-        review_task = ReviewTaskModel(
-            id="task_queen",
-            child_id=child.id,
-            material_id=material.id,
-            task_type="flashcard",
-            difficulty="easy",
-            content_json={
-                "asset_id": "asset_queen",
-                "prompt": "看图跟读：queen",
-                "word": "queen",
-                "translation": "女王",
-                "image_url": "",
-                "audio_url": "",
-            },
-            due_date=datetime.now(timezone.utc),
-            status="pending",
-        )
-        db.add_all([parent, child, material, knowledge_pack, review_task])
-        db.commit()
-    finally:
-        db.close()
+    _seed_media_material("material_media", "asset_queen", "queen")
+
+    class FakeImageProvider:
+        def generate(self, asset, prompt, reference_image_path):
+            assert asset.id == "asset_queen"
+            assert "queen" in prompt
+            assert reference_image_path is None
+            return GeneratedMedia(b"image-bytes", "image/png", ".png")
+
+    class FakeTTSProvider:
+        def synthesize(self, text, accent):
+            assert text == "queen"
+            return GeneratedMedia(f"{accent}-audio".encode(), "audio/mpeg", ".mp3")
+
+    class FakeBundle:
+        def __init__(self) -> None:
+            self.image_provider = FakeImageProvider()
+            self.tts_provider = FakeTTSProvider()
+            self.closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    bundle = FakeBundle()
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", lambda: bundle)
 
     result = process_learning_asset_media("material_media")
     assert result["status"] == "ready"
+    assert bundle.closed is True
 
     db = SessionLocal()
     try:
         material = db.get(CourseMaterialModel, "material_media")
         assert material is not None
         asset = material.learning_assets[0]
+        image_url = "http://testserver/uploads/generated/media/material_media/asset_queen/image.png"
+        tts_us_url = "http://testserver/uploads/generated/media/material_media/asset_queen/tts-us.mp3"
+        tts_uk_url = "http://testserver/uploads/generated/media/material_media/asset_queen/tts-uk.mp3"
         assert asset["generated_image_status"] == "ready"
-        assert asset["generated_image_url"] == "http://testserver/mock-media/hn014/images/queen.svg"
+        assert asset["generated_image_url"] == image_url
         assert asset["tts_us_status"] == "ready"
-        assert asset["tts_us_url"] == "http://testserver/mock-media/hn014/tts/us/queen.m4a"
+        assert asset["tts_us_url"] == tts_us_url
         assert asset["tts_uk_status"] == "ready"
-        assert asset["tts_uk_url"] == "http://testserver/mock-media/hn014/tts/uk/queen.m4a"
-        knowledge_pack = db.get(KnowledgePackModel, "knowledge_media")
+        assert asset["tts_uk_url"] == tts_uk_url
+        stored_assets = db.scalars(
+            select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
+        ).all()
+        assert {row.object_key for row in stored_assets} == {
+            "generated/media/material_media/asset_queen/image.png",
+            "generated/media/material_media/asset_queen/tts-us.mp3",
+            "generated/media/material_media/asset_queen/tts-uk.mp3",
+        }
+        knowledge_pack = db.get(KnowledgePackModel, "knowledge_material_media")
         assert knowledge_pack is not None
-        assert knowledge_pack.vocabulary_items[0]["image_url"] == "http://testserver/mock-media/hn014/images/queen.svg"
-        assert knowledge_pack.vocabulary_items[0]["audio_url"] == "http://testserver/mock-media/hn014/tts/us/queen.m4a"
-        review_task = db.get(ReviewTaskModel, "task_queen")
+        assert knowledge_pack.vocabulary_items[0]["image_url"] == image_url
+        assert knowledge_pack.vocabulary_items[0]["audio_url"] == tts_us_url
+        review_task = db.get(ReviewTaskModel, "task_asset_queen")
         assert review_task is not None
-        assert review_task.content_json["image_url"] == "http://testserver/mock-media/hn014/images/queen.svg"
-        assert review_task.content_json["audio_url"] == "http://testserver/mock-media/hn014/tts/us/queen.m4a"
+        assert review_task.content_json["image_url"] == image_url
+        assert review_task.content_json["audio_url"] == tts_us_url
+    finally:
+        db.close()
+
+
+def test_process_learning_asset_media_keeps_tts_when_image_generation_fails(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_partial", "asset_queen", "queen")
+
+    class FailingImageProvider:
+        def generate(self, asset, prompt, reference_image_path):
+            raise RuntimeError("image provider timeout")
+
+    class FakeTTSProvider:
+        def synthesize(self, text, accent):
+            return GeneratedMedia(f"{accent}-audio".encode(), "audio/mpeg", ".mp3")
+
+    class FakeBundle:
+        image_provider = FailingImageProvider()
+        tts_provider = FakeTTSProvider()
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", lambda: FakeBundle())
+
+    result = process_learning_asset_media("material_media_partial")
+    assert result["status"] == "partial"
+
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_media_partial")
+        assert material is not None
+        asset = material.learning_assets[0]
+        assert asset["generated_image_status"] == "failed"
+        assert "图片生成失败" in asset["generated_image_error"]
+        assert asset["tts_us_status"] == "ready"
+        assert asset["tts_uk_status"] == "ready"
     finally:
         db.close()
 
@@ -391,11 +494,12 @@ def test_process_learning_asset_media_preserves_user_primary_accent(monkeypatch)
     finally:
         db.close()
 
-    class ConcurrentAccentProvider:
-        def __init__(self, public_base_url: str) -> None:
-            self.public_base_url = public_base_url.rstrip("/")
+    class ConcurrentImageProvider:
+        def generate(self, asset, prompt, reference_image_path):
+            return GeneratedMedia(b"image-bytes", "image/png", ".png")
 
-        def apply(self, assets):
+    class ConcurrentTTSProvider:
+        def synthesize(self, text, accent):
             with SessionLocal() as db:
                 material = db.get(CourseMaterialModel, "material_media_accent")
                 assert material is not None
@@ -404,20 +508,16 @@ def test_process_learning_asset_media_preserves_user_primary_accent(monkeypatch)
                 material.learning_assets = [current]
                 db.add(material)
                 db.commit()
-            return [
-                assets[0].model_copy(
-                        update={
-                            "generated_image_status": MediaGenerationStatus.ready,
-                            "generated_image_url": f"{self.public_base_url}/mock-media/hn014/images/queen.svg",
-                            "tts_us_status": MediaGenerationStatus.ready,
-                            "tts_us_url": f"{self.public_base_url}/mock-media/hn014/tts/us/queen.m4a",
-                            "tts_uk_status": MediaGenerationStatus.ready,
-                            "tts_uk_url": f"{self.public_base_url}/mock-media/hn014/tts/uk/queen.m4a",
-                        }
-                    )
-            ]
+            return GeneratedMedia(f"{accent}-audio".encode(), "audio/mpeg", ".mp3")
 
-    monkeypatch.setattr("workers_app.tasks.HN014MockMediaProvider", ConcurrentAccentProvider)
+    class ConcurrentBundle:
+        image_provider = ConcurrentImageProvider()
+        tts_provider = ConcurrentTTSProvider()
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", lambda: ConcurrentBundle())
 
     result = process_learning_asset_media("material_media_accent")
     assert result["status"] == "ready"
@@ -428,7 +528,7 @@ def test_process_learning_asset_media_preserves_user_primary_accent(monkeypatch)
         assert material is not None
         asset = material.learning_assets[0]
         assert asset["primary_accent"] == "uk"
-        assert asset["tts_uk_url"] == "http://testserver/mock-media/hn014/tts/uk/queen.m4a"
+        assert asset["tts_uk_url"] == "http://testserver/uploads/generated/media/material_media_accent/asset_queen/tts-uk.mp3"
     finally:
         db.close()
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -13,7 +14,6 @@ if str(API_ROOT) not in sys.path:
     sys.path.append(str(API_ROOT))
 
 from app.core.db import SessionLocal
-from app.core.settings import get_settings
 from app.db.models import (
     ChildProfileModel,
     CourseMaterialModel,
@@ -24,7 +24,7 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import JobStatus, LearningAsset, MaterialStatus, MediaGenerationStatus, PrimaryAccent
-from app.services.learning_asset_media import HN014MockMediaProvider
+from app.services.learning_asset_media import build_media_provider_bundle
 from app.services.mappers import course_material_from_model, material_job_from_model
 from app.services.pipeline import build_pipeline_service
 from app.services.storage import get_storage_service
@@ -101,6 +101,7 @@ def process_material_job(job_id: str) -> dict[str, str]:
 @shared_task(name="materials.process_learning_asset_media")
 def process_learning_asset_media(material_id: str) -> dict[str, str]:
     db = SessionLocal()
+    bundle = None
     try:
         material = db.get(CourseMaterialModel, material_id)
         if material is None:
@@ -128,28 +129,100 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
         db.add(material)
         db.commit()
 
+        storage = get_storage_service()
+        source_assets = db.scalars(
+            select(StoredAssetModel)
+            .where(
+                StoredAssetModel.owner_type == "material",
+                StoredAssetModel.owner_id == material.id,
+            )
+            .order_by(StoredAssetModel.created_at, StoredAssetModel.id)
+        ).all()
+        bundle = build_media_provider_bundle()
+        updated_assets: list[LearningAsset] = []
         try:
-            provider = HN014MockMediaProvider(public_base_url=get_settings().public_base_url)
-            updated_assets = provider.apply(processing_assets)
-            status_value = "ready" if all(
-                asset.generated_image_status == MediaGenerationStatus.ready
-                and asset.tts_us_status == MediaGenerationStatus.ready
-                and asset.tts_uk_status == MediaGenerationStatus.ready
-                for asset in updated_assets
-            ) else "partial"
-        except Exception:
-            updated_assets = [
-                asset.model_copy(
-                    update={
-                        "generated_image_status": MediaGenerationStatus.failed,
-                        "tts_us_status": MediaGenerationStatus.failed,
-                        "tts_uk_status": MediaGenerationStatus.failed,
-                    }
-                )
-                for asset in processing_assets
-            ]
-            status_value = "failed"
+            with tempfile.TemporaryDirectory(prefix=f"media-{material_id}-") as temp_dir:
+                work_dir = Path(temp_dir)
+                for asset in processing_assets:
+                    reference_image_path = _build_reference_image(asset, source_assets, work_dir, storage=storage)
+                    updated_asset = asset
 
+                    try:
+                        generated_image = bundle.image_provider.generate(
+                            asset,
+                            _image_prompt(asset),
+                            reference_image_path,
+                        )
+                        image_asset = storage.save_bytes(
+                            owner_type="generated_media",
+                            owner_id=material.id,
+                            object_key=_media_object_key(
+                                material.id,
+                                asset.id,
+                                "image",
+                                generated_image.extension,
+                            ),
+                            content_type=generated_image.content_type,
+                            payload=generated_image.payload,
+                        )
+                        db.add(image_asset)
+                        updated_asset = updated_asset.model_copy(
+                            update={
+                                "generated_image_status": MediaGenerationStatus.ready,
+                                "generated_image_url": image_asset.url,
+                                "generated_image_object_key": image_asset.object_key,
+                                "generated_image_error": "",
+                            }
+                        )
+                    except Exception as exc:
+                        updated_asset = updated_asset.model_copy(
+                            update={
+                                "generated_image_status": MediaGenerationStatus.failed,
+                                "generated_image_error": f"图片生成失败：{exc}",
+                            }
+                        )
+
+                    for accent in ("us", "uk"):
+                        try:
+                            generated_audio = bundle.tts_provider.synthesize(
+                                _pronunciation_text(asset),
+                                accent,
+                            )
+                            audio_asset = storage.save_bytes(
+                                owner_type="generated_media",
+                                owner_id=material.id,
+                                object_key=_media_object_key(
+                                    material.id,
+                                    asset.id,
+                                    f"tts-{accent}",
+                                    generated_audio.extension,
+                                ),
+                                content_type=generated_audio.content_type,
+                                payload=generated_audio.payload,
+                            )
+                            db.add(audio_asset)
+                            updated_asset = updated_asset.model_copy(
+                                update={
+                                    f"tts_{accent}_status": MediaGenerationStatus.ready,
+                                    f"tts_{accent}_url": audio_asset.url,
+                                    f"tts_{accent}_object_key": audio_asset.object_key,
+                                    f"tts_{accent}_error": "",
+                                }
+                            )
+                        except Exception as exc:
+                            updated_asset = updated_asset.model_copy(
+                                update={
+                                    f"tts_{accent}_status": MediaGenerationStatus.failed,
+                                    f"tts_{accent}_error": f"{accent.upper()} 音频生成失败：{exc}",
+                                }
+                            )
+
+                    updated_assets.append(updated_asset)
+            status_value = _status_for_assets(updated_assets)
+        finally:
+            bundle.close()
+
+        db.expire_all()
         current_material = db.get(CourseMaterialModel, material_id)
         if current_material is not None and current_material.status == MaterialStatus.archived.value:
             return {"material_id": material_id, "status": "archived"}
@@ -158,9 +231,10 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
             for item in ((current_material.learning_assets if current_material is not None else None) or [])
         ]
         updated_assets = _merge_generated_media_updates(updated_assets, current_assets)
-        material.learning_assets = [asset.model_dump(mode="json") for asset in updated_assets]
-        db.add(material)
-        _backfill_generated_media(db, material.id, updated_assets)
+        target_material = current_material or material
+        target_material.learning_assets = [asset.model_dump(mode="json") for asset in updated_assets]
+        db.add(target_material)
+        _backfill_generated_media(db, target_material.id, updated_assets)
         db.commit()
         return {"material_id": material_id, "status": status_value}
     finally:
@@ -218,16 +292,64 @@ def _merge_generated_media_updates(
                     "generated_image_status": generated.generated_image_status,
                     "generated_image_url": generated.generated_image_url,
                     "generated_image_object_key": generated.generated_image_object_key,
+                    "generated_image_error": generated.generated_image_error,
                     "tts_us_status": generated.tts_us_status,
                     "tts_us_url": generated.tts_us_url,
                     "tts_us_object_key": generated.tts_us_object_key,
+                    "tts_us_error": generated.tts_us_error,
                     "tts_uk_status": generated.tts_uk_status,
                     "tts_uk_url": generated.tts_uk_url,
                     "tts_uk_object_key": generated.tts_uk_object_key,
+                    "tts_uk_error": generated.tts_uk_error,
                 }
             )
         )
     return merged
+
+
+def _image_prompt(asset: LearningAsset) -> str:
+    if asset.image_prompt.strip():
+        return asset.image_prompt.strip()
+    details = [f"Create a child-friendly English learning flashcard image for: {asset.text}."]
+    if asset.translation.strip():
+        details.append(f"Chinese meaning: {asset.translation}.")
+    if asset.source_visual_description.strip():
+        details.append(f"Use this worksheet context: {asset.source_visual_description}.")
+    details.append("Avoid text labels in the image; make the concept clear and safe for young learners.")
+    return " ".join(details)
+
+
+def _pronunciation_text(asset: LearningAsset) -> str:
+    return asset.pronunciation_text.strip() or asset.text.strip()
+
+
+def _media_object_key(material_id: str, asset_id: str, stem: str, extension: str) -> str:
+    normalized_extension = extension if extension.startswith(".") else f".{extension}"
+    return f"generated/media/{material_id}/{asset_id}/{stem}{normalized_extension}"
+
+
+def _build_reference_image(asset: LearningAsset, source_assets: list[StoredAssetModel], work_dir: Path, *, storage) -> Optional[Path]:
+    if asset.source_bbox is None:
+        return None
+    try:
+        from app.services.media_reference import build_reference_image
+    except ImportError:
+        return None
+
+    return build_reference_image(asset, source_assets, work_dir, storage=storage)
+
+
+def _status_for_assets(assets: list[LearningAsset]) -> str:
+    statuses = [
+        status
+        for asset in assets
+        for status in (asset.generated_image_status, asset.tts_us_status, asset.tts_uk_status)
+    ]
+    if statuses and all(status == MediaGenerationStatus.ready for status in statuses):
+        return "ready"
+    if any(status == MediaGenerationStatus.ready for status in statuses):
+        return "partial"
+    return "failed"
 
 
 def _with_generated_media(item: dict, asset: Optional[LearningAsset]) -> dict:
