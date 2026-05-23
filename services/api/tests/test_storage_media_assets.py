@@ -22,6 +22,11 @@ class _FakeStorage:
         return self.source_path
 
 
+class _FailingStorage:
+    def resolve_local_path(self, asset: StoredAssetModel) -> Path:
+        raise RuntimeError("download failed")
+
+
 def test_local_storage_save_bytes_writes_generated_media(monkeypatch, tmp_path: Path) -> None:
     get_settings.cache_clear()
     monkeypatch.setenv("LOCAL_STORAGE_PATH", str(tmp_path / "uploads"))
@@ -105,3 +110,24 @@ def test_build_reference_image_crops_source_bbox(monkeypatch, tmp_path: Path) ->
     with Image.open(reference) as cropped:
         assert cropped.size == (50, 40)
         assert cropped.getpixel((0, 0)) == (255, 0, 0)
+
+
+def test_build_reference_image_returns_none_when_storage_resolve_fails(tmp_path: Path) -> None:
+    stored = StoredAssetModel(
+        owner_type="material",
+        owner_id="material_1",
+        bucket="learning-english",
+        object_key="material/material_1/worksheet.png",
+        content_type="image/png",
+        size_bytes=123,
+        url="http://testserver/uploads/material/material_1/worksheet.png",
+    )
+    asset = LearningAsset(
+        id="asset_queen",
+        text="queen",
+        kind="word",
+        source_page_index=1,
+        source_bbox=SourceBoundingBox(x=0.1, y=0.25, width=0.5, height=0.5),
+    )
+
+    assert build_reference_image(asset, [stored], tmp_path / "refs", storage=_FailingStorage()) is None

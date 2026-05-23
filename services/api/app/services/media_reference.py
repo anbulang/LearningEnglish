@@ -27,7 +27,10 @@ def build_reference_image(
         return None
 
     storage_service = storage or get_storage_service()
-    source_path = storage_service.resolve_local_path(source)
+    try:
+        source_path = storage_service.resolve_local_path(source)
+    except Exception:
+        return None
     if not source_path.exists():
         return None
 
