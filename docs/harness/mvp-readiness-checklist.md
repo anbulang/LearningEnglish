@@ -177,7 +177,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
 - [x] `HN-014` 讲义学习资产自动生成：API/worker/mock media 自动化和 job/material JSON 摘录已补齐；AI 校对页和课程详情截图可在下一次真机/模拟器回归时补充。
 - [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除和自动化 Harness 日志已补齐；人工截图可在下一次真机/模拟器回归时补充。
-- [ ] `HN-016` 真实媒体生成 Provider：待实现真实彩色配图、US TTS、UK TTS、storage 回填和课程详情失败态。
+- [ ] `HN-016` 真实媒体生成 Provider：实现已在本分支存在，可通过 `MEDIA_PROVIDER=real` 启用真实彩色配图、US TTS、UK TTS、storage 回填和课程详情失败态；最终 readiness 仍待补齐 HN-016 验证与证据。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.15:8000/v1` 构建、安装并启动成功。
