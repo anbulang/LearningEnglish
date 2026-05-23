@@ -57,6 +57,35 @@ void main() {
     expect(repository.updatedAccent, isNull);
     expect(find.text('英式发音暂不可用'), findsOneWidget);
   });
+
+  testWidgets('lesson detail allows legacy URL-only accent switch',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final repository = _LessonMediaRepository(
+      material: _material(
+        asset: _asset(
+          ttsUsStatus: 'ready',
+          ttsUsUrl: 'https://example.test/us.m4a',
+          ttsUkStatus: 'pending',
+          ttsUkUrl: 'https://example.test/uk.m4a',
+          ttsUkError: '英式发音暂不可用',
+          primaryAccent: 'us',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(_lessonDetailApp(repository));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('英式'));
+    await tester.tap(find.text('英式'));
+    await tester.pumpAndSettle();
+
+    expect(repository.updatedAccent, 'uk');
+    expect(find.text('英式发音暂不可用'), findsNothing);
+  });
 }
 
 Widget _lessonDetailApp(_LessonMediaRepository repository) {

@@ -615,9 +615,9 @@ String _mediaStatusLabel(String status) {
 
 bool _accentAvailable(LearningAsset asset, String accent) {
   if (accent == 'uk') {
-    return asset.ttsUkStatus == 'ready' && asset.ttsUkUrl.isNotEmpty;
+    return asset.ttsUkUrl.isNotEmpty && asset.ttsUkStatus != 'failed';
   }
-  return asset.ttsUsStatus == 'ready' && asset.ttsUsUrl.isNotEmpty;
+  return asset.ttsUsUrl.isNotEmpty && asset.ttsUsStatus != 'failed';
 }
 
 String _accentUnavailableMessage(LearningAsset asset, String accent) {
