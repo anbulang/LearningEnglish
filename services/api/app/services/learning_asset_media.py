@@ -114,7 +114,7 @@ class OpenAIImageGenerationProvider:
                         f"{self.base_url}/images/edits",
                         headers=headers,
                         data={"model": self.model, "prompt": prompt, "size": "1024x1024"},
-                        files={"image": (image_path.name, image_file, "image/png")},
+                        files={"image[]": (image_path.name, image_file, "image/png")},
                     )
             response.raise_for_status()
             payload = response.json()

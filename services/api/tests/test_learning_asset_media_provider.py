@@ -174,8 +174,7 @@ def test_openai_image_generation_with_reference_calls_edits(tmp_path: Path) -> N
         assert b"Color the reference image." in request.content
         assert b'name="size"' in request.content
         assert b"1024x1024" in request.content
-        assert b'name="image"' in request.content
-        assert b'name="image[]"' not in request.content
+        assert b'name="image[]"' in request.content
         assert b"reference-image" in request.content
         return httpx.Response(200, json={"data": [{"b64_json": base64.b64encode(b"edited").decode()}]})
 
