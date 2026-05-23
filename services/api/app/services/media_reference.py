@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Optional
 
 from PIL import Image, UnidentifiedImageError
 
-from app.core.settings import get_settings
 from app.db.models import StoredAssetModel
 from app.models.contracts import LearningAsset
+from app.services.storage import get_storage_service
 
 
-def build_reference_image(asset: LearningAsset, source_assets: list[StoredAssetModel], work_dir: Path) -> Optional[Path]:
+def build_reference_image(
+    asset: LearningAsset,
+    source_assets: list[StoredAssetModel],
+    work_dir: Path,
+    *,
+    storage=None,
+) -> Optional[Path]:
     if asset.source_bbox is None:
         return None
     if asset.source_page_index < 1 or asset.source_page_index > len(source_assets):
@@ -19,12 +26,13 @@ def build_reference_image(asset: LearningAsset, source_assets: list[StoredAssetM
     if not source.content_type.startswith("image/"):
         return None
 
-    source_path = get_settings().local_storage_path / source.object_key
+    storage_service = storage or get_storage_service()
+    source_path = storage_service.resolve_local_path(source)
     if not source_path.exists():
         return None
 
     work_dir.mkdir(parents=True, exist_ok=True)
-    target_path = work_dir / f"{asset.id}-reference.png"
+    target_path = work_dir / f"{_safe_filename_component(asset.id)}-reference.png"
     try:
         with Image.open(source_path) as image:
             width, height = image.size
@@ -40,3 +48,8 @@ def build_reference_image(asset: LearningAsset, source_assets: list[StoredAssetM
 
 def _clamp(value: int, minimum: int, maximum: int) -> int:
     return max(minimum, min(maximum, value))
+
+
+def _safe_filename_component(value: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", value).strip("_-")
+    return safe or "asset"

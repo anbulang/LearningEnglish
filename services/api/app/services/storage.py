@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import mimetypes
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
@@ -52,6 +52,7 @@ class LocalStorageService:
         content_type: str,
         payload: bytes,
     ) -> StoredAssetModel:
+        object_key = _validate_object_key(object_key)
         target = self.settings.local_storage_path / object_key
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(payload)
@@ -116,6 +117,7 @@ class S3StorageService:
         content_type: str,
         payload: bytes,
     ) -> StoredAssetModel:
+        object_key = _validate_object_key(object_key)
         self.client.put_object(
             Bucket=self.settings.storage_bucket,
             Key=object_key,
@@ -151,3 +153,15 @@ def get_storage_service():
     if settings.storage_backend == "s3":
         return S3StorageService()
     return LocalStorageService()
+
+
+def _validate_object_key(object_key: str) -> str:
+    key = PurePosixPath(object_key)
+    if (
+        not object_key
+        or key.as_posix() == "."
+        or key.is_absolute()
+        or any(part in {"", ".", ".."} for part in key.parts)
+    ):
+        raise ValueError("object_key must be a relative path without traversal segments")
+    return key.as_posix()
