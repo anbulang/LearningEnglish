@@ -520,17 +520,46 @@ def test_process_learning_asset_media_marks_all_media_failed_when_bundle_configu
         material = db.get(CourseMaterialModel, "material_media_config_fail")
         assert material is not None
         asset = material.learning_assets[0]
+        expected_error = "媒体生成配置失败，请检查服务端媒体 provider 配置后重试。"
         assert asset["generated_image_status"] == "failed"
         assert asset["tts_us_status"] == "failed"
         assert asset["tts_uk_status"] == "failed"
-        assert "媒体生成配置失败" in asset["generated_image_error"]
-        assert "OPENAI_API_KEY is required when MEDIA_PROVIDER=real" in asset["generated_image_error"]
-        assert "媒体生成配置失败" in asset["tts_us_error"]
-        assert "媒体生成配置失败" in asset["tts_uk_error"]
+        assert asset["generated_image_error"] == expected_error
+        assert asset["tts_us_error"] == expected_error
+        assert asset["tts_uk_error"] == expected_error
         stored_assets = db.scalars(
             select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
         ).all()
         assert stored_assets == []
+    finally:
+        db.close()
+
+
+def test_process_learning_asset_media_sanitizes_bundle_configuration_error_details(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_config_secret", "asset_queen", "queen")
+
+    def raise_configuration_error():
+        raise MediaProviderConfigurationError("Unsupported MEDIA_PROVIDER: sk-secret")
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", raise_configuration_error)
+
+    result = process_learning_asset_media("material_media_config_secret")
+
+    assert result == {"material_id": "material_media_config_secret", "status": "failed"}
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_media_config_secret")
+        assert material is not None
+        asset = material.learning_assets[0]
+        expected_error = "媒体生成配置失败，请检查服务端媒体 provider 配置后重试。"
+        for error_key in ("generated_image_error", "tts_us_error", "tts_uk_error"):
+            assert asset[error_key] == expected_error
+            assert "sk-secret" not in asset[error_key]
+            assert "Unsupported" not in asset[error_key]
+            assert "MEDIA_PROVIDER" not in asset[error_key]
     finally:
         db.close()
 

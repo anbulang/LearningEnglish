@@ -140,13 +140,13 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
         ).all()
         try:
             bundle = build_media_provider_bundle()
-        except MediaProviderConfigurationError as exc:
+        except MediaProviderConfigurationError:
             return _fail_media_bundle_build(
                 db,
                 material,
                 material_id,
                 assets,
-                _bundle_configuration_failure_message(exc),
+                _MEDIA_CONFIGURATION_ERROR_MESSAGE,
             )
         except Exception:
             return _fail_media_bundle_build(
@@ -273,6 +273,9 @@ class _ArchivedDuringMediaGeneration(Exception):
     pass
 
 
+_MEDIA_CONFIGURATION_ERROR_MESSAGE = "媒体生成配置失败，请检查服务端媒体 provider 配置后重试。"
+
+
 def _should_apply_mock_manifest(bundle) -> bool:
     return getattr(bundle, "mode", "") == "mock" and callable(getattr(bundle.image_provider, "apply", None))
 
@@ -308,10 +311,6 @@ def _fail_media_bundle_build(
     db.add(target_material)
     db.commit()
     return {"material_id": material_id, "status": "failed"}
-
-
-def _bundle_configuration_failure_message(exc: MediaProviderConfigurationError) -> str:
-    return f"媒体生成配置失败：{exc}"
 
 
 def _mark_all_media_failed(assets: list[LearningAsset], message: str) -> list[LearningAsset]:
