@@ -11,6 +11,7 @@ import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
+import '../../../core/widgets/remote_asset_image.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
@@ -621,13 +622,11 @@ class _SourceCropPreview extends StatelessWidget {
     if (bbox == null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        child: Image.network(
-          record.url,
+        child: RemoteAssetImage(
+          url: record.url,
           width: 72,
           height: 72,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              const _CropPlaceholder(icon: Icons.image_not_supported_outlined),
+          errorIcon: Icons.image_not_supported_outlined,
         ),
       );
     }
@@ -651,15 +650,12 @@ class _SourceCropPreview extends StatelessWidget {
             maxHeight: scaledHeight,
             child: Transform.translate(
               offset: Offset(-x * scaledWidth, -y * scaledHeight),
-              child: Image.network(
-                record.url,
+              child: RemoteAssetImage(
+                url: record.url,
                 width: scaledWidth,
                 height: scaledHeight,
                 fit: BoxFit.fill,
-                errorBuilder: (context, error, stackTrace) =>
-                    const _CropPlaceholder(
-                  icon: Icons.image_not_supported_outlined,
-                ),
+                errorIcon: Icons.image_not_supported_outlined,
               ),
             ),
           ),

@@ -85,8 +85,8 @@
 - [x] phone-binding：`dist/harness/screens/phone-binding-screen.png`
 - [x] home：`dist/harness/screens/home-screen.png`
 - [x] upload：`dist/harness/screens/upload-screen.png`
-- [ ] ai-review：`dist/harness/screens/ai-review-screen.png`
-- [ ] lesson-detail：`dist/harness/screens/lesson-detail-screen.png`
+- [x] ai-review：`dist/harness/screens/ai-review-screen.png`
+- [x] lesson-detail：`dist/harness/screens/lesson-detail-screen.png`
 - [x] report：`dist/harness/screens/report-screen.png`
 
 截图采集命令：
@@ -106,9 +106,10 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `dist/harness/screens/upload-screen.png`
 - `dist/harness/screens/report-screen.png`
 
-未完成截图说明：
+补充截图说明：
 - 绑定手机号截图已从 `dist/harness/HN-003/screens/ios-simulator-phone-binding.png` 同步到标准截图路径。
-- AI 校对和课程详情截图未补齐，原因是当前模拟器本地缓存 token 与重置后的 Docker Postgres 数据不一致，真实 UI 上传返回 `Invalid access token`；对应主链已由 API smoke 和 mobile widget test 覆盖。
+- AI 校对和课程详情截图已在 2026-05-23 用 iOS 模拟器、临时 SQLite API 和 HN-014 mock 讲义资料补齐。
+- 本次截图中发现 SVG mock 资源不能直接由 `Image.network` 渲染，已补 `RemoteAssetImage` 统一处理 SVG / 位图远程资源。
 
 ### Clean-state UI 验证流程
 1. 后端执行 reset，清理测试账号、孩子档案、讲义、课程与报告数据。
@@ -191,14 +192,14 @@ make harness-capture-ios-screen SCREEN=report-screen
 `HN-014` 验收证据：
 - `dist/harness/HN-014/job-learning-assets.json`
 - `dist/harness/HN-014/material-learning-assets.json`
-- `dist/harness/HN-014/review-learning-assets.png`（人工截图，可选补充）
-- `dist/harness/HN-014/lesson-learning-assets.png`（人工截图，可选补充）
+- `dist/harness/HN-014/review-learning-assets.png`
+- `dist/harness/HN-014/lesson-learning-assets.png`
 
 `HN-015` 验收证据：
 - `dist/harness/HN-015/material-delete-api.log`
 - `dist/harness/HN-015/material-delete-worker.log`
 - `dist/harness/HN-015/material-delete-mobile.log`
-- `dist/harness/HN-015/material-delete-screen.png`（人工截图，可选补充）
+- `dist/harness/HN-015/material-delete-screen.png`
 
 ## 当前结论
 
@@ -208,7 +209,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 本轮自动化验证：
 - `services/api/.venv/bin/python -m pytest services/api/tests -q`：`68 passed`
 - `services/workers/.venv/bin/python -m pytest services/workers/tests -q`：`9 passed`
-- `cd apps/mobile && flutter test`：`33 passed`
+- `cd apps/mobile && flutter test`：`35 passed`
 - `cd apps/mobile && flutter analyze`：`No issues found`
 
 2026-05-23 P0 收口补充：
@@ -216,4 +217,4 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] AI 校对页长耗时轮询回归已覆盖连续多次 `processing` 后进入 `needs_review` 的场景。
 - [x] `infra/env/local.example.env` 已补齐 Doubao provider 和 `AI_HTTP_TRUST_ENV` 示例配置。
 - [x] `docs/project/README.md` 已说明状态文档、文章草稿和素材目录边界。
-- [ ] 人工截图证据仍待补齐：AI 校对、课程详情、学习资产和删除成功截图。
+- [x] 人工截图证据已补齐：AI 校对、课程详情、学习资产和删除确认截图。

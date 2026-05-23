@@ -10,6 +10,7 @@ import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
+import '../../../core/widgets/remote_asset_image.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
@@ -295,19 +296,12 @@ class _SourceImagesCard extends StatelessWidget {
                     children: <Widget>[
                       ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadii.input),
-                        child: record.url.isEmpty
-                            ? Container(
-                                width: 64,
-                                height: 64,
-                                color: AppColors.paperWhite,
-                                child: const Icon(Icons.image_outlined),
-                              )
-                            : Image.network(
-                                record.url,
-                                width: 64,
-                                height: 64,
-                                fit: BoxFit.cover,
-                              ),
+                        child: RemoteAssetImage(
+                          url: record.url,
+                          width: 64,
+                          height: 64,
+                          errorIcon: Icons.image_outlined,
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(

@@ -85,7 +85,7 @@
 
 ### P0：把当前主链收口成“文档可信、验收可复现”的版本
 
-- [ ] 补齐 `HN-003` / `HN-012` / `HN-014` / `HN-015` 缺失的 AI 校对页、课程详情页、删除成功页截图证据；手机号绑定截图已同步到标准路径。
+- [x] 补齐 `HN-003` / `HN-012` / `HN-014` / `HN-015` 缺失的 AI 校对页、课程详情页、删除成功页截图证据；手机号绑定截图已同步到标准路径。
 - [x] 把 `material_navigation.dart` 及 home/materials 路由回归测试合入本分支，避免首页、资料库、复习入口再次分叉。
 - [x] 重新跑一轮 API、worker、mobile test 和 mobile analyze，并把最新结果写回 Harness 记录。
 - [x] 在 `infra/env/local.example.env`、API、worker 和 infra 文档中补清楚 Doubao 的代理继承说明，明确何时需要 `AI_HTTP_TRUST_ENV=true`。
@@ -152,13 +152,18 @@
 
 - `services/api/.venv/bin/python -m pytest services/api/tests -q`：`68 passed`
 - `services/workers/.venv/bin/python -m pytest services/workers/tests -q`：`9 passed`
-- `cd apps/mobile && flutter test`：`33 passed`
+- `cd apps/mobile && flutter test`：`35 passed`
 - `cd apps/mobile && flutter analyze`：`No issues found`
 
-仍未补齐的 P0 证据：
+已补齐的 P0 截图证据：
 
 - `dist/harness/screens/ai-review-screen.png`
 - `dist/harness/screens/lesson-detail-screen.png`
 - `dist/harness/HN-014/review-learning-assets.png`
 - `dist/harness/HN-014/lesson-learning-assets.png`
 - `dist/harness/HN-015/material-delete-screen.png`
+
+补充说明：
+
+- iOS 模拟器使用临时 SQLite API 与 HN-014 mock 讲义资料完成截图。
+- 截图验证过程中发现原始讲义记录和 AI 校对裁剪预览会用 `Image.network` 渲染 SVG mock 资源，导致 `Invalid image data`；本分支已补 `RemoteAssetImage` 统一处理 SVG / 位图远程资源。
