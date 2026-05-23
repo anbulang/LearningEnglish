@@ -24,7 +24,7 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import JobStatus, LearningAsset, MaterialStatus, MediaGenerationStatus, PrimaryAccent
-from app.services.learning_asset_media import build_media_provider_bundle
+from app.services.learning_asset_media import MediaProviderConfigurationError, build_media_provider_bundle
 from app.services.mappers import course_material_from_model, material_job_from_model
 from app.services.pipeline import build_pipeline_service
 from app.services.storage import get_storage_service
@@ -138,7 +138,29 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
             )
             .order_by(StoredAssetModel.created_at, StoredAssetModel.id)
         ).all()
-        bundle = build_media_provider_bundle()
+        try:
+            bundle = build_media_provider_bundle()
+        except Exception as exc:
+            db.expire_all()
+            current_material = db.get(CourseMaterialModel, material_id)
+            if current_material is not None and current_material.status == MaterialStatus.archived.value:
+                return {"material_id": material_id, "status": "archived"}
+            current_assets = [
+                LearningAsset(**item)
+                for item in ((current_material.learning_assets if current_material is not None else None) or [])
+            ]
+            failed_assets = _mark_all_media_failed(
+                processing_assets,
+                _bundle_failure_message(exc),
+            )
+            target_material = current_material or material
+            target_material.learning_assets = [
+                asset.model_dump(mode="json")
+                for asset in _merge_generated_media_updates(failed_assets, current_assets)
+            ]
+            db.add(target_material)
+            db.commit()
+            return {"material_id": material_id, "status": "failed"}
         updated_assets: list[LearningAsset] = []
         try:
             if _should_apply_mock_manifest(bundle):
@@ -265,6 +287,27 @@ def _ensure_material_not_archived(db, material_id: str) -> None:
     material = db.get(CourseMaterialModel, material_id)
     if material is not None and material.status == MaterialStatus.archived.value:
         raise _ArchivedDuringMediaGeneration()
+
+
+def _bundle_failure_message(exc: Exception) -> str:
+    prefix = "媒体生成配置失败" if isinstance(exc, MediaProviderConfigurationError) else "媒体生成失败"
+    return f"{prefix}：{exc}"
+
+
+def _mark_all_media_failed(assets: list[LearningAsset], message: str) -> list[LearningAsset]:
+    return [
+        asset.model_copy(
+            update={
+                "generated_image_status": MediaGenerationStatus.failed,
+                "generated_image_error": message,
+                "tts_us_status": MediaGenerationStatus.failed,
+                "tts_us_error": message,
+                "tts_uk_status": MediaGenerationStatus.failed,
+                "tts_uk_error": message,
+            }
+        )
+        for asset in assets
+    ]
 
 
 def _save_generated_media_asset(

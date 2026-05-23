@@ -33,7 +33,7 @@ from app.db.models import (
     StoredAssetModel,
 )
 from app.models.contracts import JobStatus, LearningAsset, MaterialStatus, MediaGenerationStatus
-from app.services.learning_asset_media import GeneratedMedia
+from app.services.learning_asset_media import GeneratedMedia, MediaProviderConfigurationError
 from workers_app.celery_app import celery_app
 from workers_app.tasks import process_learning_asset_media, process_material_job
 
@@ -497,6 +497,40 @@ def test_process_learning_asset_media_keeps_tts_when_image_generation_fails(monk
         assert "图片生成失败" in asset["generated_image_error"]
         assert asset["tts_us_status"] == "ready"
         assert asset["tts_uk_status"] == "ready"
+    finally:
+        db.close()
+
+
+def test_process_learning_asset_media_marks_all_media_failed_when_bundle_configuration_fails(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_config_fail", "asset_queen", "queen")
+
+    def raise_configuration_error():
+        raise MediaProviderConfigurationError("OPENAI_API_KEY is required when MEDIA_PROVIDER=real")
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", raise_configuration_error)
+
+    result = process_learning_asset_media("material_media_config_fail")
+
+    assert result == {"material_id": "material_media_config_fail", "status": "failed"}
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_media_config_fail")
+        assert material is not None
+        asset = material.learning_assets[0]
+        assert asset["generated_image_status"] == "failed"
+        assert asset["tts_us_status"] == "failed"
+        assert asset["tts_uk_status"] == "failed"
+        assert "媒体生成配置失败" in asset["generated_image_error"]
+        assert "OPENAI_API_KEY is required when MEDIA_PROVIDER=real" in asset["generated_image_error"]
+        assert "媒体生成配置失败" in asset["tts_us_error"]
+        assert "媒体生成配置失败" in asset["tts_uk_error"]
+        stored_assets = db.scalars(
+            select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
+        ).all()
+        assert stored_assets == []
     finally:
         db.close()
 

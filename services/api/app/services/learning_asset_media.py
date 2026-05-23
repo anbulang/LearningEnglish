@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Protocol
@@ -280,8 +281,9 @@ class HN014MockMediaProvider:
 
 def build_media_provider_bundle(public_base_url: Optional[str] = None) -> MediaProviderBundle:
     settings = get_settings()
+    explicit_media_provider = os.getenv("MEDIA_PROVIDER")
     media_provider = settings.media_provider.strip().lower()
-    if settings.app_env.strip().lower() == "testing" or media_provider == "mock":
+    if media_provider == "mock" or (settings.app_env.strip().lower() == "testing" and explicit_media_provider is None):
         mock_provider = HN014MockMediaProvider(public_base_url or settings.public_base_url)
         return MediaProviderBundle(image_provider=mock_provider, tts_provider=mock_provider, mode="mock")
 
