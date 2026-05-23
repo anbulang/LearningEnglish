@@ -60,6 +60,7 @@ def test_media_provider_settings_read_environment(monkeypatch) -> None:
 
     assert settings.media_provider == "real"
     assert settings.media_image_model == "gpt-image-1.5"
+    assert settings.media_tts_model == "gpt-4o-mini-tts"
     assert settings.media_tts_us_voice == "marin"
     assert settings.media_tts_uk_voice == "fable"
     assert settings.media_request_timeout_seconds == 90
