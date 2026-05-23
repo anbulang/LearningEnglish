@@ -394,6 +394,13 @@ class _LearningAssetDetailTileState
   bool _updatingAccent = false;
 
   Future<void> _updatePrimaryAccent(String selected) async {
+    if (!_accentAvailable(widget.asset, selected)) {
+      setState(() {
+        _accentError = _accentUnavailableMessage(widget.asset, selected);
+      });
+      return;
+    }
+
     setState(() {
       _accentError = null;
       _updatingAccent = true;
@@ -458,10 +465,19 @@ class _LearningAssetDetailTileState
                       '配图：${_mediaStatusLabel(asset.generatedImageStatus)}',
                       style: AppTextStyles.helper,
                     ),
+                    if (asset.generatedImageStatus == 'failed' &&
+                        asset.generatedImageError.isNotEmpty)
+                      _MediaFailureReason(text: asset.generatedImageError),
                     Text(
                       '美式：${_mediaStatusLabel(asset.ttsUsStatus)} · 英式：${_mediaStatusLabel(asset.ttsUkStatus)}',
                       style: AppTextStyles.helper,
                     ),
+                    if (asset.ttsUsStatus == 'failed' &&
+                        asset.ttsUsError.isNotEmpty)
+                      _MediaFailureReason(text: asset.ttsUsError),
+                    if (asset.ttsUkStatus == 'failed' &&
+                        asset.ttsUkError.isNotEmpty)
+                      _MediaFailureReason(text: asset.ttsUkError),
                     const SizedBox(height: AppSpacing.xs),
                     SegmentedButton<String>(
                       segments: const <ButtonSegment<String>>[
@@ -481,7 +497,9 @@ class _LearningAssetDetailTileState
                                 selection.single,
                               ),
                     ),
-                    if (_accentError != null) ...<Widget>[
+                    if (_accentError != null &&
+                        !_mediaFailureReasons(asset)
+                            .contains(_accentError)) ...<Widget>[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         _accentError!,
@@ -496,6 +514,20 @@ class _LearningAssetDetailTileState
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MediaFailureReason extends StatelessWidget {
+  const _MediaFailureReason({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTextStyles.helper.copyWith(color: AppColors.cocoaCoral),
     );
   }
 }
@@ -579,6 +611,32 @@ String _mediaStatusLabel(String status) {
     'failed' => '失败',
     _ => '等待生成',
   };
+}
+
+bool _accentAvailable(LearningAsset asset, String accent) {
+  if (accent == 'uk') {
+    return asset.ttsUkStatus == 'ready' && asset.ttsUkUrl.isNotEmpty;
+  }
+  return asset.ttsUsStatus == 'ready' && asset.ttsUsUrl.isNotEmpty;
+}
+
+String _accentUnavailableMessage(LearningAsset asset, String accent) {
+  if (accent == 'uk') {
+    return asset.ttsUkError.isNotEmpty ? asset.ttsUkError : '英式发音暂不可用';
+  }
+  return asset.ttsUsError.isNotEmpty ? asset.ttsUsError : '美式发音暂不可用';
+}
+
+List<String> _mediaFailureReasons(LearningAsset asset) {
+  return <String>[
+    if (asset.generatedImageStatus == 'failed' &&
+        asset.generatedImageError.isNotEmpty)
+      asset.generatedImageError,
+    if (asset.ttsUsStatus == 'failed' && asset.ttsUsError.isNotEmpty)
+      asset.ttsUsError,
+    if (asset.ttsUkStatus == 'failed' && asset.ttsUkError.isNotEmpty)
+      asset.ttsUkError,
+  ];
 }
 
 String _sourceLabel(String sourceType) {
