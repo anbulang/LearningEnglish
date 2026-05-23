@@ -140,27 +140,22 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
         ).all()
         try:
             bundle = build_media_provider_bundle()
-        except Exception as exc:
-            db.expire_all()
-            current_material = db.get(CourseMaterialModel, material_id)
-            if current_material is not None and current_material.status == MaterialStatus.archived.value:
-                return {"material_id": material_id, "status": "archived"}
-            current_assets = [
-                LearningAsset(**item)
-                for item in ((current_material.learning_assets if current_material is not None else None) or [])
-            ]
-            failed_assets = _mark_all_media_failed(
-                processing_assets,
-                _bundle_failure_message(exc),
+        except MediaProviderConfigurationError as exc:
+            return _fail_media_bundle_build(
+                db,
+                material,
+                material_id,
+                assets,
+                _bundle_configuration_failure_message(exc),
             )
-            target_material = current_material or material
-            target_material.learning_assets = [
-                asset.model_dump(mode="json")
-                for asset in _merge_generated_media_updates(failed_assets, current_assets)
-            ]
-            db.add(target_material)
-            db.commit()
-            return {"material_id": material_id, "status": "failed"}
+        except Exception:
+            return _fail_media_bundle_build(
+                db,
+                material,
+                material_id,
+                assets,
+                "媒体生成失败，请稍后重试或联系老师。",
+            )
         updated_assets: list[LearningAsset] = []
         try:
             if _should_apply_mock_manifest(bundle):
@@ -289,25 +284,77 @@ def _ensure_material_not_archived(db, material_id: str) -> None:
         raise _ArchivedDuringMediaGeneration()
 
 
-def _bundle_failure_message(exc: Exception) -> str:
-    prefix = "媒体生成配置失败" if isinstance(exc, MediaProviderConfigurationError) else "媒体生成失败"
-    return f"{prefix}：{exc}"
+def _fail_media_bundle_build(
+    db,
+    material: CourseMaterialModel,
+    material_id: str,
+    assets: list[LearningAsset],
+    message: str,
+) -> dict[str, str]:
+    db.expire_all()
+    current_material = db.get(CourseMaterialModel, material_id)
+    if current_material is not None and current_material.status == MaterialStatus.archived.value:
+        return {"material_id": material_id, "status": "archived"}
+    current_assets = [
+        LearningAsset(**item)
+        for item in ((current_material.learning_assets if current_material is not None else None) or [])
+    ]
+    failed_assets = _mark_all_media_failed(assets, message)
+    target_material = current_material or material
+    target_material.learning_assets = [
+        asset.model_dump(mode="json")
+        for asset in _merge_generated_media_updates(failed_assets, current_assets)
+    ]
+    db.add(target_material)
+    db.commit()
+    return {"material_id": material_id, "status": "failed"}
+
+
+def _bundle_configuration_failure_message(exc: MediaProviderConfigurationError) -> str:
+    return f"媒体生成配置失败：{exc}"
 
 
 def _mark_all_media_failed(assets: list[LearningAsset], message: str) -> list[LearningAsset]:
     return [
         asset.model_copy(
             update={
-                "generated_image_status": MediaGenerationStatus.failed,
-                "generated_image_error": message,
-                "tts_us_status": MediaGenerationStatus.failed,
-                "tts_us_error": message,
-                "tts_uk_status": MediaGenerationStatus.failed,
-                "tts_uk_error": message,
+                **_failed_media_update(
+                    asset.generated_image_status,
+                    status_key="generated_image_status",
+                    error_key="generated_image_error",
+                    message=message,
+                ),
+                **_failed_media_update(
+                    asset.tts_us_status,
+                    status_key="tts_us_status",
+                    error_key="tts_us_error",
+                    message=message,
+                ),
+                **_failed_media_update(
+                    asset.tts_uk_status,
+                    status_key="tts_uk_status",
+                    error_key="tts_uk_error",
+                    message=message,
+                ),
             }
         )
         for asset in assets
     ]
+
+
+def _failed_media_update(
+    status: MediaGenerationStatus,
+    *,
+    status_key: str,
+    error_key: str,
+    message: str,
+) -> dict[str, object]:
+    if status == MediaGenerationStatus.ready:
+        return {}
+    return {
+        status_key: MediaGenerationStatus.failed,
+        error_key: message,
+    }
 
 
 def _save_generated_media_asset(

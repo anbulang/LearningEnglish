@@ -535,6 +535,71 @@ def test_process_learning_asset_media_marks_all_media_failed_when_bundle_configu
         db.close()
 
 
+def test_process_learning_asset_media_preserves_ready_media_when_bundle_configuration_fails(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_config_fail_ready", "asset_queen", "queen")
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_media_config_fail_ready")
+        assert material is not None
+        ready_asset = dict(material.learning_assets[0])
+        ready_asset.update(
+            {
+                "generated_image_status": "ready",
+                "generated_image_url": "http://testserver/uploads/generated/media/material_media_config_fail_ready/asset_queen/image.png",
+                "generated_image_object_key": "generated/media/material_media_config_fail_ready/asset_queen/image.png",
+                "generated_image_error": "",
+                "tts_us_status": "ready",
+                "tts_us_url": "http://testserver/uploads/generated/media/material_media_config_fail_ready/asset_queen/tts-us.mp3",
+                "tts_us_object_key": "generated/media/material_media_config_fail_ready/asset_queen/tts-us.mp3",
+                "tts_us_error": "",
+                "tts_uk_status": "ready",
+                "tts_uk_url": "http://testserver/uploads/generated/media/material_media_config_fail_ready/asset_queen/tts-uk.mp3",
+                "tts_uk_object_key": "generated/media/material_media_config_fail_ready/asset_queen/tts-uk.mp3",
+                "tts_uk_error": "",
+            }
+        )
+        material.learning_assets = [ready_asset]
+        db.add(material)
+        db.commit()
+    finally:
+        db.close()
+
+    def raise_configuration_error():
+        raise MediaProviderConfigurationError("OPENAI_API_KEY is required when MEDIA_PROVIDER=real")
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", raise_configuration_error)
+
+    result = process_learning_asset_media("material_media_config_fail_ready")
+
+    assert result == {"material_id": "material_media_config_fail_ready", "status": "failed"}
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_media_config_fail_ready")
+        assert material is not None
+        asset = material.learning_assets[0]
+        assert asset["generated_image_status"] == "ready"
+        assert asset["generated_image_url"] == ready_asset["generated_image_url"]
+        assert asset["generated_image_object_key"] == ready_asset["generated_image_object_key"]
+        assert asset["generated_image_error"] == ""
+        assert asset["tts_us_status"] == "ready"
+        assert asset["tts_us_url"] == ready_asset["tts_us_url"]
+        assert asset["tts_us_object_key"] == ready_asset["tts_us_object_key"]
+        assert asset["tts_us_error"] == ""
+        assert asset["tts_uk_status"] == "ready"
+        assert asset["tts_uk_url"] == ready_asset["tts_uk_url"]
+        assert asset["tts_uk_object_key"] == ready_asset["tts_uk_object_key"]
+        assert asset["tts_uk_error"] == ""
+        stored_assets = db.scalars(
+            select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
+        ).all()
+        assert stored_assets == []
+    finally:
+        db.close()
+
+
 def test_process_learning_asset_media_stops_saving_when_archived_during_generation(monkeypatch) -> None:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)

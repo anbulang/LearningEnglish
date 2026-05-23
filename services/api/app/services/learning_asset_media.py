@@ -281,9 +281,9 @@ class HN014MockMediaProvider:
 
 def build_media_provider_bundle(public_base_url: Optional[str] = None) -> MediaProviderBundle:
     settings = get_settings()
-    explicit_media_provider = os.getenv("MEDIA_PROVIDER")
+    explicit_media_provider = (os.getenv("MEDIA_PROVIDER") or "").strip()
     media_provider = settings.media_provider.strip().lower()
-    if media_provider == "mock" or (settings.app_env.strip().lower() == "testing" and explicit_media_provider is None):
+    if media_provider == "mock" or (settings.app_env.strip().lower() == "testing" and not explicit_media_provider):
         mock_provider = HN014MockMediaProvider(public_base_url or settings.public_base_url)
         return MediaProviderBundle(image_provider=mock_provider, tts_provider=mock_provider, mode="mock")
 

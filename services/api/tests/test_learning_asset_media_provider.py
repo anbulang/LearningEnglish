@@ -87,10 +87,38 @@ def test_testing_environment_uses_mock_bundle_when_media_provider_not_explicit(m
     assert bundle.image_provider is bundle.tts_provider
 
 
+@pytest.mark.parametrize("media_provider", ["", "   "])
+def test_testing_environment_uses_mock_bundle_when_media_provider_is_blank(
+    monkeypatch: pytest.MonkeyPatch,
+    media_provider: str,
+) -> None:
+    _clear_media_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv("MEDIA_PROVIDER", media_provider)
+
+    bundle = build_media_provider_bundle(public_base_url="http://testserver")
+
+    assert bundle.mode == "mock"
+    assert bundle.image_provider is bundle.tts_provider
+
+
 def test_testing_environment_explicit_real_bundle_requires_openai_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_media_env(monkeypatch)
     monkeypatch.setenv("APP_ENV", "testing")
     monkeypatch.setenv("MEDIA_PROVIDER", "real")
+    monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", "openai")
+    monkeypatch.setenv("MEDIA_TTS_PROVIDER", "openai")
+
+    with pytest.raises(MediaProviderConfigurationError, match="OPENAI_API_KEY"):
+        build_media_provider_bundle(public_base_url="http://testserver")
+
+
+def test_testing_environment_explicit_real_with_whitespace_requires_openai_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_media_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv("MEDIA_PROVIDER", " real ")
     monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", "openai")
     monkeypatch.setenv("MEDIA_TTS_PROVIDER", "openai")
 
