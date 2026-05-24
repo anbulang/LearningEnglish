@@ -257,7 +257,7 @@ class DashScopeImageGenerationProvider:
         try:
             response = self._client.get(image_url)
             response.raise_for_status()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, httpx.InvalidURL, ValueError) as exc:
             raise MediaProviderError("DashScope image download failed") from exc
         return GeneratedMedia(payload=response.content, content_type="image/png", extension=".png")
 

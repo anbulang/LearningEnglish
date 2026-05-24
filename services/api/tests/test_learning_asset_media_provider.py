@@ -245,6 +245,42 @@ def test_dashscope_image_generation_reads_official_choices_image_url() -> None:
     assert media.extension == ".png"
 
 
+def test_dashscope_image_generation_sanitizes_malformed_download_url_errors() -> None:
+    malformed_url = "http://dashscope-cdn.test:abc/image.png"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            return httpx.Response(200, json={"output": {"task_id": "task_bad_url"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_bad_url":
+            return httpx.Response(
+                200,
+                json={
+                    "output": {
+                        "task_status": "SUCCEEDED",
+                        "choices": [{"message": {"content": [{"image": malformed_url}]}}],
+                    }
+                },
+            )
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope image download failed") as exc_info:
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
+
+    assert malformed_url not in str(exc_info.value)
+
+
 def test_dashscope_image_generation_with_reference_sends_data_url_and_interleave(tmp_path: Path) -> None:
     reference_path = tmp_path / "reference.png"
     reference_path.write_bytes(b"reference-bytes")
