@@ -12,6 +12,7 @@ import pytest
 from app.core.settings import get_settings
 from app.models.contracts import LearningAsset
 from app.services.learning_asset_media import (
+    DashScopeImageGenerationProvider,
     MediaProviderBundle,
     MediaProviderConfigurationError,
     MediaProviderError,
@@ -144,6 +145,148 @@ def test_media_settings_include_dashscope_provider_config(monkeypatch: pytest.Mo
     assert settings.media_image_edit_model == "wanx2.1-imageedit-test"
     assert settings.media_provider_poll_interval_seconds == 3
     assert settings.media_provider_max_poll_seconds == 33
+
+
+def test_dashscope_image_generation_without_reference_creates_task_polls_and_downloads_image() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            assert request.headers["authorization"] == "Bearer sk-dashscope"
+            assert request.headers["x-dashscope-async"] == "enable"
+            body = json.loads(request.content)
+            assert body["model"] == "wan2.6-image"
+            assert body["input"]["messages"][0]["content"] == [{"text": "Draw a colorful queen flashcard."}]
+            assert body["parameters"]["watermark"] is False
+            assert body["parameters"]["n"] == 1
+            return httpx.Response(200, json={"output": {"task_id": "task_image_1"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_image_1":
+            return httpx.Response(
+                200,
+                json={
+                    "output": {
+                        "task_status": "SUCCEEDED",
+                        "results": [{"url": "https://dashscope-cdn.test/task_image_1.png"}],
+                    }
+                },
+            )
+        if request.url == "https://dashscope-cdn.test/task_image_1.png":
+            return httpx.Response(200, content=b"dashscope-image", headers={"content-type": "image/png"})
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    transport = FakeTransport(handler)
+    client = httpx.Client(transport=transport)
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        client=client,
+    )
+
+    media = provider.generate(
+        asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+        prompt="Draw a colorful queen flashcard.",
+        reference_image_path=None,
+    )
+
+    assert [request.method for request in transport.requests] == ["POST", "GET", "GET"]
+    assert media.payload == b"dashscope-image"
+    assert media.content_type == "image/png"
+    assert media.extension == ".png"
+
+
+def test_dashscope_image_generation_with_reference_sends_data_url_and_interleave(tmp_path: Path) -> None:
+    reference_path = tmp_path / "reference.png"
+    reference_path.write_bytes(b"reference-bytes")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            body = json.loads(request.content)
+            content = body["input"]["messages"][0]["content"]
+            assert content[0] == {"text": "Draw from the reference."}
+            assert content[1]["image"] == "data:image/png;base64,cmVmZXJlbmNlLWJ5dGVz"
+            assert body["parameters"]["enable_interleave"] is True
+            return httpx.Response(200, json={"output": {"task_id": "task_image_2"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_image_2":
+            return httpx.Response(
+                200,
+                json={
+                    "output": {
+                        "task_status": "SUCCEEDED",
+                        "results": [{"url": "https://dashscope-cdn.test/task_image_2.png"}],
+                    }
+                },
+            )
+        if request.url == "https://dashscope-cdn.test/task_image_2.png":
+            return httpx.Response(200, content=b"dashscope-reference-image", headers={"content-type": "image/png"})
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    media = provider.generate(
+        asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+        prompt="Draw from the reference.",
+        reference_image_path=reference_path,
+    )
+
+    assert media.payload == b"dashscope-reference-image"
+    assert media.content_type == "image/png"
+    assert media.extension == ".png"
+
+
+def test_dashscope_image_generation_task_failure_raises_provider_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            return httpx.Response(200, json={"output": {"task_id": "task_failed"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_failed":
+            return httpx.Response(200, json={"output": {"task_status": "FAILED", "message": "policy rejected"}})
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope image task failed"):
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
+
+
+def test_dashscope_image_generation_polling_timeout_raises_provider_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            return httpx.Response(200, json={"output": {"task_id": "task_running"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_running":
+            return httpx.Response(200, json={"output": {"task_status": "RUNNING"}})
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        max_poll_seconds=0,
+        client=httpx.Client(transport=FakeTransport(handler)),
+        sleep=lambda seconds: None,
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope image task polling timed out"):
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
 
 
 def test_openai_image_generation_without_reference_calls_generations_and_decodes_payload() -> None:

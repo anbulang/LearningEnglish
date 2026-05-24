@@ -4,9 +4,10 @@ import base64
 import binascii
 import json
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Protocol
+from typing import Any, Callable, Optional, Protocol
 
 import httpx
 
@@ -139,6 +140,123 @@ class OpenAIImageGenerationProvider:
             content_type="image/png",
             extension=".png",
         )
+
+    def close(self) -> None:
+        if self._owns_client:
+            self._client.close()
+
+
+class DashScopeImageGenerationProvider:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        model: str,
+        edit_model: str,
+        timeout_seconds: int = 180,
+        trust_env: bool = False,
+        poll_interval_seconds: int = 10,
+        max_poll_seconds: int = 180,
+        client: Optional[httpx.Client] = None,
+        sleep: Optional[Callable[[float], None]] = None,
+    ) -> None:
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.edit_model = edit_model
+        self.poll_interval_seconds = poll_interval_seconds
+        self.max_poll_seconds = max_poll_seconds
+        self._client = client or httpx.Client(timeout=timeout_seconds, trust_env=trust_env)
+        self._owns_client = client is None
+        self._sleep = sleep or time.sleep
+
+    def generate(
+        self,
+        asset: LearningAsset,
+        prompt: str,
+        reference_image_path: Optional[Path],
+    ) -> GeneratedMedia:
+        del asset
+        task_id = self._create_task(prompt=prompt, reference_image_path=reference_image_path)
+        image_url = self._poll_image_url(task_id)
+        return self._download_image(image_url)
+
+    def _create_task(self, *, prompt: str, reference_image_path: Optional[Path]) -> str:
+        content: list[dict[str, str]] = [{"text": prompt}]
+        parameters: dict[str, object] = {"watermark": False, "n": 1}
+        model = self.model
+        if reference_image_path is not None:
+            content.append({"image": _image_data_url(reference_image_path)})
+            parameters["enable_interleave"] = True
+            model = self.edit_model
+
+        try:
+            response = self._client.post(
+                f"{self.base_url}/services/aigc/image-generation/generation",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "X-DashScope-Async": "enable",
+                },
+                json={
+                    "model": model,
+                    "input": {"messages": [{"content": content}]},
+                    "parameters": parameters,
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except httpx.HTTPError as exc:
+            raise MediaProviderError("DashScope image task creation failed") from exc
+        except (OSError, ValueError) as exc:
+            raise MediaProviderError("DashScope image task creation failed") from exc
+
+        try:
+            task_id = payload["output"]["task_id"]
+        except (KeyError, TypeError) as exc:
+            raise MediaProviderError("DashScope image task response missing output.task_id") from exc
+        if not isinstance(task_id, str) or not task_id:
+            raise MediaProviderError("DashScope image task response missing output.task_id")
+        return task_id
+
+    def _poll_image_url(self, task_id: str) -> str:
+        started_at = time.monotonic()
+        while True:
+            output = self._get_task_output(task_id)
+            status = output.get("task_status")
+            if status == "SUCCEEDED":
+                return _dashscope_first_image_url(output)
+            if status == "FAILED":
+                raise MediaProviderError("DashScope image task failed")
+            if time.monotonic() - started_at >= self.max_poll_seconds:
+                raise MediaProviderError("DashScope image task polling timed out")
+            self._sleep(self.poll_interval_seconds)
+
+    def _get_task_output(self, task_id: str) -> dict[str, Any]:
+        try:
+            response = self._client.get(
+                f"{self.base_url}/tasks/{task_id}",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except httpx.HTTPError as exc:
+            raise MediaProviderError("DashScope image task polling failed") from exc
+        except ValueError as exc:
+            raise MediaProviderError("DashScope image task polling failed") from exc
+
+        output = payload.get("output") if isinstance(payload, dict) else None
+        if not isinstance(output, dict):
+            raise MediaProviderError("DashScope image task polling failed")
+        return output
+
+    def _download_image(self, image_url: str) -> GeneratedMedia:
+        try:
+            response = self._client.get(image_url)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise MediaProviderError("DashScope image download failed") from exc
+        return GeneratedMedia(payload=response.content, content_type="image/png", extension=".png")
 
     def close(self) -> None:
         if self._owns_client:
@@ -339,3 +457,35 @@ def _source_bbox_from_manifest(raw: object) -> Optional[SourceBoundingBox]:
         width=float(values.get("width") or 1),
         height=float(values.get("height") or 1),
     )
+
+
+def _image_data_url(path: Path) -> str:
+    try:
+        image_payload = Path(path).read_bytes()
+    except OSError as exc:
+        raise MediaProviderError("DashScope image reference file could not be read") from exc
+    image_b64 = base64.b64encode(image_payload).decode("ascii")
+    return f"data:image/png;base64,{image_b64}"
+
+
+def _dashscope_first_image_url(output: dict[str, Any]) -> str:
+    results = output.get("results")
+    if isinstance(results, list):
+        for result in results:
+            if isinstance(result, dict):
+                url = result.get("url") or result.get("image_url") or result.get("orig_url")
+                if isinstance(url, str) and url:
+                    return url
+
+    task_results = output.get("task_results")
+    if isinstance(task_results, list):
+        for result in task_results:
+            if isinstance(result, dict):
+                url = result.get("url")
+                if isinstance(url, str) and url:
+                    return url
+
+    image_url = output.get("image_url")
+    if isinstance(image_url, str) and image_url:
+        return image_url
+    raise MediaProviderError("DashScope image task response missing image URL")
