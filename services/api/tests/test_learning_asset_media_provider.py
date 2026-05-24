@@ -11,6 +11,7 @@ import pytest
 
 from app.core.settings import get_settings
 from app.models.contracts import LearningAsset
+from app.services import learning_asset_media as media_module
 from app.services.learning_asset_media import (
     DashScopeImageGenerationProvider,
     DashScopeTTSProvider,
@@ -158,12 +159,26 @@ def test_bundle_with_openai_image_and_dashscope_tts_builds_real_mixed_providers(
     monkeypatch.setenv("MEDIA_TTS_PROVIDER", " DashScope ")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
     monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-dashscope")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.test/v1/")
+    monkeypatch.setenv("DASHSCOPE_BASE_URL", "https://dashscope.test/api/v1/")
+    monkeypatch.setenv("MEDIA_IMAGE_MODEL", "gpt-image-test")
+    monkeypatch.setenv("MEDIA_TTS_MODEL", "cosyvoice-test")
+    monkeypatch.setenv("MEDIA_TTS_US_VOICE", "dashscope-us")
+    monkeypatch.setenv("MEDIA_TTS_UK_VOICE", "dashscope-uk")
 
     bundle = build_media_provider_bundle(public_base_url="http://testserver")
 
     assert bundle.mode == "real"
     assert isinstance(bundle.image_provider, OpenAIImageGenerationProvider)
     assert isinstance(bundle.tts_provider, DashScopeTTSProvider)
+    assert bundle.image_provider.api_key == "sk-openai"
+    assert bundle.image_provider.base_url == "https://api.openai.test/v1"
+    assert bundle.image_provider.model == "gpt-image-test"
+    assert bundle.tts_provider.api_key == "sk-dashscope"
+    assert bundle.tts_provider.base_url == "https://dashscope.test/api/v1"
+    assert bundle.tts_provider.model == "cosyvoice-test"
+    assert bundle.tts_provider.us_voice == "dashscope-us"
+    assert bundle.tts_provider.uk_voice == "dashscope-uk"
 
 
 def test_bundle_with_dashscope_image_and_openai_tts_builds_real_mixed_providers(
@@ -176,12 +191,53 @@ def test_bundle_with_dashscope_image_and_openai_tts_builds_real_mixed_providers(
     monkeypatch.setenv("MEDIA_TTS_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
     monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-dashscope")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.test/v1/")
+    monkeypatch.setenv("DASHSCOPE_BASE_URL", "https://dashscope.test/api/v1/")
+    monkeypatch.setenv("MEDIA_IMAGE_MODEL", "wan2.6-image-test")
+    monkeypatch.setenv("MEDIA_IMAGE_EDIT_MODEL", "wanx2.1-imageedit-test")
+    monkeypatch.setenv("MEDIA_TTS_MODEL", "gpt-tts-test")
+    monkeypatch.setenv("MEDIA_TTS_US_VOICE", "openai-us")
+    monkeypatch.setenv("MEDIA_TTS_UK_VOICE", "openai-uk")
+    monkeypatch.setenv("MEDIA_PROVIDER_POLL_INTERVAL_SECONDS", "7")
+    monkeypatch.setenv("MEDIA_PROVIDER_MAX_POLL_SECONDS", "77")
 
     bundle = build_media_provider_bundle(public_base_url="http://testserver")
 
     assert bundle.mode == "real"
     assert isinstance(bundle.image_provider, DashScopeImageGenerationProvider)
     assert isinstance(bundle.tts_provider, OpenAITTSProvider)
+    assert bundle.image_provider.api_key == "sk-dashscope"
+    assert bundle.image_provider.base_url == "https://dashscope.test/api/v1"
+    assert bundle.image_provider.model == "wan2.6-image-test"
+    assert bundle.image_provider.edit_model == "wanx2.1-imageedit-test"
+    assert bundle.image_provider.poll_interval_seconds == 7
+    assert bundle.image_provider.max_poll_seconds == 77
+    assert bundle.tts_provider.api_key == "sk-openai"
+    assert bundle.tts_provider.base_url == "https://api.openai.test/v1"
+    assert bundle.tts_provider.model == "gpt-tts-test"
+    assert bundle.tts_provider.us_voice == "openai-us"
+    assert bundle.tts_provider.uk_voice == "openai-uk"
+
+
+def test_bundle_closes_image_provider_when_tts_provider_build_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_media_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv("MEDIA_PROVIDER", "real")
+    image_provider = CloseableProvider()
+
+    def fail_tts_provider(settings: object) -> object:
+        del settings
+        raise MediaProviderConfigurationError("tts failed")
+
+    monkeypatch.setattr(media_module, "_build_image_provider", lambda settings: image_provider)
+    monkeypatch.setattr(media_module, "_build_tts_provider", fail_tts_provider)
+
+    with pytest.raises(MediaProviderConfigurationError, match="tts failed"):
+        build_media_provider_bundle(public_base_url="http://testserver")
+
+    assert image_provider.close_count == 1
 
 
 @pytest.mark.parametrize(

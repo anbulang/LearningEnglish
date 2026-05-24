@@ -488,9 +488,17 @@ def build_media_provider_bundle(public_base_url: Optional[str] = None) -> MediaP
 
     if media_provider != "real":
         raise MediaProviderConfigurationError(f"Unsupported MEDIA_PROVIDER: {settings.media_provider}")
+    image_provider = _build_image_provider(settings)
+    try:
+        tts_provider = _build_tts_provider(settings)
+    except Exception:
+        close = getattr(image_provider, "close", None)
+        if callable(close):
+            close()
+        raise
     return MediaProviderBundle(
-        image_provider=_build_image_provider(settings),
-        tts_provider=_build_tts_provider(settings),
+        image_provider=image_provider,
+        tts_provider=tts_provider,
         mode="real",
     )
 
