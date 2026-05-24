@@ -338,3 +338,29 @@
 
 **证据位置：**
 - `dist/harness/HN-016/`
+
+### HN-016A：DashScope 国内媒体 Provider
+
+**目标：** 在 HN-016 的媒体 provider 抽象上增加 DashScope / 百炼支持，使国内环境可以通过 `MEDIA_IMAGE_PROVIDER=dashscope` 和 `MEDIA_TTS_PROVIDER=dashscope` 生成彩色配图、US TTS 和 UK TTS。
+
+**范围内：**
+- DashScope 图片生成 provider，读取 `DASHSCOPE_API_KEY`、`DASHSCOPE_BASE_URL`、`MEDIA_IMAGE_MODEL`、`MEDIA_IMAGE_EDIT_MODEL` 和轮询配置。
+- DashScope TTS provider，读取 `MEDIA_TTS_MODEL`、`MEDIA_TTS_US_VOICE`、`MEDIA_TTS_UK_VOICE`。
+- `MEDIA_PROVIDER=real` 时允许 OpenAI 与 DashScope 图片/TTS provider 独立组合。
+- 生成成功后继续写入现有 storage，并回填 `material.learning_assets`、`KnowledgePack` 和 `ReviewTask`。
+- 缺少 DashScope 配置或 provider 返回失败时，记录脱敏中文错误，不暴露 API key。
+
+**范围外：**
+- 新增第三方媒体 provider。
+- 重做 storage schema 或课程详情 UI。
+- 人工编辑 prompt、voice 或历史媒体迁移。
+
+**验收标准：**
+- `MEDIA_PROVIDER=real`、`MEDIA_IMAGE_PROVIDER=dashscope`、`MEDIA_TTS_PROVIDER=dashscope` 时，worker 可以完成图片、US TTS、UK TTS 生成和 storage 回填。
+- DashScope 图片任务支持提交、轮询、成功 URL 下载和失败原因处理。
+- DashScope TTS 能按 US / UK voice 分别生成音频。
+- 缺少 `DASHSCOPE_API_KEY` 时媒体状态进入 `failed`，错误信息脱敏且不回退 mock。
+- HN-016 OpenAI provider 默认配置继续保留。
+
+**证据位置：**
+- `dist/harness/HN-016A/`

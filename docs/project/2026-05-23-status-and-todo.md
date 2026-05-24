@@ -31,7 +31,7 @@
 | `HN-015` 课程资料左滑删除 | 已完成 | API、worker、Flutter 和 Harness 已覆盖 |
 | 文档治理第一轮 | 已完成 | `README`、架构文档、Harness 文档、服务 README 已与当前实现重新对齐 |
 | 资料路由一致性收口 | 本分支已完成 | 已抽出 `material_navigation.dart`，并补 home/materials 路由回归测试；待 PR 合并后成为主线事实 |
-| `HN-016` 真实 TTS / 标准发音 provider | 未开始 | 当前仍使用 `HN014MockMediaProvider` |
+| `HN-016` 真实媒体 Provider | 已合入主线，readiness 待证据 | OpenAI provider 已接入，DashScope 国内 provider 进入 HN-016A |
 | `HN-017` 孩子录音上传与 AI 语音评分 | 未开始 | speaking 入口已有，真实评分未完成 |
 | `HN-018` 学习资产掌握度进入报告页 | 未开始 | 周报仍是轻量聚合 |
 
@@ -98,7 +98,7 @@
 
 ### P1：完成 HN-016 到 HN-018 的内容闭环
 
-- [ ] `HN-016`：接入真实 TTS / 标准发音 provider，替换当前 `HN014MockMediaProvider`。
+- [ ] `HN-016` / `HN-016A`：补齐真实 provider 证据；HN-016 已支持 OpenAI，HN-016A 增加 DashScope 国内图片和 TTS provider。
 - [ ] `HN-017`：实现孩子录音上传、音频存储、转写和 AI 发音评分。
 - [ ] `HN-018`：把学习资产掌握度、复习完成度、口语表现接入周报，而不只是轻量文案聚合。
 - [ ] 为学习资产、复习任务、speaking 结果建立更清晰的状态与证据约定。
