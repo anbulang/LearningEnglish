@@ -13,6 +13,7 @@ from app.core.settings import get_settings
 from app.models.contracts import LearningAsset
 from app.services.learning_asset_media import (
     DashScopeImageGenerationProvider,
+    DashScopeTTSProvider,
     MediaProviderBundle,
     MediaProviderConfigurationError,
     MediaProviderError,
@@ -637,6 +638,143 @@ def test_openai_tts_synthesize_wraps_http_failures() -> None:
 
     with pytest.raises(MediaProviderError, match="OpenAI TTS generation failed"):
         provider.synthesize(text="queen", accent="uk")
+
+
+def test_dashscope_tts_synthesize_uses_cosyvoice_and_downloads_audio() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == "https://dashscope.test/api/v1/services/audio/tts/SpeechSynthesizer":
+            assert request.headers["authorization"] == "Bearer sk-dashscope"
+            body = json.loads(request.content)
+            assert body == {
+                "model": "cosyvoice-v3-flash",
+                "input": {
+                    "text": "A rabbit can hop fast.",
+                    "voice": "uk-voice",
+                    "format": "mp3",
+                    "language_hints": ["en"],
+                },
+            }
+            return httpx.Response(
+                200,
+                json={"output": {"finish_reason": "stop", "audio": {"url": "https://result.test/audio.mp3"}}},
+            )
+        if str(request.url) == "https://result.test/audio.mp3":
+            return httpx.Response(200, content=b"mp3-bytes")
+        return httpx.Response(404, text=str(request.url))
+
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="us-voice",
+        uk_voice="uk-voice",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    media = provider.synthesize("A rabbit can hop fast.", "uk")
+
+    assert media.payload == b"mp3-bytes"
+    assert media.content_type == "audio/mpeg"
+    assert media.extension == ".mp3"
+
+
+def test_dashscope_tts_synthesize_rejects_unknown_accent() -> None:
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="us-voice",
+        uk_voice="uk-voice",
+        client=httpx.Client(transport=FakeTransport(lambda request: httpx.Response(200, content=b"unused"))),
+    )
+
+    with pytest.raises(MediaProviderError, match="Unsupported TTS accent"):
+        provider.synthesize("queen", "au")
+
+
+def test_dashscope_tts_synthesize_requires_voice() -> None:
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="",
+        uk_voice="uk-voice",
+        client=httpx.Client(transport=FakeTransport(lambda request: httpx.Response(200, content=b"unused"))),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope TTS voice is not configured"):
+        provider.synthesize("queen", "us")
+
+
+def test_dashscope_tts_synthesize_fails_without_audio_url() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"output": {"finish_reason": "stop", "audio": {}}})
+
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="us-voice",
+        uk_voice="uk-voice",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope TTS response missing output.audio.url"):
+        provider.synthesize("queen", "us")
+
+
+def test_dashscope_tts_synthesize_wraps_audio_download_http_error() -> None:
+    audio_url = "https://result.test/failed.mp3"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == "https://dashscope.test/api/v1/services/audio/tts/SpeechSynthesizer":
+            return httpx.Response(
+                200,
+                json={"output": {"finish_reason": "stop", "audio": {"url": audio_url}}},
+            )
+        if str(request.url) == audio_url:
+            return httpx.Response(503, text="temporary audio store failure")
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="us-voice",
+        uk_voice="uk-voice",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope TTS audio download failed") as exc_info:
+        provider.synthesize("queen", "us")
+
+    assert audio_url not in str(exc_info.value)
+
+
+def test_dashscope_tts_synthesize_wraps_malformed_audio_url() -> None:
+    malformed_url = "http://result.test:abc/audio.mp3"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == "https://dashscope.test/api/v1/services/audio/tts/SpeechSynthesizer":
+            return httpx.Response(
+                200,
+                json={"output": {"finish_reason": "stop", "audio": {"url": malformed_url}}},
+            )
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="us-voice",
+        uk_voice="uk-voice",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope TTS audio download failed") as exc_info:
+        provider.synthesize("queen", "us")
+
+    assert malformed_url not in str(exc_info.value)
 
 
 def test_media_provider_bundle_close_closes_unique_providers_once() -> None:

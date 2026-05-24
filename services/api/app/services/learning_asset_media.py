@@ -317,6 +317,75 @@ class OpenAITTSProvider:
             self._client.close()
 
 
+class DashScopeTTSProvider:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        model: str,
+        us_voice: str,
+        uk_voice: str,
+        timeout_seconds: int = 180,
+        trust_env: bool = False,
+        client: Optional[httpx.Client] = None,
+    ) -> None:
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.us_voice = us_voice
+        self.uk_voice = uk_voice
+        self._client = client or httpx.Client(timeout=timeout_seconds, trust_env=trust_env)
+        self._owns_client = client is None
+
+    def synthesize(self, text: str, accent: str) -> GeneratedMedia:
+        accent_key = accent.strip().lower()
+        if accent_key not in {"us", "uk"}:
+            raise MediaProviderError(f"Unsupported TTS accent: {accent}")
+        voice = self.uk_voice if accent_key == "uk" else self.us_voice
+        if not voice.strip():
+            raise MediaProviderError("DashScope TTS voice is not configured")
+
+        try:
+            response = self._client.post(
+                f"{self.base_url}/services/audio/tts/SpeechSynthesizer",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "input": {
+                        "text": text,
+                        "voice": voice,
+                        "format": "mp3",
+                        "language_hints": ["en"],
+                    },
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except httpx.HTTPError as exc:
+            raise MediaProviderError("DashScope TTS generation failed") from exc
+        except ValueError as exc:
+            raise MediaProviderError("DashScope TTS generation failed") from exc
+
+        audio_url = payload.get("output", {}).get("audio", {}).get("url")
+        if not isinstance(audio_url, str) or not audio_url.strip():
+            raise MediaProviderError("DashScope TTS response missing output.audio.url")
+
+        try:
+            audio_response = self._client.get(audio_url)
+            audio_response.raise_for_status()
+        except (httpx.HTTPError, httpx.InvalidURL, ValueError) as exc:
+            raise MediaProviderError("DashScope TTS audio download failed") from exc
+        return GeneratedMedia(payload=audio_response.content, content_type="audio/mpeg", extension=".mp3")
+
+    def close(self) -> None:
+        if self._owns_client:
+            self._client.close()
+
+
 class HN014MockMediaProvider:
     def __init__(self, public_base_url: str) -> None:
         self.public_base_url = public_base_url.rstrip("/")
