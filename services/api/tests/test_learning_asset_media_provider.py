@@ -148,6 +148,67 @@ def test_media_settings_include_dashscope_provider_config(monkeypatch: pytest.Mo
     assert settings.media_provider_max_poll_seconds == 33
 
 
+def test_bundle_with_openai_image_and_dashscope_tts_builds_real_mixed_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_media_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv("MEDIA_PROVIDER", " real ")
+    monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", " OpenAI ")
+    monkeypatch.setenv("MEDIA_TTS_PROVIDER", " DashScope ")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-dashscope")
+
+    bundle = build_media_provider_bundle(public_base_url="http://testserver")
+
+    assert bundle.mode == "real"
+    assert isinstance(bundle.image_provider, OpenAIImageGenerationProvider)
+    assert isinstance(bundle.tts_provider, DashScopeTTSProvider)
+
+
+def test_bundle_with_dashscope_image_and_openai_tts_builds_real_mixed_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_media_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv("MEDIA_PROVIDER", "real")
+    monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", "dashscope")
+    monkeypatch.setenv("MEDIA_TTS_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-dashscope")
+
+    bundle = build_media_provider_bundle(public_base_url="http://testserver")
+
+    assert bundle.mode == "real"
+    assert isinstance(bundle.image_provider, DashScopeImageGenerationProvider)
+    assert isinstance(bundle.tts_provider, OpenAITTSProvider)
+
+
+@pytest.mark.parametrize(
+    ("image_provider", "tts_provider"),
+    [
+        ("dashscope", "openai"),
+        ("openai", "dashscope"),
+    ],
+)
+def test_bundle_with_dashscope_provider_requires_dashscope_api_key_without_leaking_configured_keys(
+    monkeypatch: pytest.MonkeyPatch,
+    image_provider: str,
+    tts_provider: str,
+) -> None:
+    _clear_media_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "testing")
+    monkeypatch.setenv("MEDIA_PROVIDER", "real")
+    monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", image_provider)
+    monkeypatch.setenv("MEDIA_TTS_PROVIDER", tts_provider)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-secret")
+
+    with pytest.raises(MediaProviderConfigurationError, match="DASHSCOPE_API_KEY") as exc_info:
+        build_media_provider_bundle(public_base_url="http://testserver")
+
+    assert "sk-openai-secret" not in str(exc_info.value)
+
+
 def test_dashscope_image_generation_without_reference_creates_task_polls_and_downloads_image() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":

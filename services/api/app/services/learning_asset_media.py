@@ -488,30 +488,68 @@ def build_media_provider_bundle(public_base_url: Optional[str] = None) -> MediaP
 
     if media_provider != "real":
         raise MediaProviderConfigurationError(f"Unsupported MEDIA_PROVIDER: {settings.media_provider}")
-    if settings.media_image_provider.strip().lower() != "openai":
-        raise MediaProviderConfigurationError(f"Unsupported MEDIA_IMAGE_PROVIDER: {settings.media_image_provider}")
-    if settings.media_tts_provider.strip().lower() != "openai":
-        raise MediaProviderConfigurationError(f"Unsupported MEDIA_TTS_PROVIDER: {settings.media_tts_provider}")
-    if not settings.openai_api_key:
-        raise MediaProviderConfigurationError("OPENAI_API_KEY is required when MEDIA_PROVIDER=real")
+    return MediaProviderBundle(
+        image_provider=_build_image_provider(settings),
+        tts_provider=_build_tts_provider(settings),
+        mode="real",
+    )
 
-    image_provider = OpenAIImageGenerationProvider(
-        api_key=settings.openai_api_key,
-        base_url=settings.openai_base_url,
-        model=settings.media_image_model,
-        timeout_seconds=settings.media_request_timeout_seconds,
-        trust_env=settings.media_http_trust_env,
-    )
-    tts_provider = OpenAITTSProvider(
-        api_key=settings.openai_api_key,
-        base_url=settings.openai_base_url,
-        model=settings.media_tts_model,
-        us_voice=settings.media_tts_us_voice,
-        uk_voice=settings.media_tts_uk_voice,
-        timeout_seconds=settings.media_request_timeout_seconds,
-        trust_env=settings.media_http_trust_env,
-    )
-    return MediaProviderBundle(image_provider=image_provider, tts_provider=tts_provider, mode="real")
+
+def _build_image_provider(settings: Any) -> ImageGenerationProvider:
+    provider = settings.media_image_provider.strip().lower()
+    if provider == "openai":
+        if not settings.openai_api_key:
+            raise MediaProviderConfigurationError("OPENAI_API_KEY is required when MEDIA_PROVIDER=real")
+        return OpenAIImageGenerationProvider(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            model=settings.media_image_model,
+            timeout_seconds=settings.media_request_timeout_seconds,
+            trust_env=settings.media_http_trust_env,
+        )
+    if provider == "dashscope":
+        if not settings.dashscope_api_key:
+            raise MediaProviderConfigurationError("DASHSCOPE_API_KEY is required when MEDIA_IMAGE_PROVIDER=dashscope")
+        return DashScopeImageGenerationProvider(
+            api_key=settings.dashscope_api_key,
+            base_url=settings.dashscope_base_url,
+            model=settings.media_image_model,
+            edit_model=settings.media_image_edit_model,
+            timeout_seconds=settings.media_request_timeout_seconds,
+            trust_env=settings.media_http_trust_env,
+            poll_interval_seconds=settings.media_provider_poll_interval_seconds,
+            max_poll_seconds=settings.media_provider_max_poll_seconds,
+        )
+    raise MediaProviderConfigurationError(f"Unsupported MEDIA_IMAGE_PROVIDER: {settings.media_image_provider}")
+
+
+def _build_tts_provider(settings: Any) -> TTSProvider:
+    provider = settings.media_tts_provider.strip().lower()
+    if provider == "openai":
+        if not settings.openai_api_key:
+            raise MediaProviderConfigurationError("OPENAI_API_KEY is required when MEDIA_PROVIDER=real")
+        return OpenAITTSProvider(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            model=settings.media_tts_model,
+            us_voice=settings.media_tts_us_voice,
+            uk_voice=settings.media_tts_uk_voice,
+            timeout_seconds=settings.media_request_timeout_seconds,
+            trust_env=settings.media_http_trust_env,
+        )
+    if provider == "dashscope":
+        if not settings.dashscope_api_key:
+            raise MediaProviderConfigurationError("DASHSCOPE_API_KEY is required when MEDIA_TTS_PROVIDER=dashscope")
+        return DashScopeTTSProvider(
+            api_key=settings.dashscope_api_key,
+            base_url=settings.dashscope_base_url,
+            model=settings.media_tts_model,
+            us_voice=settings.media_tts_us_voice,
+            uk_voice=settings.media_tts_uk_voice,
+            timeout_seconds=settings.media_request_timeout_seconds,
+            trust_env=settings.media_http_trust_env,
+        )
+    raise MediaProviderConfigurationError(f"Unsupported MEDIA_TTS_PROVIDER: {settings.media_tts_provider}")
 
 
 def _validate_manifest_item(raw: object) -> None:
