@@ -47,13 +47,18 @@ def _clear_media_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "MEDIA_IMAGE_PROVIDER",
         "MEDIA_TTS_PROVIDER",
         "MEDIA_IMAGE_MODEL",
+        "MEDIA_IMAGE_EDIT_MODEL",
         "MEDIA_TTS_MODEL",
         "MEDIA_TTS_US_VOICE",
         "MEDIA_TTS_UK_VOICE",
         "MEDIA_REQUEST_TIMEOUT_SECONDS",
         "MEDIA_HTTP_TRUST_ENV",
+        "MEDIA_PROVIDER_POLL_INTERVAL_SECONDS",
+        "MEDIA_PROVIDER_MAX_POLL_SECONDS",
         "OPENAI_API_KEY",
         "OPENAI_BASE_URL",
+        "DASHSCOPE_API_KEY",
+        "DASHSCOPE_BASE_URL",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()
@@ -124,6 +129,21 @@ def test_testing_environment_explicit_real_with_whitespace_requires_openai_api_k
 
     with pytest.raises(MediaProviderConfigurationError, match="OPENAI_API_KEY"):
         build_media_provider_bundle(public_base_url="http://testserver")
+
+
+def test_media_settings_include_dashscope_provider_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_media_env(monkeypatch)
+    monkeypatch.setenv("DASHSCOPE_BASE_URL", "https://dashscope.test/api/v1")
+    monkeypatch.setenv("MEDIA_IMAGE_EDIT_MODEL", "wanx2.1-imageedit-test")
+    monkeypatch.setenv("MEDIA_PROVIDER_POLL_INTERVAL_SECONDS", "3")
+    monkeypatch.setenv("MEDIA_PROVIDER_MAX_POLL_SECONDS", "33")
+
+    settings = get_settings()
+
+    assert settings.dashscope_base_url == "https://dashscope.test/api/v1"
+    assert settings.media_image_edit_model == "wanx2.1-imageedit-test"
+    assert settings.media_provider_poll_interval_seconds == 3
+    assert settings.media_provider_max_poll_seconds == 33
 
 
 def test_openai_image_generation_without_reference_calls_generations_and_decodes_payload() -> None:
