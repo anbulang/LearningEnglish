@@ -8,8 +8,8 @@
 
 当前仍未收口的部分主要有两类：
 
-- 人工截图证据还没全部补齐，尤其是 AI 校对页、课程详情页和删除成功页。
-- Doubao 真识别在部分网络环境下仍可能受代理继承影响；如果 shell 已配置 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 但 worker 仍无法访问外网，需要额外设置 `AI_HTTP_TRUST_ENV=true`。
+- `HN-016` OpenAI 真实媒体 provider 证据仍未补齐；`HN-016A` DashScope 已有 provider 直连与 worker/storage 回填证据，但还缺课程详情截图。
+- Doubao、OpenAI、DashScope 真依赖在部分网络环境下仍可能受代理继承影响；如果 shell 已配置 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 但 API / worker 仍无法访问外网，需要额外设置 `AI_HTTP_TRUST_ENV=true` 或 `MEDIA_HTTP_TRUST_ENV=true`。
 
 ## 触发问题时的旧现状
 
@@ -28,7 +28,7 @@
 - AI 校对页会对 `queued` / `processing` 自动轮询。
 - 首页与资料库对未完成资料统一进入 AI 校对页。
 - `failed`、`needs_review`、`ready`、`archived` 的状态收敛已经体现在 API、Flutter 路由和 Harness 文档中。
-- HN-012、HN-013、HN-014、HN-015 都已经有代码和证据落点，剩余主要是截图补齐和下一阶段能力建设。
+- HN-012、HN-013、HN-014、HN-015 都已经有代码和证据落点，剩余主要是真实媒体 provider readiness 和下一阶段能力建设。
 
 ## 真机问题记录
 
@@ -338,3 +338,41 @@
 
 **证据位置：**
 - `dist/harness/HN-016/`
+
+### HN-016A：DashScope 国内媒体 Provider
+
+**目标：** 在 HN-016 的媒体 provider 抽象上增加 DashScope / 百炼支持，使国内环境可以通过 `MEDIA_IMAGE_PROVIDER=dashscope` 和 `MEDIA_TTS_PROVIDER=dashscope` 生成彩色配图、US TTS 和 UK TTS。
+
+**范围内：**
+- DashScope 图片生成 provider，读取 `DASHSCOPE_API_KEY`、`DASHSCOPE_BASE_URL`、`MEDIA_IMAGE_MODEL`、`MEDIA_IMAGE_EDIT_MODEL` 和轮询配置。
+- DashScope TTS provider，读取 `MEDIA_TTS_MODEL`、`MEDIA_TTS_US_VOICE`、`MEDIA_TTS_UK_VOICE`。
+- `MEDIA_PROVIDER=real` 时允许 OpenAI 与 DashScope 图片/TTS provider 独立组合。
+- 生成成功后继续写入现有 storage，并回填 `material.learning_assets`、`KnowledgePack` 和 `ReviewTask`。
+- 缺少 DashScope 配置或 provider 返回失败时，记录脱敏中文错误，不暴露 API key。
+
+**范围外：**
+- 新增第三方媒体 provider。
+- 重做 storage schema 或课程详情 UI。
+- 人工编辑 prompt、voice 或历史媒体迁移。
+
+**验收标准：**
+- `MEDIA_PROVIDER=real`、`MEDIA_IMAGE_PROVIDER=dashscope`、`MEDIA_TTS_PROVIDER=dashscope` 时，worker 可以完成图片、US TTS、UK TTS 生成和 storage 回填。
+- DashScope 图片任务支持提交、轮询、成功 URL 下载和失败原因处理。
+- DashScope TTS 能按 US / UK voice 分别生成音频。
+- 缺少 `DASHSCOPE_API_KEY` 时媒体状态进入 `failed`，错误信息脱敏且不回退 mock。
+- HN-016 OpenAI provider 默认配置继续保留。
+
+**证据位置：**
+- `dist/harness/HN-016A/`
+
+**当前证据记录（2026-05-24）：**
+- DashScope 直连 provider smoke 已通过，证据：
+  - `dist/harness/HN-016A/dashscope-provider-smoke-summary.json`
+  - `dist/harness/HN-016A/dashscope-rabbit-image.png`
+  - `dist/harness/HN-016A/dashscope-reference-edit-image.png`
+  - `dist/harness/HN-016A/dashscope-tts-us.mp3`
+  - `dist/harness/HN-016A/dashscope-tts-uk.mp3`
+- DashScope worker / storage 回填 smoke 已通过，证据：
+  - `dist/harness/HN-016A/worker-dashscope-real-summary.json`
+  - `dist/harness/HN-016A/worker-storage/generated/media/material_dashscope_real/asset_rabbit/`
+- 当前仍缺：真实课程详情页截图或真机/模拟器 UI 截图，因此 `HN-016A` readiness 暂不勾选完成。

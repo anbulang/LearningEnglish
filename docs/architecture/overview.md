@@ -15,7 +15,7 @@ flowchart LR
     API --> Workers["Celery Workers"]
     Workers --> OCR["Stub / PaddleOCR / Doubao Vision"]
     Workers --> LLM["Stub / Doubao Text"]
-    Workers --> Media["Learning Asset Media Provider<br/>mock / OpenAI image / OpenAI TTS"]
+    Workers --> Media["Learning Asset Media Provider<br/>mock / OpenAI / DashScope"]
 ```
 
 ## 当前主链
@@ -46,5 +46,5 @@ flowchart TD
 
 - 还不是生产级多环境系统：目前以本地 `Docker Compose` + 本地/局域网验证为主。
 - 还没有真实语音评分闭环：`speaking_attempts` 已有接口和 UI 入口，但评分仍是 stub。
-- HN-016 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用；本地测试默认仍使用 mock provider。
+- HN-016 / HN-016A 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用，并按 `MEDIA_IMAGE_PROVIDER` / `MEDIA_TTS_PROVIDER` 选择 OpenAI 或 DashScope；本地测试默认仍使用 mock provider。
 - 还没有完整 Android 可交付链路：iOS 内测链路已跑通，Android 仍受本机 SDK 环境阻塞。

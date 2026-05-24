@@ -33,4 +33,4 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 
 - speaking 页已有入口，但真实录音上传与 AI 评分尚未完成。
 - `/reports` 当前复用 `ReviewTasksScreen(reportMode: true)`，还不是独立复杂报告模块。
-- 真机和模拟器截图证据未全部补齐，详见 `docs/harness/`。
+- MVP 主链截图证据已补齐；真实媒体 provider 的 readiness 证据仍在 `docs/harness/` 和 `dist/harness/HN-016*/` 继续补充。

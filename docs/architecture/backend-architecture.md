@@ -103,9 +103,9 @@
   - `StubLanguageParsingProvider`
   - `DoubaoLanguageParsingProvider`
 - 学习资产媒体：
-  - Learning Asset Media Provider（mock / OpenAI image / OpenAI TTS）
+  - Learning Asset Media Provider（mock / OpenAI image+TTS / DashScope image+TTS）
 
-目前真实外部依赖主要集中在 Doubao 和可配置媒体 provider。HN-016 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用；本地测试默认仍使用 mock provider。
+目前真实外部依赖主要集中在 Doubao 和可配置媒体 provider。HN-016 / HN-016A 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用，并按图片/TTS 分别选择 OpenAI 或 DashScope；本地测试默认仍使用 mock provider。
 
 ## 存储约定
 
@@ -116,6 +116,6 @@
 
 ## 当前限制
 
-- 真正的 OCR、语音评分和真实媒体生成还没有全部生产化。
+- 真正的 OCR 和语音评分还没有全部生产化；真实媒体 provider 已有代码路径，但 readiness 证据仍待补齐。
 - 周报聚合仍是轻量逻辑，不是完整学习分析系统。
 - 任务队列默认面向本地环境验证，尚未形成生产级重试、监控和告警规范。

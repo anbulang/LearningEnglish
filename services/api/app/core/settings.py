@@ -38,14 +38,18 @@ class Settings:
     media_image_provider: str
     media_tts_provider: str
     media_image_model: str
+    media_image_edit_model: str
     media_tts_model: str
     media_tts_us_voice: str
     media_tts_uk_voice: str
     media_request_timeout_seconds: int
     media_http_trust_env: bool
+    media_provider_poll_interval_seconds: int
+    media_provider_max_poll_seconds: int
     openai_api_key: str
     openai_base_url: str
     dashscope_api_key: str
+    dashscope_base_url: str
     qwen_model: str
     sentry_dsn: str
 
@@ -87,14 +91,18 @@ def get_settings() -> Settings:
         media_image_provider=os.getenv("MEDIA_IMAGE_PROVIDER", "openai"),
         media_tts_provider=os.getenv("MEDIA_TTS_PROVIDER", "openai"),
         media_image_model=os.getenv("MEDIA_IMAGE_MODEL", "gpt-image-2"),
+        media_image_edit_model=os.getenv("MEDIA_IMAGE_EDIT_MODEL", "wanx2.1-imageedit"),
         media_tts_model=os.getenv("MEDIA_TTS_MODEL", "gpt-4o-mini-tts"),
         media_tts_us_voice=os.getenv("MEDIA_TTS_US_VOICE", "coral"),
         media_tts_uk_voice=os.getenv("MEDIA_TTS_UK_VOICE", "cedar"),
         media_request_timeout_seconds=int(os.getenv("MEDIA_REQUEST_TIMEOUT_SECONDS", "180")),
         media_http_trust_env=os.getenv("MEDIA_HTTP_TRUST_ENV", "false").lower() == "true",
+        media_provider_poll_interval_seconds=int(os.getenv("MEDIA_PROVIDER_POLL_INTERVAL_SECONDS", "10")),
+        media_provider_max_poll_seconds=int(os.getenv("MEDIA_PROVIDER_MAX_POLL_SECONDS", "180")),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", ""),
+        dashscope_base_url=os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
     )

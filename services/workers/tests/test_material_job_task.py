@@ -412,6 +412,59 @@ def test_process_learning_asset_media_generates_and_stores_provider_media(monkey
         db.close()
 
 
+def test_process_learning_asset_media_stores_dashscope_style_media(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_dashscope_media", "asset_rabbit", "rabbit")
+
+    class FakeDashScopeImageProvider:
+        def generate(self, asset, prompt, reference_image_path):
+            assert asset.id == "asset_rabbit"
+            assert "rabbit" in prompt
+            assert reference_image_path is None
+            return GeneratedMedia(b"dashscope-image", "image/png", ".png")
+
+    class FakeDashScopeTTSProvider:
+        def synthesize(self, text, accent):
+            assert text == "rabbit"
+            assert accent in {"us", "uk"}
+            return GeneratedMedia(f"dashscope-{accent}".encode(), "audio/mpeg", ".mp3")
+
+    class FakeBundle:
+        mode = "real"
+        image_provider = FakeDashScopeImageProvider()
+        tts_provider = FakeDashScopeTTSProvider()
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", lambda: FakeBundle())
+
+    result = process_learning_asset_media("material_dashscope_media")
+
+    assert result["status"] == "ready"
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_dashscope_media")
+        assert material is not None
+        asset = material.learning_assets[0]
+        assert asset["generated_image_status"] == "ready"
+        assert asset["generated_image_url"].endswith(
+            "/generated/media/material_dashscope_media/asset_rabbit/image.png"
+        )
+        assert asset["tts_us_status"] == "ready"
+        assert asset["tts_us_url"].endswith("/generated/media/material_dashscope_media/asset_rabbit/tts-us.mp3")
+        assert asset["tts_uk_status"] == "ready"
+        assert asset["tts_uk_url"].endswith("/generated/media/material_dashscope_media/asset_rabbit/tts-uk.mp3")
+        stored_assets = db.scalars(
+            select(StoredAssetModel).where(StoredAssetModel.owner_type == "generated_media")
+        ).all()
+        assert len(stored_assets) == 3
+    finally:
+        db.close()
+
+
 def test_process_learning_asset_media_preserves_hn014_mock_manifest_urls() -> None:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -560,6 +613,36 @@ def test_process_learning_asset_media_sanitizes_bundle_configuration_error_detai
             assert "sk-secret" not in asset[error_key]
             assert "Unsupported" not in asset[error_key]
             assert "MEDIA_PROVIDER" not in asset[error_key]
+    finally:
+        db.close()
+
+
+def test_process_learning_asset_media_sanitizes_dashscope_configuration_failure(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_dashscope_config_failure", "asset_queen", "queen")
+
+    def fail_bundle():
+        raise MediaProviderConfigurationError("DASHSCOPE_API_KEY is required: sk-secret")
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", fail_bundle)
+
+    result = process_learning_asset_media("material_dashscope_config_failure")
+
+    assert result["status"] == "failed"
+    db = SessionLocal()
+    try:
+        material = db.get(CourseMaterialModel, "material_dashscope_config_failure")
+        assert material is not None
+        asset = material.learning_assets[0]
+        assert asset["generated_image_status"] == "failed"
+        assert asset["tts_us_status"] == "failed"
+        assert asset["tts_uk_status"] == "failed"
+        for error_key in ("generated_image_error", "tts_us_error", "tts_uk_error"):
+            assert "媒体生成配置失败" in asset[error_key]
+            assert "sk-secret" not in asset[error_key]
+            assert "DASHSCOPE_API_KEY" not in asset[error_key]
     finally:
         db.close()
 
