@@ -96,7 +96,7 @@ export const mockMaterials: AdminMaterial[] = [
     title: "Queen / Quilt Review Pack",
     pageCount: 8,
     jobId: "job_queen_quilt_parse",
-    confidenceSummary: "Waiting for parent review.",
+    confidenceSummary: "OCR parsing in progress.",
     ocrConfidence: 0.88,
     sourcePages: createSourcePages("queen-quilt", 8, "gallery"),
     materialStatus: "processing",

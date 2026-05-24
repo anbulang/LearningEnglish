@@ -22,7 +22,7 @@ describe("admin domain selectors", () => {
       parse: 1,
       parentReview: 1,
       knowledgePack: 1,
-      media: 3,
+      media: 1,
       ready: 0,
       failed: 1
     });

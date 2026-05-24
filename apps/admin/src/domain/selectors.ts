@@ -25,7 +25,7 @@ export function getLifecycleCounts(materials: AdminMaterial[]): LifecycleCounts 
       if (!isArchived && !isFailed && hasKnowledgePack && !isFullyReady) {
         counts.knowledgePack += 1;
       }
-      if (!isArchived && !isFailed && (material.mediaStatus === "pending" || material.mediaStatus === "processing")) {
+      if (!isArchived && !isFailed && hasKnowledgePack && (material.mediaStatus === "pending" || material.mediaStatus === "processing")) {
         counts.media += 1;
       }
       if (!isArchived && !isFailed && isFullyReady) {
