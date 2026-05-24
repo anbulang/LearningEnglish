@@ -365,12 +365,18 @@ class DashScopeTTSProvider:
             )
             response.raise_for_status()
             payload = response.json()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, httpx.InvalidURL) as exc:
             raise MediaProviderError("DashScope TTS generation failed") from exc
         except ValueError as exc:
             raise MediaProviderError("DashScope TTS generation failed") from exc
 
-        audio_url = payload.get("output", {}).get("audio", {}).get("url")
+        audio_url = None
+        if isinstance(payload, dict):
+            output = payload.get("output")
+            if isinstance(output, dict):
+                audio = output.get("audio")
+                if isinstance(audio, dict):
+                    audio_url = audio.get("url")
         if not isinstance(audio_url, str) or not audio_url.strip():
             raise MediaProviderError("DashScope TTS response missing output.audio.url")
 

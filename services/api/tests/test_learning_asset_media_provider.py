@@ -723,6 +723,50 @@ def test_dashscope_tts_synthesize_fails_without_audio_url() -> None:
         provider.synthesize("queen", "us")
 
 
+def test_dashscope_tts_synthesize_wraps_malformed_generation_url() -> None:
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test:abc/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="us-voice",
+        uk_voice="uk-voice",
+        client=httpx.Client(
+            transport=FakeTransport(lambda request: pytest.fail(f"unexpected request: {request.url}"))
+        ),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope TTS generation failed"):
+        provider.synthesize("queen", "us")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        {"output": None},
+        {"output": []},
+        {"output": {"audio": None}},
+        {"output": {"audio": []}},
+        {"output": {"audio": "https://result.test/audio.mp3"}},
+    ],
+)
+def test_dashscope_tts_synthesize_fails_when_audio_url_containers_are_not_objects(payload: object) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    provider = DashScopeTTSProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="cosyvoice-v3-flash",
+        us_voice="us-voice",
+        uk_voice="uk-voice",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope TTS response missing output.audio.url"):
+        provider.synthesize("queen", "us")
+
+
 def test_dashscope_tts_synthesize_wraps_audio_download_http_error() -> None:
     audio_url = "https://result.test/failed.mp3"
 
