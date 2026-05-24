@@ -177,8 +177,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
 - [x] `HN-014` 讲义学习资产自动生成：API/worker/mock media 自动化和 job/material JSON 摘录已补齐；AI 校对页和课程详情截图可在下一次真机/模拟器回归时补充。
 - [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除和自动化 Harness 日志已补齐；人工截图可在下一次真机/模拟器回归时补充。
-- [ ] `HN-016` 真实媒体生成 Provider：实现已在本分支存在，可通过 `MEDIA_PROVIDER=real` 启用真实彩色配图、US TTS、UK TTS、storage 回填和课程详情失败态；最终 readiness 仍待补齐 HN-016 验证与证据。
-- [ ] `HN-016A` DashScope 国内媒体 Provider：待补齐 DashScope 图片、US TTS、UK TTS、storage 回填和课程详情证据。
+- [ ] `HN-016` 真实媒体生成 Provider：实现已存在，可通过 `MEDIA_PROVIDER=real` 启用真实彩色配图、US TTS、UK TTS、storage 回填和课程详情失败态；最终 readiness 仍待补齐 HN-016 验证与证据。
+- [ ] `HN-016A` DashScope 国内媒体 Provider：DashScope 直连 provider smoke 与 worker/storage 回填 smoke 已通过；仍待补齐课程详情页截图或真机/模拟器 UI 证据后再勾选 readiness 完成。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.15:8000/v1` 构建、安装并启动成功。
@@ -205,6 +205,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 
 - HN-016 真实媒体 provider 证据：`dist/harness/HN-016/`
 - HN-016A DashScope 国内媒体 provider 证据：`dist/harness/HN-016A/`
+  - 已有：`dashscope-provider-smoke-summary.json`、`dashscope-reference-edit-smoke-summary.json`、`worker-dashscope-real-summary.json`、生成图片与 US/UK TTS 文件。
+  - 待补：课程详情页展示真实 DashScope 图片和音频状态的 UI 截图。
 
 ## 当前结论
 

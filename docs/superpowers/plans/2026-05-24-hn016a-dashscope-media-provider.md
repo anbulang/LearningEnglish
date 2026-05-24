@@ -1054,7 +1054,7 @@ git commit -m "test: cover DashScope media worker behavior"
 - Modify: `infra/env/local.example.env`
 - Modify: `docs/harness/upload-recognition-loop.md`
 - Modify: `docs/harness/mvp-readiness-checklist.md`
-- Modify: `docs/project/2026-05-23-status-and-todo.md`
+- Modify: `docs/project/2026-05-24-status-and-todo.md`
 
 - [ ] **Step 1: Update env example**
 
@@ -1118,7 +1118,7 @@ In the evidence list, add:
 
 - [ ] **Step 4: Update project status doc**
 
-In `docs/project/2026-05-23-status-and-todo.md`, update HN-016 wording from “未开始 / 当前仍使用 mock” to current main reality:
+In `docs/project/2026-05-24-status-and-todo.md`, update HN-016 wording from “未开始 / 当前仍使用 mock” to current main reality:
 
 ```markdown
 | `HN-016` 真实媒体 Provider | 已合入主线，readiness 待证据 | OpenAI provider 已接入，DashScope 国内 provider 进入 HN-016A |
@@ -1149,7 +1149,7 @@ git diff --check exits 0
 - [ ] **Step 6: Commit**
 
 ```bash
-git add infra/env/local.example.env docs/harness/upload-recognition-loop.md docs/harness/mvp-readiness-checklist.md docs/project/2026-05-23-status-and-todo.md
+git add infra/env/local.example.env docs/harness/upload-recognition-loop.md docs/harness/mvp-readiness-checklist.md docs/project/2026-05-24-status-and-todo.md
 git commit -m "docs: add HN-016A DashScope media harness"
 ```
 
@@ -1267,7 +1267,7 @@ Do not commit `dist/harness/HN-016A/*` unless the repo convention changes. Menti
 If Task 7 only creates `dist/` artifacts, do not commit. If checklist status is changed because real evidence was completed, commit:
 
 ```bash
-git add docs/harness/mvp-readiness-checklist.md docs/harness/upload-recognition-loop.md docs/project/2026-05-23-status-and-todo.md
+git add docs/harness/mvp-readiness-checklist.md docs/harness/upload-recognition-loop.md docs/project/2026-05-24-status-and-todo.md
 git commit -m "docs: record HN-016A DashScope verification"
 ```
 
