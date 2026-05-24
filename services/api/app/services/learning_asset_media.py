@@ -185,11 +185,9 @@ class DashScopeImageGenerationProvider:
     def _create_task(self, *, prompt: str, reference_image_path: Optional[Path]) -> str:
         content: list[dict[str, str]] = [{"text": prompt}]
         parameters: dict[str, object] = {"watermark": False, "n": 1}
-        model = self.model
         if reference_image_path is not None:
             content.append({"image": _image_data_url(reference_image_path)})
             parameters["enable_interleave"] = True
-            model = self.edit_model
 
         try:
             response = self._client.post(
@@ -199,8 +197,8 @@ class DashScopeImageGenerationProvider:
                     "X-DashScope-Async": "enable",
                 },
                 json={
-                    "model": model,
-                    "input": {"messages": [{"content": content}]},
+                    "model": self.model,
+                    "input": {"messages": [{"role": "user", "content": content}]},
                     "parameters": parameters,
                 },
             )
@@ -469,6 +467,23 @@ def _image_data_url(path: Path) -> str:
 
 
 def _dashscope_first_image_url(output: dict[str, Any]) -> str:
+    choices = output.get("choices")
+    if isinstance(choices, list):
+        for choice in choices:
+            if not isinstance(choice, dict):
+                continue
+            message = choice.get("message")
+            if not isinstance(message, dict):
+                continue
+            content = message.get("content")
+            if not isinstance(content, list):
+                continue
+            for item in content:
+                if isinstance(item, dict):
+                    url = item.get("image")
+                    if isinstance(url, str) and url:
+                        return url
+
     results = output.get("results")
     if isinstance(results, list):
         for result in results:
