@@ -157,8 +157,12 @@ def test_dashscope_image_generation_without_reference_creates_task_polls_and_dow
             assert body["input"]["messages"] == [
                 {"role": "user", "content": [{"text": "Draw a colorful queen flashcard."}]}
             ]
+            assert body["parameters"]["prompt_extend"] is True
             assert body["parameters"]["watermark"] is False
-            assert body["parameters"]["n"] == 1
+            assert body["parameters"]["max_images"] == 1
+            assert body["parameters"]["size"] == "1280*1280"
+            assert body["parameters"]["enable_interleave"] is True
+            assert "n" not in body["parameters"]
             return httpx.Response(200, json={"output": {"task_id": "task_image_1"}})
         if request.url == "https://dashscope.test/api/v1/tasks/task_image_1":
             return httpx.Response(
@@ -253,7 +257,12 @@ def test_dashscope_image_generation_with_reference_sends_data_url_and_interleave
             assert message["role"] == "user"
             assert message["content"][0] == {"text": "Draw from the reference."}
             assert message["content"][1]["image"] == "data:image/png;base64,cmVmZXJlbmNlLWJ5dGVz"
+            assert body["parameters"]["prompt_extend"] is True
+            assert body["parameters"]["watermark"] is False
+            assert body["parameters"]["max_images"] == 1
+            assert body["parameters"]["size"] == "1280*1280"
             assert body["parameters"]["enable_interleave"] is True
+            assert "n" not in body["parameters"]
             return httpx.Response(200, json={"output": {"task_id": "task_image_2"}})
         if request.url == "https://dashscope.test/api/v1/tasks/task_image_2":
             return httpx.Response(

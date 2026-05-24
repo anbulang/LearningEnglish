@@ -184,10 +184,15 @@ class DashScopeImageGenerationProvider:
 
     def _create_task(self, *, prompt: str, reference_image_path: Optional[Path]) -> str:
         content: list[dict[str, str]] = [{"text": prompt}]
-        parameters: dict[str, object] = {"watermark": False, "n": 1}
+        parameters: dict[str, object] = {
+            "prompt_extend": True,
+            "watermark": False,
+            "max_images": 1,
+            "size": "1280*1280",
+            "enable_interleave": True,
+        }
         if reference_image_path is not None:
             content.append({"image": _image_data_url(reference_image_path)})
-            parameters["enable_interleave"] = True
 
         try:
             response = self._client.post(
