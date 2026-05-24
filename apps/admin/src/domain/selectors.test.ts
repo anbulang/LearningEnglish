@@ -17,12 +17,15 @@ describe("admin domain selectors", () => {
 
   it("counts lifecycle stages from material, job, and media status", () => {
     const counts = getLifecycleCounts(mockMaterials);
-    expect(counts.upload).toBeGreaterThan(0);
-    expect(counts.parse).toBeGreaterThan(0);
-    expect(counts.parentReview).toBeGreaterThan(0);
-    expect(counts.media).toBeGreaterThan(0);
-    expect(counts.ready).toBeGreaterThan(0);
-    expect(counts.failed).toBeGreaterThan(0);
+    expect(counts).toEqual({
+      upload: 5,
+      parse: 1,
+      parentReview: 1,
+      knowledgePack: 1,
+      media: 3,
+      ready: 0,
+      failed: 1
+    });
   });
 
   it("applies provider policy precedence with tenant override above global default", () => {
@@ -30,10 +33,16 @@ describe("admin domain selectors", () => {
     expect(effective.aiProvider).toBe("doubao");
     expect(effective.mediaProvider).toBe("real");
     expect(effective.source).toBe("tenant_override");
+
+    const fallback = getEffectiveProviderPolicy(mockProviderPolicies, "tenant_unknown");
+    expect(fallback.source).toBe("global_default");
+    expect(fallback.aiProvider).toBe("stub");
   });
 
   it("sorts tenant health rows by risk before healthy tenants", () => {
     const rows = getTenantHealthRows(mockTenants, mockMaterials);
-    expect(rows[0].blockedJobs).toBeGreaterThanOrEqual(rows[rows.length - 1].blockedJobs);
+    expect(rows[0].tenant.id).toBe("tenant_sunny_kids");
+    expect(rows[rows.length - 1].blockedJobs).toBe(0);
+    expect(rows[rows.length - 1].healthScore).toBeGreaterThanOrEqual(rows[0].healthScore);
   });
 });

@@ -21,6 +21,12 @@ export type MaterialStatus = "uploaded" | "processing" | "needs_review" | "ready
 export type JobStatus = "queued" | "processing" | "needs_review" | "ready" | "failed";
 export type MediaStatus = "pending" | "processing" | "ready" | "failed";
 
+export interface SourcePage {
+  pageIndex: number;
+  thumbnailUrl: string;
+  sourceType: "camera" | "gallery";
+}
+
 export interface AdminMaterial {
   id: string;
   tenantId: string;
@@ -29,6 +35,10 @@ export interface AdminMaterial {
   childAge: number;
   title: string;
   pageCount: number;
+  jobId: string;
+  confidenceSummary: string;
+  ocrConfidence: number;
+  sourcePages: SourcePage[];
   materialStatus: MaterialStatus;
   jobStatus: JobStatus;
   provider: "stub" | "doubao";

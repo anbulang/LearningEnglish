@@ -10,23 +10,28 @@ export function getMaterialsForScope(materials: AdminMaterial[], scope: TenantSc
 export function getLifecycleCounts(materials: AdminMaterial[]): LifecycleCounts {
   return materials.reduce<LifecycleCounts>(
     (counts, material) => {
+      const isArchived = material.materialStatus === "archived";
+      const isFailed = material.materialStatus === "failed" || material.jobStatus === "failed" || material.mediaStatus === "failed";
+      const isFullyReady = material.materialStatus === "ready" && material.mediaStatus === "ready";
+      const hasKnowledgePack = material.jobStatus === "ready" || material.materialStatus === "ready";
+
       counts.upload += 1;
-      if (material.jobStatus === "queued" || material.jobStatus === "processing") {
+      if (!isArchived && (material.jobStatus === "queued" || material.jobStatus === "processing")) {
         counts.parse += 1;
       }
-      if (material.jobStatus === "needs_review" || material.materialStatus === "needs_review") {
+      if (!isArchived && (material.jobStatus === "needs_review" || material.materialStatus === "needs_review")) {
         counts.parentReview += 1;
       }
-      if (material.jobStatus === "ready" || material.materialStatus === "ready") {
+      if (!isArchived && !isFailed && hasKnowledgePack && !isFullyReady) {
         counts.knowledgePack += 1;
       }
-      if (material.mediaStatus === "pending" || material.mediaStatus === "processing") {
+      if (!isArchived && !isFailed && (material.mediaStatus === "pending" || material.mediaStatus === "processing")) {
         counts.media += 1;
       }
-      if (material.materialStatus === "ready" && material.mediaStatus === "ready") {
+      if (!isArchived && !isFailed && isFullyReady) {
         counts.ready += 1;
       }
-      if (material.materialStatus === "failed" || material.jobStatus === "failed" || material.mediaStatus === "failed") {
+      if (isFailed) {
         counts.failed += 1;
       }
       return counts;

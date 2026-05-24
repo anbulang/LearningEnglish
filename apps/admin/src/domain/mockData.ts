@@ -1,4 +1,12 @@
-import type { AdminMaterial, AdminUser, ProviderPolicy, Tenant } from "./types";
+import type { AdminMaterial, AdminUser, ProviderPolicy, SourcePage, Tenant } from "./types";
+
+function createSourcePages(slug: string, pageCount: number, sourceType: SourcePage["sourceType"]): SourcePage[] {
+  return Array.from({ length: pageCount }, (_, index) => ({
+    pageIndex: index + 1,
+    thumbnailUrl: `/admin-mock/pages/${slug}-${index + 1}.png`,
+    sourceType
+  }));
+}
 
 export const mockAdminUser: AdminUser = {
   id: "admin_001",
@@ -66,8 +74,12 @@ export const mockMaterials: AdminMaterial[] = [
     childAge: 6,
     title: "HN-014 Phonics Worksheet",
     pageCount: 6,
+    jobId: "job_hn014_parse",
+    confidenceSummary: "OCR parsed successfully; media generation still running.",
+    ocrConfidence: 0.92,
+    sourcePages: createSourcePages("hn014", 6, "camera"),
     materialStatus: "ready",
-    jobStatus: "processing",
+    jobStatus: "ready",
     provider: "doubao",
     learningAssets: 68,
     mediaStatus: "processing",
@@ -83,14 +95,18 @@ export const mockMaterials: AdminMaterial[] = [
     childAge: 5,
     title: "Queen / Quilt Review Pack",
     pageCount: 8,
-    materialStatus: "needs_review",
-    jobStatus: "needs_review",
+    jobId: "job_queen_quilt_parse",
+    confidenceSummary: "Waiting for parent review.",
+    ocrConfidence: 0.88,
+    sourcePages: createSourcePages("queen-quilt", 8, "gallery"),
+    materialStatus: "processing",
+    jobStatus: "processing",
     provider: "doubao",
     learningAssets: 92,
     mediaStatus: "pending",
     slaMinutes: 225,
     updatedAt: "2026-05-24 09:41",
-    warnings: ["Parent review waiting over 48h"]
+    warnings: ["OCR parsing in progress"]
   },
   {
     id: "mat_weekend",
@@ -100,11 +116,15 @@ export const mockMaterials: AdminMaterial[] = [
     childAge: 7,
     title: "Weekend Reading Worksheet",
     pageCount: 4,
-    materialStatus: "ready",
-    jobStatus: "ready",
+    jobId: "job_weekend_parse",
+    confidenceSummary: "Waiting for parent review.",
+    ocrConfidence: 0.96,
+    sourcePages: createSourcePages("weekend", 4, "gallery"),
+    materialStatus: "needs_review",
+    jobStatus: "needs_review",
     provider: "stub",
     learningAssets: 52,
-    mediaStatus: "ready",
+    mediaStatus: "pending",
     slaMinutes: 20,
     updatedAt: "2026-05-23 08:12",
     warnings: []
@@ -117,6 +137,10 @@ export const mockMaterials: AdminMaterial[] = [
     childAge: 6,
     title: "Animal Sounds Practice",
     pageCount: 5,
+    jobId: "job_animals_parse",
+    confidenceSummary: "OCR request failed before draft assets were generated.",
+    ocrConfidence: 0.31,
+    sourcePages: createSourcePages("animals", 5, "camera"),
     materialStatus: "failed",
     jobStatus: "failed",
     provider: "doubao",
@@ -134,6 +158,10 @@ export const mockMaterials: AdminMaterial[] = [
     childAge: 5,
     title: "Colors Mini Test",
     pageCount: 1,
+    jobId: "job_colors_parse",
+    confidenceSummary: "Archived by parent request.",
+    ocrConfidence: 0.9,
+    sourcePages: createSourcePages("colors", 1, "camera"),
     materialStatus: "archived",
     jobStatus: "ready",
     provider: "stub",
