@@ -1,6 +1,6 @@
 :root {
-  color: #251910;
-  background: #fff8f5;
+  color: #1f2937;
+  background: #f6f7fb;
   font-family: "Plus Jakarta Sans", "Be Vietnam Pro", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -10,7 +10,7 @@
 
 body {
   margin: 0;
-  background: #fff8f5;
+  background: #f6f7fb;
 }
 
 button,
@@ -20,10 +20,248 @@ textarea {
   font: inherit;
 }
 
-.app-boot {
+button,
+select {
+  border: 0;
+}
+
+button {
+  cursor: pointer;
+}
+
+.admin-shell {
   min-height: 100vh;
   display: grid;
-  place-content: center;
+  grid-template-columns: 248px minmax(0, 1fr);
+  background: #f6f7fb;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px 18px;
+  color: #f9fafb;
+  background: #172033;
+}
+
+.brand-mark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 8px;
+  color: #172033;
+  background: #facc15;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.sidebar-nav {
+  display: grid;
+  gap: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #cbd5e1;
+  background: transparent;
+  text-align: left;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  color: #ffffff;
+  background: #26334d;
+}
+
+.nav-item svg {
+  flex: 0 0 auto;
+}
+
+.nav-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-frame {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.topbar strong {
+  margin-right: auto;
+  color: #111827;
+  font-size: 16px;
+}
+
+.topbar select {
+  min-width: 172px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #111827;
+  background: #ffffff;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-chip.success {
+  color: #047857;
+  background: #eafbf6;
+}
+
+.language-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.language-toggle button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: #4b5563;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.language-toggle button.active {
+  color: #111827;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 12%);
+}
+
+.ghost-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #374151;
+  background: #ffffff;
+  font-weight: 700;
+}
+
+.page-content {
+  min-width: 0;
+  flex: 1;
+  padding: 32px;
+}
+
+.page-header {
+  max-width: 840px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 34px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.page-header p:last-child {
+  margin: 12px 0 0;
+  color: #4b5563;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.surface {
+  display: inline-flex;
+  align-items: baseline;
   gap: 8px;
-  text-align: center;
+  min-height: 64px;
+  padding: 18px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #4b5563;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 7%);
+}
+
+.surface strong {
+  color: #111827;
+  font-size: 28px;
+}
+
+@media (max-width: 900px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .sidebar-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar strong {
+    width: 100%;
+  }
+
+  .page-content {
+    padding: 24px 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar select,
+  .language-toggle,
+  .ghost-button {
+    width: 100%;
+  }
+
+  .language-toggle button {
+    flex: 1;
+  }
 }
