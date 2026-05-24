@@ -234,11 +234,6 @@ button {
   box-shadow: 0 10px 24px rgb(15 23 42 / 7%);
 }
 
-.surface strong {
-  color: #111827;
-  font-size: 28px;
-}
-
 .page-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));

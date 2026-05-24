@@ -25,6 +25,18 @@ describe("CommandCenter", () => {
     expect(activeTenantsCard).not.toBeNull();
     expect(within(activeTenantsCard as HTMLElement).getByText("1")).toBeInTheDocument();
 
+    const blockedJobsCard = screen.getByText("Blocked jobs").closest(".metric-card");
+    expect(blockedJobsCard).not.toBeNull();
+    expect(within(blockedJobsCard as HTMLElement).getByText("1")).toBeInTheDocument();
+
+    const mediaFailuresCard = screen.getByText("Media failures").closest(".metric-card");
+    expect(mediaFailuresCard).not.toBeNull();
+    expect(within(mediaFailuresCard as HTMLElement).getByText("1")).toBeInTheDocument();
+
+    const providerIncidentsCard = screen.getByText("Provider incidents").closest(".metric-card");
+    expect(providerIncidentsCard).not.toBeNull();
+    expect(within(providerIncidentsCard as HTMLElement).getByText("1")).toBeInTheDocument();
+
     expect(screen.getAllByText("Sunny Kids English")).toHaveLength(2);
     expect(screen.queryByText("Bright Future School")).not.toBeInTheDocument();
     expect(screen.queryByText("Maple Pilot Group")).not.toBeInTheDocument();
