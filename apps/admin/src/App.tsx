@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
+import { EmptyPhase } from "./components/ui";
 import { mockMaterials, mockTenants } from "./domain/mockData";
 import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
+import { CommandCenter } from "./pages/CommandCenter";
 
 const pageTitles: Record<PageKey, MessageKey> = {
   command: "page.commandCenter.title",
@@ -23,10 +25,6 @@ export function App() {
   const [tenantScope, setTenantScope] = useState<TenantScope>("all");
   const [activePage, setActivePage] = useState<PageKey>("command");
   const t = createTranslator(language);
-  const scopedMaterials = useMemo(
-    () => (tenantScope === "all" ? mockMaterials : mockMaterials.filter((material) => material.tenantId === tenantScope)),
-    [tenantScope]
-  );
 
   return (
     <AppShell
@@ -38,17 +36,17 @@ export function App() {
       onTenantScopeChange={setTenantScope}
       onPageChange={setActivePage}
     >
-      <section className="page-header">
-        <p className="eyebrow">Phase 1 mock prototype</p>
-        <h1>{t(pageTitles[activePage])}</h1>
-        <p>{activePage === "command" ? t("page.commandCenter.subtitle") : t("placeholder.phase1")}</p>
-      </section>
       {activePage === "command" ? (
-        <section className="surface">
-          <strong>{scopedMaterials.length}</strong> materials in current scope
-        </section>
+        <CommandCenter language={language} tenantScope={tenantScope} tenants={mockTenants} materials={mockMaterials} />
       ) : (
-        <section className="surface">{t("placeholder.phase1")}</section>
+        <>
+          <section className="page-header">
+            <p className="eyebrow">Phase 1 mock prototype</p>
+            <h1>{t(pageTitles[activePage])}</h1>
+            <p>{t("placeholder.phase1")}</p>
+          </section>
+          <EmptyPhase title={t(pageTitles[activePage])} detail={t("placeholder.phase1")} />
+        </>
       )}
     </AppShell>
   );
