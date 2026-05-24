@@ -281,6 +281,76 @@ def test_dashscope_image_generation_sanitizes_malformed_download_url_errors() ->
     assert malformed_url not in str(exc_info.value)
 
 
+def test_dashscope_image_generation_missing_image_url_raises_provider_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            return httpx.Response(200, json={"output": {"task_id": "task_missing_url"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_missing_url":
+            return httpx.Response(
+                200,
+                json={
+                    "output": {
+                        "task_status": "SUCCEEDED",
+                        "choices": [{"message": {"content": [{"text": "no image here"}]}}],
+                    }
+                },
+            )
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope image task response missing image URL"):
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
+
+
+def test_dashscope_image_generation_download_http_error_raises_provider_error() -> None:
+    image_url = "https://dashscope-cdn.test/failed-download.png"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            return httpx.Response(200, json={"output": {"task_id": "task_download_failed"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_download_failed":
+            return httpx.Response(
+                200,
+                json={
+                    "output": {
+                        "task_status": "SUCCEEDED",
+                        "choices": [{"message": {"content": [{"image": image_url}]}}],
+                    }
+                },
+            )
+        if request.url == image_url:
+            return httpx.Response(502, text="temporary object store failure")
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope image download failed") as exc_info:
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
+
+    assert image_url not in str(exc_info.value)
+
+
 def test_dashscope_image_generation_with_reference_sends_data_url_and_interleave(tmp_path: Path) -> None:
     reference_path = tmp_path / "reference.png"
     reference_path.write_bytes(b"reference-bytes")
@@ -291,7 +361,10 @@ def test_dashscope_image_generation_with_reference_sends_data_url_and_interleave
             assert body["model"] == "wan2.6-image"
             message = body["input"]["messages"][0]
             assert message["role"] == "user"
-            assert message["content"][0] == {"text": "Draw from the reference."}
+            prompt_text = message["content"][0]["text"]
+            assert "Draw from the reference." in prompt_text
+            assert "参考讲义图片" in prompt_text
+            assert "彩色教学配图" in prompt_text or "彩色教学图片" in prompt_text
             assert message["content"][1]["image"] == "data:image/png;base64,cmVmZXJlbmNlLWJ5dGVz"
             assert body["parameters"]["prompt_extend"] is True
             assert body["parameters"]["watermark"] is False

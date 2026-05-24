@@ -183,7 +183,10 @@ class DashScopeImageGenerationProvider:
         return self._download_image(image_url)
 
     def _create_task(self, *, prompt: str, reference_image_path: Optional[Path]) -> str:
-        content: list[dict[str, str]] = [{"text": prompt}]
+        text_prompt = prompt
+        if reference_image_path is not None:
+            text_prompt = _dashscope_reference_prompt(prompt)
+        content: list[dict[str, str]] = [{"text": text_prompt}]
         parameters: dict[str, object] = {
             "prompt_extend": True,
             "watermark": False,
@@ -469,6 +472,12 @@ def _image_data_url(path: Path) -> str:
         raise MediaProviderError("DashScope image reference file could not be read") from exc
     image_b64 = base64.b64encode(image_payload).decode("ascii")
     return f"data:image/png;base64,{image_b64}"
+
+
+def _dashscope_reference_prompt(prompt: str) -> str:
+    if "参考讲义图片" in prompt and ("彩色教学配图" in prompt or "彩色教学图片" in prompt):
+        return prompt
+    return f"{prompt}\n\n请参考讲义图片，生成适合儿童英语学习的彩色教学配图。"
 
 
 def _dashscope_first_image_url(output: dict[str, Any]) -> str:
