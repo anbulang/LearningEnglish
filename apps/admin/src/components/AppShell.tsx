@@ -54,6 +54,13 @@ const navItems: { key: PageKey; label: MessageKey; icon: LucideIcon }[] = [
 
 export function AppShell(props: AppShellProps) {
   const t = createTranslator(props.language);
+  const knownTenantIds = new Set(props.tenants.map((tenant) => tenant.id));
+
+  function handleTenantScopeChange(value: string) {
+    if (value === "all" || knownTenantIds.has(value)) {
+      props.onTenantScopeChange(value);
+    }
+  }
 
   return (
     <div className="admin-shell">
@@ -66,6 +73,7 @@ export function AppShell(props: AppShellProps) {
               <button
                 key={item.key}
                 className={props.activePage === item.key ? "nav-item active" : "nav-item"}
+                aria-current={props.activePage === item.key ? "page" : undefined}
                 onClick={() => props.onPageChange(item.key)}
               >
                 <Icon size={18} />
@@ -78,7 +86,11 @@ export function AppShell(props: AppShellProps) {
       <div className="admin-frame">
         <header className="topbar">
           <strong>LearningEnglish Admin</strong>
-          <select value={props.tenantScope} onChange={(event) => props.onTenantScopeChange(event.target.value as TenantScope)}>
+          <select
+            value={props.tenantScope}
+            aria-label={t("top.tenantScope")}
+            onChange={(event) => handleTenantScopeChange(event.target.value)}
+          >
             <option value="all">{t("top.allTenants")}</option>
             {props.tenants.map((tenant) => (
               <option key={tenant.id} value={tenant.id}>
@@ -88,10 +100,18 @@ export function AppShell(props: AppShellProps) {
           </select>
           <span className="status-chip success">{t("top.production")}</span>
           <div className="language-toggle" aria-label="Language">
-            <button className={props.language === "zh" ? "active" : ""} onClick={() => props.onLanguageChange("zh")}>
+            <button
+              className={props.language === "zh" ? "active" : ""}
+              aria-pressed={props.language === "zh"}
+              onClick={() => props.onLanguageChange("zh")}
+            >
               中文
             </button>
-            <button className={props.language === "en" ? "active" : ""} onClick={() => props.onLanguageChange("en")}>
+            <button
+              className={props.language === "en" ? "active" : ""}
+              aria-pressed={props.language === "en"}
+              onClick={() => props.onLanguageChange("en")}
+            >
               English
             </button>
           </div>

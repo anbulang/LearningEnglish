@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createTranslator } from "./i18n";
+import { messages } from "./messages";
 
 describe("i18n", () => {
   it("translates navigation labels", () => {
@@ -10,5 +11,9 @@ describe("i18n", () => {
   it("keeps code tokens outside translation", () => {
     expect(createTranslator("zh")("code.aiProvider")).toBe("AI_PROVIDER");
     expect(createTranslator("en")("code.aiProvider")).toBe("AI_PROVIDER");
+  });
+
+  it("keeps Chinese and English message keys in parity", () => {
+    expect(Object.keys(messages.en).sort()).toEqual(Object.keys(messages.zh).sort());
   });
 });
