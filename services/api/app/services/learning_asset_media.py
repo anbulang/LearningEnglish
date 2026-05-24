@@ -186,29 +186,38 @@ class DashScopeImageGenerationProvider:
         text_prompt = prompt
         if reference_image_path is not None:
             text_prompt = _dashscope_reference_prompt(prompt)
-        content: list[dict[str, str]] = [{"text": text_prompt}]
-        parameters: dict[str, object] = {
-            "prompt_extend": True,
-            "watermark": False,
-            "max_images": 1,
-            "size": "1280*1280",
-            "enable_interleave": True,
-        }
-        if reference_image_path is not None:
-            content.append({"image": _image_data_url(reference_image_path)})
+            endpoint = f"{self.base_url}/services/aigc/image2image/image-synthesis"
+            payload = {
+                "model": self.edit_model,
+                "input": {
+                    "function": "description_edit",
+                    "prompt": text_prompt,
+                    "base_image_url": _image_data_url(reference_image_path),
+                },
+                "parameters": {"n": 1},
+            }
+        else:
+            endpoint = f"{self.base_url}/services/aigc/image-generation/generation"
+            payload = {
+                "model": self.model,
+                "input": {"messages": [{"role": "user", "content": [{"text": text_prompt}]}]},
+                "parameters": {
+                    "prompt_extend": True,
+                    "watermark": False,
+                    "max_images": 1,
+                    "size": "1280*1280",
+                    "enable_interleave": True,
+                },
+            }
 
         try:
             response = self._client.post(
-                f"{self.base_url}/services/aigc/image-generation/generation",
+                endpoint,
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "X-DashScope-Async": "enable",
                 },
-                json={
-                    "model": self.model,
-                    "input": {"messages": [{"role": "user", "content": content}]},
-                    "parameters": parameters,
-                },
+                json=payload,
             )
             response.raise_for_status()
             payload = response.json()
@@ -232,7 +241,7 @@ class DashScopeImageGenerationProvider:
             status = output.get("task_status")
             if status == "SUCCEEDED":
                 return _dashscope_first_image_url(output)
-            if status == "FAILED":
+            if status in {"FAILED", "CANCELED", "UNKNOWN"}:
                 raise MediaProviderError("DashScope image task failed")
             if time.monotonic() - started_at >= self.max_poll_seconds:
                 raise MediaProviderError("DashScope image task polling timed out")

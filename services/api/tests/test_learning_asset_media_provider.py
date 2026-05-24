@@ -474,22 +474,18 @@ def test_dashscope_image_generation_with_reference_sends_data_url_and_interleave
     reference_path.write_bytes(b"reference-bytes")
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image2image/image-synthesis":
+            assert request.headers["authorization"] == "Bearer sk-dashscope"
+            assert request.headers["x-dashscope-async"] == "enable"
             body = json.loads(request.content)
-            assert body["model"] == "wan2.6-image"
-            message = body["input"]["messages"][0]
-            assert message["role"] == "user"
-            prompt_text = message["content"][0]["text"]
+            assert body["model"] == "wanx2.1-imageedit"
+            assert body["input"]["function"] == "description_edit"
+            prompt_text = body["input"]["prompt"]
             assert "Draw from the reference." in prompt_text
             assert "参考讲义图片" in prompt_text
             assert "彩色教学配图" in prompt_text or "彩色教学图片" in prompt_text
-            assert message["content"][1]["image"] == "data:image/png;base64,cmVmZXJlbmNlLWJ5dGVz"
-            assert body["parameters"]["prompt_extend"] is True
-            assert body["parameters"]["watermark"] is False
-            assert body["parameters"]["max_images"] == 1
-            assert body["parameters"]["size"] == "1280*1280"
-            assert body["parameters"]["enable_interleave"] is True
-            assert "n" not in body["parameters"]
+            assert body["input"]["base_image_url"] == "data:image/png;base64,cmVmZXJlbmNlLWJ5dGVz"
+            assert body["parameters"]["n"] == 1
             return httpx.Response(200, json={"output": {"task_id": "task_image_2"}})
         if request.url == "https://dashscope.test/api/v1/tasks/task_image_2":
             return httpx.Response(
@@ -522,6 +518,31 @@ def test_dashscope_image_generation_with_reference_sends_data_url_and_interleave
     assert media.payload == b"dashscope-reference-image"
     assert media.content_type == "image/png"
     assert media.extension == ".png"
+
+
+@pytest.mark.parametrize("task_status", ["FAILED", "CANCELED", "UNKNOWN"])
+def test_dashscope_image_generation_terminal_task_status_raises_provider_error(task_status: str) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url == "https://dashscope.test/api/v1/services/aigc/image-generation/generation":
+            return httpx.Response(200, json={"output": {"task_id": "task_terminal"}})
+        if request.url == "https://dashscope.test/api/v1/tasks/task_terminal":
+            return httpx.Response(200, json={"output": {"task_status": task_status, "message": "not recoverable"}})
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    provider = DashScopeImageGenerationProvider(
+        api_key="sk-dashscope",
+        base_url="https://dashscope.test/api/v1",
+        model="wan2.6-image",
+        edit_model="wanx2.1-imageedit",
+        client=httpx.Client(transport=FakeTransport(handler)),
+    )
+
+    with pytest.raises(MediaProviderError, match="DashScope image task failed"):
+        provider.generate(
+            asset=LearningAsset(id="asset_1", text="queen", kind="word"),
+            prompt="Draw a queen.",
+            reference_image_path=None,
+        )
 
 
 def test_dashscope_image_generation_task_failure_raises_provider_error() -> None:
