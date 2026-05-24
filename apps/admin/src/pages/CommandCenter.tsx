@@ -1,5 +1,5 @@
 import { MetricCard, StatusChip } from "../components/ui";
-import { getLifecycleCounts, getMaterialsForScope, getTenantHealthRows } from "../domain/selectors";
+import { getLifecycleCounts, getMaterialsForScope, getTenantHealthRows, isBlockedMaterial } from "../domain/selectors";
 import type { AdminMaterial, Language, LifecycleCounts, Tenant, TenantScope } from "../domain/types";
 
 interface CommandCenterProps {
@@ -19,9 +19,8 @@ export function CommandCenter({ language, tenantScope, tenants, materials }: Com
   const scopedTenants = tenantScope === "all" ? tenants : tenants.filter((tenant) => tenant.id === tenantScope);
   const counts = getLifecycleCounts(scopedMaterials);
   const tenantRows = getTenantHealthRows(scopedTenants, scopedMaterials).slice(0, 4);
-  const riskRows = scopedMaterials.filter(
-    (material) => material.materialStatus === "failed" || material.jobStatus === "failed" || material.slaMinutes > 120
-  );
+  const riskRows = scopedMaterials.filter(isBlockedMaterial);
+  const providerIncidents = scopedMaterials.filter(hasProviderIncident).length;
   const copy = language === "zh" ? zhCopy : enCopy;
   const funnelItems: FunnelItem[] = [
     { key: "upload", label: copy.stageUpload },
@@ -49,7 +48,7 @@ export function CommandCenter({ language, tenantScope, tenants, materials }: Com
           value={scopedMaterials.filter((material) => material.mediaStatus === "failed").length}
           detail={copy.mediaFailuresDetail}
         />
-        <MetricCard label={copy.providerIncidents} value={copy.providerIncidentValue} detail={copy.providerIncidentDetail} />
+        <MetricCard label={copy.providerIncidents} value={providerIncidents} detail={copy.providerIncidentDetail} />
       </div>
 
       <section className="surface table-panel span-7">
@@ -123,6 +122,10 @@ export function CommandCenter({ language, tenantScope, tenants, materials }: Com
   );
 }
 
+function hasProviderIncident(material: AdminMaterial): boolean {
+  return material.provider !== "stub" && (isBlockedMaterial(material) || material.mediaStatus === "failed" || material.warnings.length > 0);
+}
+
 const zhCopy = {
   title: "平台指挥台",
   subtitle: "多租户学习内容生产、AI 处理和学习结果的统一运营入口",
@@ -133,8 +136,7 @@ const zhCopy = {
   mediaFailures: "媒体失败",
   mediaFailuresDetail: "配图或 TTS 失败",
   providerIncidents: "Provider 事件",
-  providerIncidentValue: "2 active",
-  providerIncidentDetail: "Doubao Text / OpenAI Media",
+  providerIncidentDetail: "当前范围内 provider 告警材料",
   inbox: "今日待处理",
   tenant: "租户",
   issue: "问题",
@@ -163,8 +165,7 @@ const enCopy = {
   mediaFailures: "Media failures",
   mediaFailuresDetail: "Image or TTS failures",
   providerIncidents: "Provider incidents",
-  providerIncidentValue: "2 active",
-  providerIncidentDetail: "Doubao Text / OpenAI Media",
+  providerIncidentDetail: "Provider-warning materials in scope",
   inbox: "Action inbox",
   tenant: "Tenant",
   issue: "Issue",

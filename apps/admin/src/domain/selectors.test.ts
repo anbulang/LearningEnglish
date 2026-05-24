@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { mockMaterials, mockProviderPolicies, mockTenants } from "./mockData";
 import {
+  BLOCKED_SLA_MINUTES,
   getEffectiveProviderPolicy,
   getLifecycleCounts,
   getMaterialsForScope,
-  getTenantHealthRows
+  getTenantHealthRows,
+  isBlockedMaterial
 } from "./selectors";
 
 describe("admin domain selectors", () => {
@@ -44,5 +46,23 @@ describe("admin domain selectors", () => {
     expect(rows[0].tenant.id).toBe("tenant_sunny_kids");
     expect(rows[rows.length - 1].blockedJobs).toBe(0);
     expect(rows[rows.length - 1].healthScore).toBeGreaterThanOrEqual(rows[0].healthScore);
+  });
+
+  it("uses one blocked SLA boundary across inbox and tenant health", () => {
+    const atBoundary = {
+      ...mockMaterials[0],
+      id: "mat_at_boundary",
+      materialStatus: "processing" as const,
+      jobStatus: "ready" as const,
+      mediaStatus: "pending" as const,
+      slaMinutes: BLOCKED_SLA_MINUTES
+    };
+    const overBoundary = { ...atBoundary, id: "mat_over_boundary", slaMinutes: BLOCKED_SLA_MINUTES + 1 };
+
+    expect(isBlockedMaterial(atBoundary)).toBe(false);
+    expect(isBlockedMaterial(overBoundary)).toBe(true);
+
+    const rows = getTenantHealthRows(mockTenants, [atBoundary, overBoundary]);
+    expect(rows.find((row) => row.tenant.id === atBoundary.tenantId)?.blockedJobs).toBe(1);
   });
 });

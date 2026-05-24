@@ -221,8 +221,9 @@ button {
 }
 
 .surface {
-  display: inline-flex;
-  align-items: baseline;
+  display: block;
+  min-width: 0;
+  width: 100%;
   gap: 8px;
   min-height: 64px;
   padding: 18px 20px;
@@ -410,6 +411,8 @@ td small {
 .empty-phase {
   display: grid;
   align-items: start;
+  gap: 8px;
+  max-width: 720px;
 }
 
 .empty-phase h2 {

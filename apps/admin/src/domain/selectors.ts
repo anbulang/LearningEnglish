@@ -1,5 +1,11 @@
 import type { AdminMaterial, LifecycleCounts, ProviderPolicy, Tenant, TenantHealthRow, TenantScope } from "./types";
 
+export const BLOCKED_SLA_MINUTES = 180;
+
+export function isBlockedMaterial(material: AdminMaterial): boolean {
+  return material.materialStatus === "failed" || material.jobStatus === "failed" || material.slaMinutes > BLOCKED_SLA_MINUTES;
+}
+
 export function getMaterialsForScope(materials: AdminMaterial[], scope: TenantScope): AdminMaterial[] {
   if (scope === "all") {
     return materials;
@@ -63,9 +69,7 @@ export function getTenantHealthRows(tenants: Tenant[], materials: AdminMaterial[
   return tenants
     .map((tenant) => {
       const tenantMaterials = materials.filter((material) => material.tenantId === tenant.id);
-      const blockedJobs = tenantMaterials.filter(
-        (material) => material.materialStatus === "failed" || material.jobStatus === "failed" || material.slaMinutes > 180
-      ).length;
+      const blockedJobs = tenantMaterials.filter(isBlockedMaterial).length;
       const mediaFailures = tenantMaterials.filter((material) => material.mediaStatus === "failed").length;
       const healthScore = Math.max(0, 100 - blockedJobs * 12 - mediaFailures * 8);
       return { tenant, blockedJobs, mediaFailures, healthScore };
