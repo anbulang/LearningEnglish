@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
-import { EmptyPhase } from "./components/ui";
 import { mockMaterials, mockProviderPolicies, mockTenants } from "./domain/mockData";
 import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
 import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
+import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { TenantDetail } from "./pages/TenantDetail";
 
 const pageTitles: Record<PageKey, MessageKey> = {
@@ -56,14 +56,7 @@ export function App() {
         <ContentPipeline language={language} tenantScope={tenantScope} tenants={mockTenants} materials={mockMaterials} />
       )}
       {activePage !== "command" && activePage !== "tenants" && activePage !== "pipeline" && (
-        <>
-          <section className="page-header">
-            <p className="eyebrow">Phase 1 mock prototype</p>
-            <h1>{t(pageTitles[activePage])}</h1>
-            <p>{t("placeholder.phase1")}</p>
-          </section>
-          <EmptyPhase title={t(pageTitles[activePage])} detail={t("placeholder.phase1")} />
-        </>
+        <PlaceholderPage language={language} title={t(pageTitles[activePage])} />
       )}
     </AppShell>
   );
