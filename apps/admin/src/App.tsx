@@ -48,6 +48,7 @@ export function App() {
           tenants={mockTenants}
           materials={mockMaterials}
           policies={mockProviderPolicies}
+          isAllTenantPreview={tenantScope === "all"}
         />
       )}
       {activePage !== "command" && activePage !== "tenants" && (

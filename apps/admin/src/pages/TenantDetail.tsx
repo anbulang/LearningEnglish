@@ -8,17 +8,20 @@ interface TenantDetailProps {
   tenants: Tenant[];
   materials: AdminMaterial[];
   policies: ProviderPolicy[];
+  isAllTenantPreview?: boolean;
 }
 
-export function TenantDetail({ language, tenantId, tenants, materials, policies }: TenantDetailProps) {
-  const tenant = tenants.find((item) => item.id === tenantId) ?? tenants[0];
+export function TenantDetail({ language, tenantId, tenants, materials, policies, isAllTenantPreview = false }: TenantDetailProps) {
+  const tenant = tenants.find((item) => item.id === tenantId);
   const copy = language === "zh" ? zhCopy : enCopy;
 
   if (!tenant) {
     return (
       <section className="surface empty-phase">
         <h1>{copy.emptyTitle}</h1>
-        <p>{copy.emptyDetail}</p>
+        <p>
+          {copy.emptyDetail}: <strong>{tenantId}</strong>
+        </p>
       </section>
     );
   }
@@ -34,6 +37,11 @@ export function TenantDetail({ language, tenantId, tenants, materials, policies 
         <p className="eyebrow">Tenants / {tenant.name}</p>
         <h1>{copy.title}</h1>
         <p>{copy.subtitle}</p>
+        {isAllTenantPreview && (
+          <p className="scope-note">
+            {copy.allTenantPreview}: <strong>{tenant.name}</strong>
+          </p>
+        )}
       </section>
 
       <section className="surface span-5">
@@ -90,13 +98,16 @@ export function TenantDetail({ language, tenantId, tenants, materials, policies 
 
       <section className="surface span-7">
         <div className="section-title">
-          <h2>{copy.modules}</h2>
+          <div>
+            <h2>{copy.modules}</h2>
+            <p>{copy.modulesDetail}</p>
+          </div>
           <StatusChip tone={processingMedia > 0 ? "warning" : "success"}>
             {processingMedia > 0 ? copy.mediaProcessing : copy.allClear}
           </StatusChip>
         </div>
         <div className="module-grid">
-          {buildModules(policy, failedJobs).map((module) => (
+          {buildModules(policy, failedJobs, tenant).map((module) => (
             <div key={module.name} className="module-row">
               <span>{module.name}</span>
               <StatusChip tone={module.tone}>{module.status}</StatusChip>
@@ -165,13 +176,23 @@ type ModuleRow = {
   tone: "success" | "warning" | "danger" | "neutral";
 };
 
-function buildModules(policy: ProviderPolicy, failedJobs: number): ModuleRow[] {
+function buildModules(policy: ProviderPolicy, failedJobs: number, tenant: Tenant): ModuleRow[] {
+  const isPilotTier = tenant.tier.toLowerCase().includes("pilot");
+
   return [
-    { name: "Worksheet import", status: "Enabled", tone: "success" },
-    { name: "AI review", status: policy.aiProvider === "stub" ? "Mock" : "Enabled", tone: policy.aiProvider === "stub" ? "neutral" : "success" },
-    { name: "Real media", status: policy.mediaProvider === "real" ? "Enabled" : "Mock media", tone: policy.mediaProvider === "real" ? "success" : "warning" },
-    { name: "Speaking score", status: "Pilot", tone: "warning" },
-    { name: "Weekly reports", status: failedJobs > 0 ? "Watch" : "Enabled", tone: failedJobs > 0 ? "warning" : "success" }
+    { name: "Worksheet import", status: `${tenant.tier} ready`, tone: "success" },
+    {
+      name: "AI review",
+      status: policy.aiProvider === "stub" ? "Prototype stub" : `Provider ${policy.aiProvider}`,
+      tone: policy.aiProvider === "stub" ? "neutral" : "success"
+    },
+    {
+      name: "Media pipeline",
+      status: policy.mediaProvider === "real" ? "Real media preview" : "Mock media preview",
+      tone: policy.mediaProvider === "real" ? "success" : "warning"
+    },
+    { name: "Speaking score", status: isPilotTier ? "Pilot-tier ready" : "Tier review", tone: isPilotTier ? "success" : "warning" },
+    { name: "Weekly reports", status: failedJobs > 0 ? "Watch failed jobs" : "Readiness OK", tone: failedJobs > 0 ? "warning" : "success" }
   ];
 }
 
@@ -220,9 +241,10 @@ function getMediaStatusTone(status: MediaStatus): "success" | "warning" | "dange
 
 const zhCopy = {
   title: "租户详情",
-  subtitle: "查看租户身份、配额使用、模块访问、Provider 策略和内容材料状态。",
+  subtitle: "查看租户身份、配额使用、Prototype readiness、Provider 策略和内容材料状态。",
   emptyTitle: "未找到租户",
-  emptyDetail: "当前 mock 数据中没有可展示的租户。",
+  emptyDetail: "当前 mock 数据中不存在请求的 tenantId",
+  allTenantPreview: "All tenants selected; showing first tenant preview",
   type: "类型",
   region: "区域",
   owner: "负责人",
@@ -241,7 +263,8 @@ const zhCopy = {
   fallback: "Fallback",
   guardrail: "Monthly guardrail",
   policySource: "Policy source",
-  modules: "Module access",
+  modules: "Prototype operational readiness",
+  modulesDetail: "Phase 1 readiness view derived from tenant tier and provider policy; not authoritative module access.",
   mediaProcessing: "Media processing",
   allClear: "All clear",
   materials: "Tenant materials",
@@ -257,9 +280,10 @@ const zhCopy = {
 
 const enCopy = {
   title: "Tenant Detail",
-  subtitle: "Tenant identity, quota usage, module access, provider policy, and tenant content health.",
+  subtitle: "Tenant identity, quota usage, prototype readiness, provider policy, and tenant content health.",
   emptyTitle: "Tenant not found",
-  emptyDetail: "No tenant is available in the current mock dataset.",
+  emptyDetail: "Requested tenantId is not present in the current mock dataset",
+  allTenantPreview: "All tenants selected; showing first tenant preview",
   type: "Type",
   region: "Region",
   owner: "Owner",
@@ -278,7 +302,8 @@ const enCopy = {
   fallback: "Fallback",
   guardrail: "Monthly guardrail",
   policySource: "Policy source",
-  modules: "Module access",
+  modules: "Prototype operational readiness",
+  modulesDetail: "Phase 1 readiness view derived from tenant tier and provider policy; not authoritative module access.",
   mediaProcessing: "Media processing",
   allClear: "All clear",
   materials: "Tenant materials",
