@@ -11,8 +11,10 @@ IOS_API_BASE_URL ?= http://192.168.2.11:18000/v1
 IOS_PREFLIGHT_URL ?= $(subst /v1,,$(IOS_API_BASE_URL))/healthz
 IOS_DEVELOPMENT_TEAM ?= 95RDXKW54K
 API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0.0.1:5432/learning_english
+ADMIN_API_BASE_URL ?= http://127.0.0.1:8000
+ADMIN_API_TOKEN ?= local-admin-token
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-reset-ios-sim harness-capture-ios-screen
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-reset-ios-sim harness-capture-ios-screen
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -40,6 +42,9 @@ admin-install:
 
 admin-dev:
 	cd apps/admin && npm run dev
+
+admin-dev-live:
+	cd apps/admin && VITE_ADMIN_API_BASE_URL=$(ADMIN_API_BASE_URL) VITE_ADMIN_API_TOKEN=$(ADMIN_API_TOKEN) npm run dev
 
 admin-test:
 	cd apps/admin && npm test

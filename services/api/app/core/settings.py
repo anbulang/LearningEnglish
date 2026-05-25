@@ -47,6 +47,8 @@ class Settings:
     openai_base_url: str
     dashscope_api_key: str
     qwen_model: str
+    admin_api_token: str
+    admin_cors_origins: tuple[str, ...]
     sentry_dsn: str
 
 
@@ -96,6 +98,8 @@ def get_settings() -> Settings:
         openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", ""),
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
+        admin_api_token=os.getenv("ADMIN_API_TOKEN", "local-admin-token"),
+        admin_cors_origins=_csv_tuple(os.getenv("ADMIN_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173")),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
     )
 
@@ -105,3 +109,7 @@ def ensure_local_paths(settings: Settings) -> None:
     if settings.database_url.startswith("sqlite:///"):
         database_path = Path(settings.database_url.removeprefix("sqlite:///"))
         database_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _csv_tuple(value: str) -> tuple[str, ...]:
+    return tuple(item.strip() for item in value.split(",") if item.strip())

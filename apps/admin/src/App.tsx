@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
+import { loadAdminDashboard, type AdminDashboardData } from "./domain/adminApi";
 import { mockMaterials, mockProviderPolicies, mockTenants } from "./domain/mockData";
 import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
@@ -26,34 +27,84 @@ export function App() {
   const [language, setLanguage] = useState<Language>("zh");
   const [tenantScope, setTenantScope] = useState<TenantScope>("all");
   const [activePage, setActivePage] = useState<PageKey>("command");
+  const [dashboardData, setDashboardData] = useState<AdminDashboardData>({
+    tenants: mockTenants,
+    materials: mockMaterials,
+    providerPolicies: mockProviderPolicies
+  });
+  const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
   const t = createTranslator(language);
-  const selectedTenantId = tenantScope === "all" ? mockTenants[0]?.id ?? "" : tenantScope;
+  const selectedTenantId = tenantScope === "all" ? dashboardData.tenants[0]?.id ?? "" : tenantScope;
+
+  useEffect(() => {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      return;
+    }
+    let isCancelled = false;
+    loadAdminDashboard({
+      apiBaseUrl,
+      adminToken: import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token"
+    })
+      .then((data) => {
+        if (isCancelled) {
+          return;
+        }
+        setDashboardData(data);
+        setDataMode("live");
+        setTenantScope((currentScope) => {
+          if (currentScope === "all" || data.tenants.some((tenant) => tenant.id === currentScope)) {
+            return currentScope;
+          }
+          return "all";
+        });
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setDataMode("mock");
+        }
+      });
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   return (
     <AppShell
       activePage={activePage}
       language={language}
       tenantScope={tenantScope}
-      tenants={mockTenants}
+      tenants={dashboardData.tenants}
+      dataMode={dataMode}
       onLanguageChange={setLanguage}
       onTenantScopeChange={setTenantScope}
       onPageChange={setActivePage}
     >
       {activePage === "command" && (
-        <CommandCenter language={language} tenantScope={tenantScope} tenants={mockTenants} materials={mockMaterials} />
+        <CommandCenter
+          language={language}
+          tenantScope={tenantScope}
+          tenants={dashboardData.tenants}
+          materials={dashboardData.materials}
+        />
       )}
       {activePage === "tenants" && (
         <TenantDetail
           language={language}
           tenantId={selectedTenantId}
-          tenants={mockTenants}
-          materials={mockMaterials}
-          policies={mockProviderPolicies}
+          tenants={dashboardData.tenants}
+          materials={dashboardData.materials}
+          policies={dashboardData.providerPolicies}
           isAllTenantPreview={tenantScope === "all"}
         />
       )}
       {activePage === "pipeline" && (
-        <ContentPipeline language={language} tenantScope={tenantScope} tenants={mockTenants} materials={mockMaterials} />
+        <ContentPipeline
+          language={language}
+          tenantScope={tenantScope}
+          tenants={dashboardData.tenants}
+          materials={dashboardData.materials}
+        />
       )}
       {activePage !== "command" && activePage !== "tenants" && activePage !== "pipeline" && (
         <PlaceholderPage language={language} title={t(pageTitles[activePage])} />

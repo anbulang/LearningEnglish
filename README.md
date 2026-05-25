@@ -101,6 +101,7 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | Worker 测试 | `make worker-test` |
 | Admin 原型安装 | `make admin-install` |
 | Admin 原型开发 | `make admin-dev` |
+| Admin 连接本地 API | `make admin-dev-live` |
 | Admin 原型测试 | `make admin-test` |
 | Admin 原型构建 | `make admin-build` |
 | Flutter 测试 | `make mobile-test` |

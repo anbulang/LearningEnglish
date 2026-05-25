@@ -16,6 +16,7 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 ### 业务接口
 
+- `GET /v1/admin/dashboard?tenant_scope=all`
 - `GET/POST /v1/children`
 - `GET/POST /v1/materials`
 - `GET /v1/materials/{material_id}`
@@ -33,6 +34,7 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 ## 当前行为
 
+- Admin read API 需要 `X-Admin-Token`，默认本地 token 为 `local-admin-token`。该接口只读聚合当前数据库中的家长、孩子、讲义和解析任务，用于后台 MVP 验证；生产级 admin session、role、permission、audit mutation 后续补齐。
 - 上传讲义会创建 `CourseMaterial` 和 `MaterialParseJob`，然后通过 `Celery` 排队到后台识别，不再依赖前端首次读取 job 时才触发。
 - 默认 `AI_PROVIDER=stub`，可以直接跑通本地 MVP。
 - 配置 `AI_PROVIDER=doubao`、`ARK_API_KEY`、`DOUBAO_VISION_MODEL_OR_ENDPOINT`、`DOUBAO_TEXT_MODEL_OR_ENDPOINT` 后，可走 Volcengine Ark / Doubao 真识别。
@@ -49,6 +51,12 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
 .venv/bin/alembic upgrade head
 .venv/bin/uvicorn app.main:app --reload
+```
+
+本地 admin 页面如需接入 API：
+
+```bash
+ADMIN_API_BASE_URL=http://127.0.0.1:8000 ADMIN_API_TOKEN=local-admin-token make admin-dev-live
 ```
 
 ## 测试

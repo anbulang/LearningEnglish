@@ -4,9 +4,9 @@ LearningEnglish Admin 是 Phase 1 的 production-shaped 多租户后台原型，
 
 ## 范围
 
-- 仅使用 typed mock data。
-- 无真实 admin auth。
-- 无真实 admin API。
+- 默认使用 typed mock data，保证没有后端时页面仍可打开。
+- 可通过 `VITE_ADMIN_API_BASE_URL` 接入本地 FastAPI read-only admin API。
+- 首版 admin auth 使用本地 `X-Admin-Token` 静态 token；生产级 admin session / role / permission 仍在后续阶段。
 - 无 production mutation。
 - 验证 `Platform -> Tenant -> ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob -> LearningAsset -> ReviewTask / PracticeSession / SpeakingAttempt -> WeeklyReport` 的后台运营视角。
 - 支持中文 / English UI 切换。
@@ -17,8 +17,15 @@ LearningEnglish Admin 是 Phase 1 的 production-shaped 多租户后台原型，
 ```bash
 make admin-install
 make admin-dev
+make admin-dev-live
 make admin-test
 make admin-build
+```
+
+`make admin-dev-live` 默认连接 `http://127.0.0.1:8000/v1/admin/dashboard?tenant_scope=all`，并使用 `ADMIN_API_TOKEN=local-admin-token`。如需改地址：
+
+```bash
+ADMIN_API_BASE_URL=http://127.0.0.1:8000 ADMIN_API_TOKEN=local-admin-token make admin-dev-live
 ```
 
 ## 已实现页面
@@ -37,4 +44,4 @@ make admin-build
 - Audit & Access
 - Developer API
 
-这些页面在 Phase 1 只保留导航入口和租户范围上下文，后续需要接入真实 admin read API、admin auth、权限模型、审计链路和受控 mutation 后才能作为生产后台能力使用。
+这些页面在 Phase 1 只保留导航入口和租户范围上下文；当前已接入最小 read-only dashboard API，后续仍需要补齐独立 admin session、权限模型、审计链路和受控 mutation 后才能作为生产后台能力使用。

@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
@@ -37,6 +38,12 @@ app = FastAPI(
 
 settings = get_settings()
 ensure_local_paths(settings)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings.admin_cors_origins),
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["X-Admin-Token", "Content-Type"],
+)
 if settings.storage_backend == "s3":
     @app.get("/uploads/{object_key:path}", include_in_schema=False)
     def uploaded_asset(object_key: str) -> FileResponse:

@@ -1,10 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { mockTenants } from "../domain/mockData";
 import { AppShell } from "./AppShell";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 describe("AppShell", () => {
   it("shows tenant scope and switches language", async () => {
@@ -47,6 +52,72 @@ describe("AppShell", () => {
 
     expect(screen.getByRole("combobox", { name: "租户范围" })).toHaveValue("tenant_sunny_kids");
     expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("shows live API mode when the admin dashboard endpoint responds", async () => {
+    vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          tenants: [
+            {
+              id: "parent_live",
+              name: "微信家长live",
+              tenant_type: "pilot_family",
+              status: "active",
+              region: "local",
+              owner_contact: "13800138110",
+              tier: "pilot",
+              created_at: "2026-05-25T10:00:00+00:00",
+              active_parents: 1,
+              children: 1
+            }
+          ],
+          materials: [
+            {
+              id: "material_live",
+              tenant_id: "parent_live",
+              parent_name: "微信家长live",
+              child_name: "Mia Wang",
+              child_age: 6,
+              title: "Live API Worksheet",
+              page_count: 1,
+              job_id: "job_live",
+              confidence_summary: "上传完成，等待 OCR 与解析。",
+              ocr_confidence: 0.72,
+              source_pages: [],
+              material_status: "processing",
+              job_status: "processing",
+              provider: "stub",
+              learning_assets: 0,
+              media_status: "pending",
+              sla_minutes: 12,
+              updated_at: "2026-05-25T10:05:00+00:00",
+              warnings: []
+            }
+          ],
+          provider_policies: [
+            {
+              tenant_id: "global",
+              ai_provider: "stub",
+              media_provider: "mock",
+              fallback_mode: "global_stub",
+              monthly_guardrail: 0,
+              source: "global_default"
+            }
+          ]
+        })
+      })
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText("真实 API")).toBeInTheDocument();
+    expect(screen.getAllByText("微信家长live").length).toBeGreaterThan(0);
+    expect(screen.getByRole("combobox", { name: "租户范围" })).toHaveDisplayValue("所有租户");
   });
 
   it("ignores unknown tenant scope values", async () => {

@@ -34,6 +34,7 @@ interface AppShellProps {
   language: Language;
   tenantScope: TenantScope;
   tenants: Tenant[];
+  dataMode?: "mock" | "live";
   onLanguageChange: (language: Language) => void;
   onTenantScopeChange: (scope: TenantScope) => void;
   onPageChange: (page: PageKey) => void;
@@ -98,7 +99,7 @@ export function AppShell(props: AppShellProps) {
               </option>
             ))}
           </select>
-          <span className="status-chip success">{t("top.production")}</span>
+          <span className="status-chip success">{props.dataMode === "live" ? t("top.liveApi") : t("top.production")}</span>
           <div className="language-toggle" aria-label="Language">
             <button
               className={props.language === "zh" ? "active" : ""}
