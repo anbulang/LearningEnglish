@@ -557,11 +557,6 @@ td small {
   min-width: 940px;
 }
 
-.pipeline-table tbody tr {
-  cursor: pointer;
-}
-
-.pipeline-table tbody tr:hover,
 .pipeline-table tbody tr.selected-row {
   background: #f8fafc;
 }

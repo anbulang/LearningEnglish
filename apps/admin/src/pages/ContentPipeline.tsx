@@ -96,11 +96,7 @@ export function ContentPipeline({ language, tenantScope, tenants, materials }: C
               </thead>
               <tbody>
                 {filteredMaterials.map((material) => (
-                  <tr
-                    key={material.id}
-                    className={selectedMaterial?.id === material.id ? "selected-row" : ""}
-                    onClick={() => setSelectedMaterialId(material.id)}
-                  >
+                  <tr key={material.id} className={selectedMaterial?.id === material.id ? "selected-row" : ""}>
                     <td>{tenantNameById.get(material.tenantId) ?? material.tenantId}</td>
                     <td>
                       {material.childName}
@@ -111,10 +107,7 @@ export function ContentPipeline({ language, tenantScope, tenants, materials }: C
                         type="button"
                         className="table-link-button"
                         aria-label={`${copy.inspect} ${material.title}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedMaterialId(material.id);
-                        }}
+                        onClick={() => setSelectedMaterialId(material.id)}
                       >
                         {material.title}
                       </button>
