@@ -82,4 +82,26 @@ describe("ContentPipeline", () => {
     expect(onArchiveMaterial).toHaveBeenCalledWith("mat_weekend", "Duplicate worksheet uploaded by parent.");
     expect(await screen.findByText("Archive request recorded.")).toBeInTheDocument();
   });
+
+  it("submits a live retry mutation with the selected job and audit reason", async () => {
+    const onRetryMaterialJob = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ContentPipeline
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        dataMode="live"
+        onRetryMaterialJob={onRetryMaterialJob}
+      />
+    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Status filter"), "failed");
+    await userEvent.click(screen.getByRole("button", { name: /Inspect Animal Sounds Practice/ }));
+    await userEvent.type(screen.getByLabelText("Audit reason"), "OCR provider recovered.");
+    await userEvent.click(screen.getByRole("button", { name: "Retry job" }));
+
+    expect(onRetryMaterialJob).toHaveBeenCalledWith("job_animals_parse", "OCR provider recovered.");
+    expect(await screen.findByText("Retry request recorded.")).toBeInTheDocument();
+  });
 });

@@ -24,7 +24,8 @@ from app.db.models import (
     ParentCoachingScriptModel,
     ReviewTaskModel,
 )
-from app.models.contracts import MaterialStatus
+from app.models.contracts import JobStatus, MaterialStatus
+from app.services.job_queue import enqueue_material_job
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -33,6 +34,7 @@ ADMIN_PERMISSIONS = [
     "admin.tenant.read",
     "admin.material.read",
     "admin.material.archive",
+    "admin.material.retry",
     "admin.audit.read",
 ]
 
@@ -48,6 +50,10 @@ class AdminActor:
 
 
 class AdminArchiveMaterialRequest(BaseModel):
+    reason: str = ""
+
+
+class AdminRetryMaterialJobRequest(BaseModel):
     reason: str = ""
 
 
@@ -201,6 +207,79 @@ def archive_admin_material(
     )
     return {
         "required_permission": "admin.material.archive",
+        "material": _admin_material_payload(material, child, parent, job),
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
+@router.post("/material-jobs/{job_id}/retry")
+def retry_admin_material_job(
+    job_id: str,
+    payload: AdminRetryMaterialJobRequest,
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    reason = payload.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=422, detail="Retry reason is required")
+    if "admin.material.retry" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.material.retry permission")
+
+    _ensure_admin_user(db, actor)
+    row = db.execute(
+        select(MaterialParseJobModel, CourseMaterialModel, ChildProfileModel, ParentAccountModel)
+        .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .join(ParentAccountModel, ParentAccountModel.id == ChildProfileModel.parent_account_id)
+        .where(MaterialParseJobModel.id == job_id)
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material job not found")
+    job, material, child, parent = row
+    if tenant_scope != "all" and parent.id != tenant_scope:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material job not found in tenant scope")
+    if material.status == MaterialStatus.archived.value:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Archived material cannot be retried")
+
+    job.status = JobStatus.processing.value
+    job.warnings = []
+    job.confidence_summary = "任务已重新排队。"
+    job.finished_at = None
+    job.draft_image_records = material.image_records or []
+    job.draft_learning_assets = material.learning_assets or []
+    material.status = MaterialStatus.processing.value
+    db.add_all([job, material])
+    db.commit()
+    db.refresh(job)
+    db.refresh(material)
+    try:
+        enqueue_material_job(job.id)
+    except Exception as exc:
+        job.status = JobStatus.failed.value
+        job.confidence_summary = f"识别任务排队失败：{exc}"
+        job.warnings = [f"识别任务排队失败：{exc}", "请稍后重新识别。"]
+        material.status = MaterialStatus.failed.value
+        db.add_all([job, material])
+        db.commit()
+        db.refresh(job)
+        db.refresh(material)
+
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=parent.id,
+        action="admin.material_job.retry",
+        resource_type="material_parse_job",
+        resource_id=job.id,
+        risk_level="high",
+        result="success",
+        trace_id=_trace_id(request),
+        reason=reason,
+    )
+    return {
+        "required_permission": "admin.material.retry",
         "material": _admin_material_payload(material, child, parent, job),
         "audit_event": _audit_event_payload(audit_event),
     }

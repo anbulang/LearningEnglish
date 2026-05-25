@@ -264,6 +264,133 @@ describe("AppShell", () => {
     });
   });
 
+  it("submits live admin retry mutation and shows the audit reason", async () => {
+    vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    const dashboardPayload = {
+      tenants: [
+        {
+          id: "parent_live",
+          name: "微信家长live",
+          tenant_type: "pilot_family",
+          status: "warning",
+          region: "local",
+          owner_contact: "13800138110",
+          tier: "pilot",
+          created_at: "2026-05-25T10:00:00+00:00",
+          active_parents: 1,
+          children: 1
+        }
+      ],
+      materials: [
+        {
+          id: "material_failed",
+          tenant_id: "parent_live",
+          parent_name: "微信家长live",
+          child_name: "Mia Wang",
+          child_age: 6,
+          title: "Failed API Worksheet",
+          page_count: 1,
+          job_id: "job_failed",
+          confidence_summary: "OCR request failed.",
+          ocr_confidence: 0,
+          source_pages: [],
+          material_status: "failed",
+          job_status: "failed",
+          provider: "stub",
+          learning_assets: 0,
+          media_status: "failed",
+          sla_minutes: 44,
+          updated_at: "2026-05-25T10:05:00+00:00",
+          warnings: ["OCR request failed"]
+        }
+      ],
+      provider_policies: [
+        {
+          tenant_id: "global",
+          ai_provider: "stub",
+          media_provider: "mock",
+          fallback_mode: "global_stub",
+          monthly_guardrail: 0,
+          source: "global_default"
+        }
+      ]
+    };
+    const retriedMaterial = {
+      ...dashboardPayload.materials[0],
+      confidence_summary: "任务已重新排队。",
+      material_status: "processing",
+      job_status: "processing",
+      media_status: "pending",
+      warnings: []
+    };
+    const accessPayload = {
+      current_admin: {
+        id: "admin_local",
+        display_name: "Local Platform Admin",
+        email: "admin@learningenglish.local",
+        role: "Platform Owner",
+        status: "active"
+      },
+      permissions: ["admin.dashboard.read", "admin.material.retry", "admin.audit.read"],
+      audit_events: []
+    };
+    const retryEvent = {
+      id: "audit_retry",
+      actor_id: "admin_local",
+      actor_role: "Platform Owner",
+      tenant_scope: "parent_live",
+      action: "admin.material_job.retry",
+      resource_type: "material_parse_job",
+      resource_id: "job_failed",
+      risk_level: "high",
+      result: "success",
+      reason: "OCR provider recovered.",
+      trace_id: "req_retry",
+      created_at: "2026-05-25T10:08:00+00:00"
+    };
+    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      const url = String(input);
+      if (url.includes("/v1/admin/material-jobs/job_failed/retry")) {
+        return {
+          ok: true,
+          json: async () => ({
+            required_permission: "admin.material.retry",
+            material: retriedMaterial,
+            audit_event: retryEvent
+          })
+        };
+      }
+      return {
+        ok: true,
+        json: async () => (url.includes("/v1/admin/access") ? accessPayload : dashboardPayload)
+      };
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+
+    render(<App />);
+
+    expect(await screen.findByText("真实 API")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "内容流水线" }));
+    await userEvent.click(screen.getByRole("button", { name: "查看 Failed API Worksheet" }));
+    await userEvent.type(screen.getByLabelText("审计原因"), "OCR provider recovered.");
+    await userEvent.click(screen.getByRole("button", { name: "重试任务" }));
+
+    expect(await screen.findByText("重试请求已记录。")).toBeInTheDocument();
+    expect(screen.getAllByText("processing").length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole("button", { name: "审计与权限" }));
+    expect(await screen.findByText("admin.material_job.retry")).toBeInTheDocument();
+    expect(screen.getByText("OCR provider recovered.")).toBeInTheDocument();
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/material-jobs/job_failed/retry?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({ reason: "OCR provider recovered." })
+    });
+  });
+
   it("ignores unknown tenant scope values", async () => {
     const onTenantScopeChange = vi.fn();
     render(

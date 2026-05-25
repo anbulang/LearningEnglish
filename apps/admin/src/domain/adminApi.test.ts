@@ -4,7 +4,8 @@ import {
   loadAdminAccess,
   loadAdminDashboard,
   normalizeAdminAccessPayload,
-  normalizeAdminDashboardPayload
+  normalizeAdminDashboardPayload,
+  retryAdminMaterialJob
 } from "./adminApi";
 
 const apiPayload = {
@@ -197,6 +198,44 @@ describe("admin API client", () => {
         "X-Admin-Token": "local-admin-token"
       },
       body: JSON.stringify({ reason: "Duplicate worksheet uploaded by parent." })
+    });
+  });
+
+  it("retries an admin material job with tenant scope and reason", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        required_permission: "admin.material.retry",
+        material: { ...apiPayload.materials[0], material_status: "processing", job_status: "processing" },
+        audit_event: {
+          ...accessPayload.audit_events[0],
+          action: "admin.material_job.retry",
+          resource_type: "material_parse_job",
+          resource_id: "job_1",
+          reason: "OCR provider recovered."
+        }
+      })
+    });
+
+    const result = await retryAdminMaterialJob({
+      apiBaseUrl: "http://127.0.0.1:8000/",
+      adminToken: "local-admin-token",
+      tenantScope: "all",
+      jobId: "job_1",
+      reason: "OCR provider recovered.",
+      fetchImpl
+    });
+
+    expect(result.requiredPermission).toBe("admin.material.retry");
+    expect(result.material.jobStatus).toBe("processing");
+    expect(result.auditEvent.action).toBe("admin.material_job.retry");
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/material-jobs/job_1/retry?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({ reason: "OCR provider recovered." })
     });
   });
 });

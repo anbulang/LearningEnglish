@@ -4,6 +4,7 @@ import {
   archiveAdminMaterial,
   loadAdminAccess,
   loadAdminDashboard,
+  retryAdminMaterialJob,
   type AdminAccessData,
   type AdminDashboardData
 } from "./domain/adminApi";
@@ -112,6 +113,33 @@ export function App() {
     );
   }
 
+  async function handleRetryMaterialJob(jobId: string, reason: string) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin retry API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await retryAdminMaterialJob({
+      apiBaseUrl,
+      adminToken,
+      tenantScope,
+      jobId,
+      reason
+    });
+    setDashboardData((current) => ({
+      ...current,
+      materials: current.materials.map((material) => (material.id === result.material.id ? result.material : material))
+    }));
+    setAccessData((current) =>
+      current
+        ? {
+            ...current,
+            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+          }
+        : current
+    );
+  }
+
   return (
     <AppShell
       activePage={activePage}
@@ -149,6 +177,7 @@ export function App() {
           materials={dashboardData.materials}
           dataMode={dataMode}
           onArchiveMaterial={dataMode === "live" ? handleArchiveMaterial : undefined}
+          onRetryMaterialJob={dataMode === "live" ? handleRetryMaterialJob : undefined}
         />
       )}
       {activePage === "audit" && <AuditAccess language={language} accessData={accessData} dataMode={dataMode} />}

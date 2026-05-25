@@ -10,6 +10,7 @@ interface ContentPipelineProps {
   materials: AdminMaterial[];
   dataMode?: "mock" | "live";
   onArchiveMaterial?: (materialId: string, reason: string) => Promise<void>;
+  onRetryMaterialJob?: (jobId: string, reason: string) => Promise<void>;
 }
 
 type StatusFilter = "all" | MaterialStatus;
@@ -22,13 +23,14 @@ export function ContentPipeline({
   tenants,
   materials,
   dataMode = "mock",
-  onArchiveMaterial
+  onArchiveMaterial,
+  onRetryMaterialJob
 }: ContentPipelineProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
   const [auditReason, setAuditReason] = useState("");
   const [actionMessage, setActionMessage] = useState("");
-  const [isArchiving, setIsArchiving] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const copy = language === "zh" ? zhCopy : enCopy;
   const tenantNameById = useMemo(() => new Map(tenants.map((tenant) => [tenant.id, tenant.name])), [tenants]);
   const scopedMaterials = useMemo(() => getMaterialsForScope(materials, tenantScope), [materials, tenantScope]);
@@ -53,7 +55,7 @@ export function ContentPipeline({
     if (!onArchiveMaterial || !auditReason.trim()) {
       return;
     }
-    setIsArchiving(true);
+    setIsMutating(true);
     setActionMessage("");
     try {
       await onArchiveMaterial(material.id, auditReason.trim());
@@ -62,7 +64,24 @@ export function ContentPipeline({
     } catch {
       setActionMessage(copy.archiveFailed);
     } finally {
-      setIsArchiving(false);
+      setIsMutating(false);
+    }
+  }
+
+  async function handleRetryMaterialJob(material: AdminMaterial) {
+    if (!onRetryMaterialJob || !auditReason.trim()) {
+      return;
+    }
+    setIsMutating(true);
+    setActionMessage("");
+    try {
+      await onRetryMaterialJob(material.jobId, auditReason.trim());
+      setAuditReason("");
+      setActionMessage(copy.retryRecorded);
+    } catch {
+      setActionMessage(copy.retryFailed);
+    } finally {
+      setIsMutating(false);
     }
   }
 
@@ -188,10 +207,12 @@ export function ContentPipeline({
             dataMode={dataMode}
             auditReason={auditReason}
             actionMessage={actionMessage}
-            isArchiving={isArchiving}
+            isMutating={isMutating}
             canArchive={Boolean(onArchiveMaterial)}
+            canRetry={Boolean(onRetryMaterialJob)}
             onAuditReasonChange={setAuditReason}
             onArchiveMaterial={handleArchiveMaterial}
+            onRetryMaterialJob={handleRetryMaterialJob}
           />
         ) : (
           <div className="pipeline-empty inspector-empty">
@@ -211,10 +232,12 @@ function MaterialInspector({
   dataMode,
   auditReason,
   actionMessage,
-  isArchiving,
+  isMutating,
   canArchive,
+  canRetry,
   onAuditReasonChange,
-  onArchiveMaterial
+  onArchiveMaterial,
+  onRetryMaterialJob
 }: {
   material: AdminMaterial;
   tenantName: string | undefined;
@@ -222,10 +245,12 @@ function MaterialInspector({
   dataMode: "mock" | "live";
   auditReason: string;
   actionMessage: string;
-  isArchiving: boolean;
+  isMutating: boolean;
   canArchive: boolean;
+  canRetry: boolean;
   onAuditReasonChange: (value: string) => void;
   onArchiveMaterial: (material: AdminMaterial) => Promise<void>;
+  onRetryMaterialJob: (material: AdminMaterial) => Promise<void>;
 }) {
   const timelineItems = [
     `${copy.uploaded}: ${material.sourcePages.length} ${copy.sourcePages}`,
@@ -282,13 +307,25 @@ function MaterialInspector({
           />
         </label>
         <div className="audit-actions">
-          <button type="button" className="primary-button" disabled>
-            {copy.retryMock}
+          <button
+            type="button"
+            className="primary-button"
+            disabled={
+              dataMode !== "live" ||
+              !canRetry ||
+              material.materialStatus === "archived" ||
+              material.jobStatus !== "failed" ||
+              !auditReason.trim() ||
+              isMutating
+            }
+            onClick={() => void onRetryMaterialJob(material)}
+          >
+            {dataMode === "live" ? copy.retryMaterialJob : copy.retryMock}
           </button>
           <button
             type="button"
             className="ghost-button"
-            disabled={dataMode !== "live" || !canArchive || material.materialStatus === "archived" || !auditReason.trim() || isArchiving}
+            disabled={dataMode !== "live" || !canArchive || material.materialStatus === "archived" || !auditReason.trim() || isMutating}
             onClick={() => void onArchiveMaterial(material)}
           >
             {dataMode === "live" ? copy.archiveMaterial : copy.archiveMock}
@@ -378,10 +415,13 @@ const zhCopy = {
   timelineAria: "生命周期时间线",
   auditReason: "审计原因",
   auditPlaceholder: "填写重试或归档原因。Mock mode 不会提交真实 API 或 mutation。",
-  auditPlaceholderLive: "填写归档原因；live mode 会提交 admin mutation 并写入审计。",
+  auditPlaceholderLive: "填写重试或归档原因；live mode 会提交 admin mutation 并写入审计。",
   retryMock: "模拟重试（no-op）",
+  retryMaterialJob: "重试任务",
   archiveMock: "模拟归档（no-op）",
   archiveMaterial: "归档材料",
+  retryRecorded: "重试请求已记录。",
+  retryFailed: "重试失败，请稍后重试。",
   archiveRecorded: "归档请求已记录。",
   archiveFailed: "归档失败，请稍后重试。",
   emptyFiltered: "没有符合当前筛选的材料。",
@@ -428,10 +468,13 @@ const enCopy = {
   timelineAria: "Lifecycle timeline",
   auditReason: "Audit reason",
   auditPlaceholder: "Enter retry or archive reason. Mock mode will not call a real API or mutation.",
-  auditPlaceholderLive: "Enter the archive reason; live mode submits an admin mutation and audit event.",
+  auditPlaceholderLive: "Enter the retry or archive reason; live mode submits an admin mutation and audit event.",
   retryMock: "Mock retry only (no-op)",
+  retryMaterialJob: "Retry job",
   archiveMock: "Mock archive only (no-op)",
   archiveMaterial: "Archive material",
+  retryRecorded: "Retry request recorded.",
+  retryFailed: "Retry failed. Try again later.",
   archiveRecorded: "Archive request recorded.",
   archiveFailed: "Archive failed. Try again later.",
   emptyFiltered: "No materials match this filter.",

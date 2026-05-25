@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.core.db import SessionLocal
-from app.db.models import KnowledgePackModel, ParentCoachingScriptModel, ReviewTaskModel
+from app.db.models import CourseMaterialModel, KnowledgePackModel, MaterialParseJobModel, ParentCoachingScriptModel, ReviewTaskModel
 from conftest import auth_headers, configure_test_environment
 
 
@@ -80,6 +80,19 @@ def test_admin_dashboard_allows_local_admin_cors_preflight(api_client) -> None:
     assert archive_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
     assert "POST" in archive_response.headers["access-control-allow-methods"]
 
+    retry_response = api_client.options(
+        "/v1/admin/material-jobs/job_test/retry?tenant_scope=all",
+        headers={
+            "Origin": "http://127.0.0.1:5174",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "X-Admin-Token,Content-Type",
+        },
+    )
+
+    assert retry_response.status_code == 200
+    assert retry_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+    assert "POST" in retry_response.headers["access-control-allow-methods"]
+
 
 def test_admin_archive_material_requires_reason(api_client) -> None:
     material_id, _, _ = seed_parent_material(
@@ -139,6 +152,85 @@ def test_admin_archive_material_updates_status_and_records_audit_event(api_clien
         assert db.get(KnowledgePackModel, knowledge_id) is None
         assert db.get(ParentCoachingScriptModel, coach_id) is None
         assert db.get(ReviewTaskModel, task_id) is None
+
+
+def test_admin_retry_material_job_requires_reason(api_client) -> None:
+    _, job_id, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-retry-reason",
+        phone_number="13800138130",
+        child_name="Mia Retry",
+        material_title="Retry Reason Worksheet",
+    )
+
+    response = api_client.post(
+        f"/v1/admin/material-jobs/{job_id}/retry?tenant_scope=all",
+        json={"reason": "  "},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Retry reason is required"
+
+
+def test_admin_retry_material_job_resets_state_and_records_audit_event(api_client) -> None:
+    material_id, job_id, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-retry-success",
+        phone_number="13800138131",
+        child_name="Nora Retry",
+        material_title="Retry Success Worksheet",
+    )
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        material = db.get(CourseMaterialModel, material_id)
+        assert job is not None
+        assert material is not None
+        job.status = "failed"
+        job.warnings = ["OCR timeout", "Queue timeout"]
+        job.confidence_summary = "识别失败：OCR timeout"
+        job.finished_at = datetime(2026, 5, 25, tzinfo=timezone.utc)
+        material.status = "failed"
+        db.add_all([job, material])
+        db.commit()
+
+    response = api_client.post(
+        f"/v1/admin/material-jobs/{job_id}/retry?tenant_scope=all",
+        json={"reason": "OCR provider recovered."},
+        headers={**ADMIN_HEADERS, "X-Request-ID": "req_admin_retry"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["required_permission"] == "admin.material.retry"
+    assert payload["material"]["id"] == material_id
+    assert payload["material"]["job_id"] == job_id
+    assert payload["material"]["material_status"] == "processing"
+    assert payload["material"]["job_status"] == "processing"
+    assert payload["material"]["warnings"] == []
+    audit_event = payload["audit_event"]
+    assert audit_event["action"] == "admin.material_job.retry"
+    assert audit_event["resource_type"] == "material_parse_job"
+    assert audit_event["resource_id"] == job_id
+    assert audit_event["reason"] == "OCR provider recovered."
+    assert audit_event["risk_level"] == "high"
+    assert audit_event["result"] == "success"
+    assert audit_event["trace_id"] == "req_admin_retry"
+
+    access = api_client.get("/v1/admin/access?tenant_scope=all", headers=ADMIN_HEADERS)
+    assert access.status_code == 200
+    assert access.json()["audit_events"][0]["id"] == audit_event["id"]
+
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        material = db.get(CourseMaterialModel, material_id)
+        assert job is not None
+        assert material is not None
+        assert job.status == "processing"
+        assert job.warnings == []
+        assert job.confidence_summary == "任务已重新排队。"
+        assert job.finished_at is None
+        assert material.status == "processing"
 
 
 def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> None:

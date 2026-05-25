@@ -39,6 +39,12 @@ interface ArchiveAdminMaterialOptions extends LoadAdminDashboardOptions {
   reason: string;
 }
 
+interface RetryAdminMaterialJobOptions extends LoadAdminDashboardOptions {
+  tenantScope: string;
+  jobId: string;
+  reason: string;
+}
+
 type AdminDashboardPayload = {
   tenants: Array<Record<string, unknown>>;
   materials: Array<Record<string, unknown>>;
@@ -97,6 +103,26 @@ export async function archiveAdminMaterial(options: ArchiveAdminMaterialOptions)
   );
   if (!response.ok) {
     throw new Error(`Admin archive material request failed: ${response.status}`);
+  }
+  return normalizeAdminArchiveMaterialPayload((await response.json()) as AdminArchiveMaterialPayload);
+}
+
+export async function retryAdminMaterialJob(options: RetryAdminMaterialJobOptions): Promise<AdminArchiveMaterialResult> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    `${apiBaseUrl}/v1/admin/material-jobs/${encodeURIComponent(options.jobId)}/retry?tenant_scope=${encodeURIComponent(options.tenantScope)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": options.adminToken
+      },
+      body: JSON.stringify({ reason: options.reason })
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Admin retry material job request failed: ${response.status}`);
   }
   return normalizeAdminArchiveMaterialPayload((await response.json()) as AdminArchiveMaterialPayload);
 }
