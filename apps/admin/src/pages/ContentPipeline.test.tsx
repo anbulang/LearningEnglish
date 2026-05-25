@@ -15,6 +15,7 @@ describe("ContentPipeline", () => {
     expect(screen.getByText("生命周期时间线")).toBeInTheDocument();
     expect(screen.getByText("job_hn014_parse")).toBeInTheDocument();
     expect(screen.getByText("Media generation still running")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导出失败清单 mock/no-op" })).toBeDisabled();
   });
 
   it("filters failed materials", async () => {

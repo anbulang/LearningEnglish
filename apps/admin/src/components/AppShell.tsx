@@ -116,7 +116,9 @@ export function AppShell(props: AppShellProps) {
             </button>
           </div>
           <span className="status-chip success">{t("top.healthy")}</span>
-          <button className="ghost-button">{t("top.openapi")}</button>
+          <button className="ghost-button" type="button" disabled title={t("top.openapi")}>
+            {t("top.openapi")}
+          </button>
         </header>
         <main className="page-content">{props.children}</main>
       </div>

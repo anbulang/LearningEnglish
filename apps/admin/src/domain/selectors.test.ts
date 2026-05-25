@@ -8,6 +8,7 @@ import {
   getTenantHealthRows,
   isBlockedMaterial
 } from "./selectors";
+import type { ProviderPolicy } from "./types";
 
 describe("admin domain selectors", () => {
   it("filters materials by all tenants or a selected tenant", () => {
@@ -39,6 +40,56 @@ describe("admin domain selectors", () => {
     const fallback = getEffectiveProviderPolicy(mockProviderPolicies, "tenant_unknown");
     expect(fallback.source).toBe("global_default");
     expect(fallback.aiProvider).toBe("stub");
+  });
+
+  it("applies emergency provider policy above tenant overrides", () => {
+    const policies: ProviderPolicy[] = [
+      ...mockProviderPolicies,
+      {
+        tenantId: "global",
+        aiProvider: "stub",
+        mediaProvider: "mock",
+        fallbackMode: "global_stub",
+        monthlyGuardrail: 0,
+        source: "emergency_global"
+      }
+    ];
+
+    const effective = getEffectiveProviderPolicy(policies, "tenant_bright_future", "Pilot Plus");
+
+    expect(effective.source).toBe("emergency_global");
+    expect(effective.aiProvider).toBe("stub");
+    expect(effective.mediaProvider).toBe("mock");
+  });
+
+  it("applies tier defaults between tenant overrides and global defaults", () => {
+    const policies: ProviderPolicy[] = [
+      {
+        tenantId: "global",
+        aiProvider: "stub",
+        mediaProvider: "mock",
+        fallbackMode: "global_stub",
+        monthlyGuardrail: 100,
+        source: "global_default"
+      },
+      {
+        tenantId: "tier_standard",
+        tier: "Standard",
+        aiProvider: "doubao",
+        mediaProvider: "mock",
+        fallbackMode: "auto_to_mock",
+        monthlyGuardrail: 300,
+        source: "tier_default"
+      }
+    ];
+
+    const tierDefault = getEffectiveProviderPolicy(policies, "tenant_sunny_kids", "Standard");
+    const globalDefault = getEffectiveProviderPolicy(policies, "tenant_little_star", "Family Pilot");
+
+    expect(tierDefault.source).toBe("tier_default");
+    expect(tierDefault.aiProvider).toBe("doubao");
+    expect(globalDefault.source).toBe("global_default");
+    expect(globalDefault.aiProvider).toBe("stub");
   });
 
   it("sorts tenant health rows by risk before healthy tenants", () => {

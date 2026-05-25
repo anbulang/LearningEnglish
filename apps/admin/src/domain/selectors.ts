@@ -46,11 +46,21 @@ export function getLifecycleCounts(materials: AdminMaterial[]): LifecycleCounts 
   );
 }
 
-export function getEffectiveProviderPolicy(policies: ProviderPolicy[], tenantId: string): ProviderPolicy {
-  const globalPolicy = policies.find((policy) => policy.tenantId === "global");
-  const tenantPolicy = policies.find((policy) => policy.tenantId === tenantId);
+export function getEffectiveProviderPolicy(policies: ProviderPolicy[], tenantId: string, tenantTier?: string): ProviderPolicy {
+  const emergencyPolicy = policies.find((policy) => policy.source === "emergency_global");
+  const globalPolicy = policies.find((policy) => policy.tenantId === "global" && policy.source === "global_default");
+  const tenantPolicy = policies.find((policy) => policy.tenantId === tenantId && policy.source === "tenant_override");
+  const tierPolicy = policies.find(
+    (policy) => policy.source === "tier_default" && policy.tier !== undefined && normalizeTier(policy.tier) === normalizeTier(tenantTier)
+  );
+  if (emergencyPolicy) {
+    return emergencyPolicy;
+  }
   if (tenantPolicy) {
     return tenantPolicy;
+  }
+  if (tierPolicy) {
+    return tierPolicy;
   }
   if (globalPolicy) {
     return globalPolicy;
@@ -63,6 +73,10 @@ export function getEffectiveProviderPolicy(policies: ProviderPolicy[], tenantId:
     monthlyGuardrail: 0,
     source: "global_default"
   };
+}
+
+function normalizeTier(tier: string | undefined): string {
+  return tier?.trim().toLowerCase() ?? "";
 }
 
 export function getTenantHealthRows(tenants: Tenant[], materials: AdminMaterial[]): TenantHealthRow[] {

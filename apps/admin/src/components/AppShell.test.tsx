@@ -11,6 +11,7 @@ describe("AppShell", () => {
     render(<App />);
     expect(screen.getByRole("combobox", { name: "租户范围" })).toHaveValue("all");
     expect(screen.getByText("指挥台")).toBeInTheDocument();
+    expect(screen.getByText("Mock 数据")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "中文" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "false");
 
@@ -18,6 +19,9 @@ describe("AppShell", () => {
 
     expect(screen.getByRole("combobox", { name: "Tenant scope" })).toHaveValue("all");
     expect(screen.getByText("Command Center")).toBeInTheDocument();
+    expect(screen.getByText("Mock data")).toBeInTheDocument();
+    expect(screen.getByText("Prototype OK")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "OpenAPI placeholder" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "中文" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
   });

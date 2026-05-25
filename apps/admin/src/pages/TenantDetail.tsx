@@ -27,7 +27,7 @@ export function TenantDetail({ language, tenantId, tenants, materials, policies,
   }
 
   const tenantMaterials = materials.filter((material) => material.tenantId === tenant.id);
-  const policy = getEffectiveProviderPolicy(policies, tenant.id);
+  const policy = getEffectiveProviderPolicy(policies, tenant.id, tenant.tier);
   const failedJobs = tenantMaterials.filter((item) => item.jobStatus === "failed" || item.materialStatus === "failed").length;
   const processingMedia = tenantMaterials.filter((item) => item.mediaStatus === "pending" || item.mediaStatus === "processing").length;
 

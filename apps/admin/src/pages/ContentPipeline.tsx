@@ -61,7 +61,7 @@ export function ContentPipeline({ language, tenantScope, tenants, materials }: C
         <button type="button" className="primary-button">
           {copy.bulkRetryMock}
         </button>
-        <button type="button" className="ghost-button">
+        <button type="button" className="ghost-button" disabled>
           {copy.exportFailures}
         </button>
       </section>
@@ -281,7 +281,7 @@ const zhCopy = {
   statusFilter: "状态筛选",
   all: "全部",
   bulkRetryMock: "批量重试 mock/no-op",
-  exportFailures: "导出失败清单",
+  exportFailures: "导出失败清单 mock/no-op",
   queue: "生产队列",
   materialsInScope: "条材料",
   tenant: "租户",
@@ -327,7 +327,7 @@ const enCopy = {
   statusFilter: "Status filter",
   all: "All",
   bulkRetryMock: "Bulk retry mock/no-op",
-  exportFailures: "Export failures",
+  exportFailures: "Export failures mock/no-op",
   queue: "Production queue",
   materialsInScope: "materials in scope",
   tenant: "Tenant",

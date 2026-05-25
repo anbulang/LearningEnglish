@@ -51,6 +51,7 @@ export interface AdminMaterial {
 
 export interface ProviderPolicy {
   tenantId: "global" | string;
+  tier?: string;
   aiProvider: "stub" | "doubao";
   mediaProvider: "mock" | "real";
   fallbackMode: "global_stub" | "auto_to_mock" | "per_tenant";
