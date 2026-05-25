@@ -1,7 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import type { AdminAccessData } from "../domain/adminApi";
+import { mockTenants } from "../domain/mockData";
 import { AuditAccess } from "./AuditAccess";
 
 const accessData: AdminAccessData = {
@@ -33,7 +35,7 @@ const accessData: AdminAccessData = {
 
 describe("AuditAccess", () => {
   it("shows live admin identity permissions and audit events in Chinese", () => {
-    render(<AuditAccess language="zh" accessData={accessData} dataMode="live" />);
+    render(<AuditAccess language="zh" accessData={accessData} dataMode="live" tenants={mockTenants} />);
 
     expect(screen.getByText("审计与权限")).toBeInTheDocument();
     expect(screen.getByText("Local Platform Admin")).toBeInTheDocument();
@@ -45,10 +47,36 @@ describe("AuditAccess", () => {
   });
 
   it("keeps the target-state copy when live access data has not loaded", () => {
-    render(<AuditAccess language="en" accessData={null} dataMode="mock" />);
+    render(<AuditAccess language="en" accessData={null} dataMode="mock" tenants={mockTenants} />);
 
     expect(screen.getByText("Audit & Access")).toBeInTheDocument();
     expect(screen.getByText("Mock mode")).toBeInTheDocument();
     expect(screen.getByText("Admin access data will load from the live read API when configured.")).toBeInTheDocument();
+  });
+
+  it("submits a supervised impersonation session in live mode", async () => {
+    const onStartImpersonation = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AuditAccess
+        language="en"
+        accessData={{ ...accessData, permissions: [...accessData.permissions, "admin.impersonation.start"] }}
+        dataMode="live"
+        tenants={mockTenants}
+        onStartImpersonation={onStartImpersonation}
+      />
+    );
+
+    await userEvent.type(
+      screen.getByLabelText("Impersonation reason"),
+      "Support is reproducing parent-reported upload issue."
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Start supervised session" }));
+
+    expect(onStartImpersonation).toHaveBeenCalledWith({
+      tenantId: "tenant_bright_future",
+      targetParentId: "tenant_bright_future",
+      reason: "Support is reproducing parent-reported upload issue."
+    });
+    expect(await screen.findByText("Supervised session started.")).toBeInTheDocument();
   });
 });

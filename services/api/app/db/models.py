@@ -73,6 +73,21 @@ class AdminAuditEventModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class AdminImpersonationSessionModel(Base):
+    __tablename__ = "admin_impersonation_sessions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"imp_{uuid4().hex[:12]}")
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), index=True)
+    target_parent_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), index=True)
+    actor_id: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="active", index=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class TenantProviderPolicyModel(Base):
     __tablename__ = "tenant_provider_policies"
 

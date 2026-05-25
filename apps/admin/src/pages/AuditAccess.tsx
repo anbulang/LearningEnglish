@@ -1,15 +1,51 @@
+import { useState } from "react";
 import { StatusChip } from "../components/ui";
 import type { AdminAccessData } from "../domain/adminApi";
-import type { Language } from "../domain/types";
+import type { Language, Tenant } from "../domain/types";
+
+export interface StartImpersonationInput {
+  tenantId: string;
+  targetParentId: string;
+  reason: string;
+}
 
 interface AuditAccessProps {
   language: Language;
   accessData: AdminAccessData | null;
   dataMode: "mock" | "live";
+  tenants: Tenant[];
+  onStartImpersonation?: (input: StartImpersonationInput) => Promise<void>;
 }
 
-export function AuditAccess({ language, accessData, dataMode }: AuditAccessProps) {
+export function AuditAccess({ language, accessData, dataMode, tenants, onStartImpersonation }: AuditAccessProps) {
   const copy = language === "zh" ? zhCopy : enCopy;
+  const [selectedTenantId, setSelectedTenantId] = useState(tenants[0]?.id ?? "");
+  const [impersonationReason, setImpersonationReason] = useState("");
+  const [impersonationMessage, setImpersonationMessage] = useState("");
+  const [isStartingImpersonation, setIsStartingImpersonation] = useState(false);
+  const hasImpersonationPermission = Boolean(accessData?.permissions.includes("admin.impersonation.start"));
+  const effectiveTenantId = tenants.some((tenant) => tenant.id === selectedTenantId) ? selectedTenantId : tenants[0]?.id ?? "";
+
+  async function handleStartImpersonation() {
+    if (!onStartImpersonation || !effectiveTenantId || !impersonationReason.trim()) {
+      return;
+    }
+    setIsStartingImpersonation(true);
+    setImpersonationMessage("");
+    try {
+      await onStartImpersonation({
+        tenantId: effectiveTenantId,
+        targetParentId: effectiveTenantId,
+        reason: impersonationReason.trim()
+      });
+      setImpersonationReason("");
+      setImpersonationMessage(copy.impersonationStarted);
+    } catch {
+      setImpersonationMessage(copy.impersonationFailed);
+    } finally {
+      setIsStartingImpersonation(false);
+    }
+  }
 
   return (
     <div className="page-grid">
@@ -58,6 +94,59 @@ export function AuditAccess({ language, accessData, dataMode }: AuditAccessProps
                   {permission}
                 </span>
               ))}
+            </div>
+          </section>
+
+          <section className="surface wide">
+            <div className="section-title">
+              <div>
+                <h2>{copy.impersonationTitle}</h2>
+                <p>{copy.impersonationDetail}</p>
+              </div>
+              <StatusChip tone={hasImpersonationPermission ? "warning" : "neutral"}>
+                {hasImpersonationPermission ? "admin.impersonation.start" : copy.permissionMissing}
+              </StatusChip>
+            </div>
+            <div className="provider-form">
+              <label>
+                <span>{copy.targetTenant}</span>
+                <select value={effectiveTenantId} onChange={(event) => setSelectedTenantId(event.target.value)}>
+                  {tenants.map((tenant) => (
+                    <option value={tenant.id} key={tenant.id}>
+                      {tenant.name} / {tenant.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>{copy.impersonationReason}</span>
+                <textarea
+                  aria-label={copy.impersonationReason}
+                  maxLength={240}
+                  placeholder={copy.impersonationPlaceholder}
+                  value={impersonationReason}
+                  onChange={(event) => setImpersonationReason(event.target.value)}
+                />
+              </label>
+              <div className="audit-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={
+                    dataMode !== "live" ||
+                    !hasImpersonationPermission ||
+                    !onStartImpersonation ||
+                    !effectiveTenantId ||
+                    !impersonationReason.trim() ||
+                    isStartingImpersonation
+                  }
+                  onClick={() => void handleStartImpersonation()}
+                >
+                  {copy.startImpersonation}
+                </button>
+                <StatusChip tone="neutral">{copy.noParentToken}</StatusChip>
+              </div>
+              {impersonationMessage && <p className="action-message">{impersonationMessage}</p>}
             </div>
           </section>
 
@@ -127,6 +216,16 @@ const zhCopy = {
   role: "角色",
   status: "状态",
   permissions: "权限",
+  impersonationTitle: "受监督代入",
+  impersonationDetail: "创建短期支持会话，用于复现问题；不会签发家长 token。",
+  targetTenant: "目标租户 / 家长账号",
+  impersonationReason: "代入原因",
+  impersonationPlaceholder: "说明支持人员为什么需要进入该租户上下文。",
+  startImpersonation: "启动受监督会话",
+  noParentToken: "不签发 parent token",
+  permissionMissing: "缺少权限",
+  impersonationStarted: "受监督会话已启动。",
+  impersonationFailed: "受监督会话启动失败，请稍后重试。",
   auditLog: "审计日志",
   auditLogDetail: "后台读取、重试、归档和高风险操作会写入不可变审计记录。",
   immutable: "不可删除",
@@ -154,6 +253,16 @@ const enCopy = {
   role: "Role",
   status: "Status",
   permissions: "Permissions",
+  impersonationTitle: "Supervised impersonation",
+  impersonationDetail: "Create a short support session to reproduce an issue; no parent token is issued.",
+  targetTenant: "Target tenant / parent account",
+  impersonationReason: "Impersonation reason",
+  impersonationPlaceholder: "Explain why support needs to enter this tenant context.",
+  startImpersonation: "Start supervised session",
+  noParentToken: "No parent token issued",
+  permissionMissing: "Missing permission",
+  impersonationStarted: "Supervised session started.",
+  impersonationFailed: "Supervised session failed. Try again later.",
   auditLog: "Audit log",
   auditLogDetail: "Admin reads, retries, archives, and high-risk actions write immutable audit records.",
   immutable: "Immutable",

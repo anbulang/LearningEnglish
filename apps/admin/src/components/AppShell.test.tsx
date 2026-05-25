@@ -648,6 +648,114 @@ describe("AppShell", () => {
     });
   });
 
+  it("submits live supervised impersonation and shows the audit reason", async () => {
+    vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    const dashboardPayload = {
+      tenants: [
+        {
+          id: "parent_live",
+          name: "微信家长live",
+          tenant_type: "pilot_family",
+          status: "active",
+          region: "local",
+          owner_contact: "13800138110",
+          tier: "pilot",
+          created_at: "2026-05-25T10:00:00+00:00",
+          active_parents: 1,
+          children: 1
+        }
+      ],
+      materials: [],
+      provider_policies: [
+        {
+          tenant_id: "global",
+          ai_provider: "stub",
+          media_provider: "mock",
+          fallback_mode: "global_stub",
+          monthly_guardrail: 0,
+          source: "global_default"
+        }
+      ],
+      module_settings: []
+    };
+    const accessPayload = {
+      current_admin: {
+        id: "admin_local",
+        display_name: "Local Platform Admin",
+        email: "admin@learningenglish.local",
+        role: "Platform Owner",
+        status: "active"
+      },
+      permissions: ["admin.dashboard.read", "admin.impersonation.start", "admin.audit.read"],
+      audit_events: []
+    };
+    const impersonationEvent = {
+      id: "audit_impersonation",
+      actor_id: "admin_local",
+      actor_role: "Platform Owner",
+      tenant_scope: "parent_live",
+      action: "admin.impersonation.start",
+      resource_type: "admin_impersonation_session",
+      resource_id: "imp_123",
+      risk_level: "high",
+      result: "success",
+      reason: "Support is reproducing parent-reported upload issue.",
+      trace_id: "req_impersonation",
+      created_at: "2026-05-25T10:11:00+00:00"
+    };
+    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      const url = String(input);
+      if (url.includes("/v1/admin/impersonation-sessions")) {
+        return {
+          ok: true,
+          json: async () => ({
+            required_permission: "admin.impersonation.start",
+            impersonation_session: {
+              id: "imp_123",
+              tenant_id: "parent_live",
+              target_parent_id: "parent_live",
+              actor_id: "admin_local",
+              status: "active",
+              reason: "Support is reproducing parent-reported upload issue.",
+              expires_at: "2026-05-25T10:41:00+00:00",
+              created_at: "2026-05-25T10:11:00+00:00"
+            },
+            audit_event: impersonationEvent
+          })
+        };
+      }
+      return {
+        ok: true,
+        json: async () => (url.includes("/v1/admin/access") ? accessPayload : dashboardPayload)
+      };
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+
+    render(<App />);
+
+    expect(await screen.findByText("真实 API")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "审计与权限" }));
+    await userEvent.type(screen.getByLabelText("代入原因"), "Support is reproducing parent-reported upload issue.");
+    await userEvent.click(screen.getByRole("button", { name: "启动受监督会话" }));
+
+    expect(await screen.findByText("受监督会话已启动。")).toBeInTheDocument();
+    expect(screen.getAllByText("admin.impersonation.start").length).toBeGreaterThan(0);
+    expect(screen.getByText("Support is reproducing parent-reported upload issue.")).toBeInTheDocument();
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/impersonation-sessions?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({
+        tenant_id: "parent_live",
+        target_parent_id: "parent_live",
+        reason: "Support is reproducing parent-reported upload issue."
+      })
+    });
+  });
+
   it("ignores unknown tenant scope values", async () => {
     const onTenantScopeChange = vi.fn();
     render(

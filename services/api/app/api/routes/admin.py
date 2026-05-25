@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
 
@@ -15,6 +15,7 @@ from app.core.db import get_db
 from app.core.settings import get_settings
 from app.db.models import (
     AdminAuditEventModel,
+    AdminImpersonationSessionModel,
     AdminUserModel,
     ChildProfileModel,
     CourseMaterialModel,
@@ -39,6 +40,7 @@ ADMIN_PERMISSIONS = [
     "admin.material.retry",
     "admin.tenant.module.toggle",
     "admin.provider.override",
+    "admin.impersonation.start",
     "admin.audit.read",
 ]
 
@@ -77,6 +79,12 @@ class AdminProviderPolicyOverrideRequest(BaseModel):
 
 class AdminTenantModuleToggleRequest(BaseModel):
     enabled: bool = True
+    reason: str = ""
+
+
+class AdminImpersonationSessionRequest(BaseModel):
+    tenant_id: str = ""
+    target_parent_id: str = ""
     reason: str = ""
 
 
@@ -443,6 +451,60 @@ def toggle_admin_tenant_module(
     }
 
 
+@router.post("/impersonation-sessions")
+def start_admin_impersonation_session(
+    payload: AdminImpersonationSessionRequest,
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    reason = payload.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=422, detail="Impersonation reason is required")
+    if "admin.impersonation.start" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.impersonation.start permission")
+
+    tenant = db.get(ParentAccountModel, payload.tenant_id.strip())
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    if tenant_scope != "all" and tenant.id != tenant_scope:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found in tenant scope")
+    target_parent = db.get(ParentAccountModel, payload.target_parent_id.strip())
+    if target_parent is None or target_parent.id != tenant.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target parent not found in tenant scope")
+
+    _ensure_admin_user(db, actor)
+    impersonation_session = AdminImpersonationSessionModel(
+        tenant_id=tenant.id,
+        target_parent_id=target_parent.id,
+        actor_id=actor.id,
+        status="active",
+        reason=reason,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+    )
+    db.add(impersonation_session)
+    db.commit()
+    db.refresh(impersonation_session)
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant.id,
+        action="admin.impersonation.start",
+        resource_type="admin_impersonation_session",
+        resource_id=impersonation_session.id,
+        risk_level="high",
+        result="success",
+        trace_id=_trace_id(request),
+        reason=reason,
+    )
+    return {
+        "required_permission": "admin.impersonation.start",
+        "impersonation_session": _impersonation_session_payload(impersonation_session),
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
 def _audit_scope_filter(tenant_scope: str):
     if tenant_scope == "all":
         return AdminAuditEventModel.tenant_scope != ""
@@ -673,6 +735,19 @@ def _tenant_module_setting_payload(setting: TenantModuleSettingModel) -> dict:
         "module_key": setting.module_key,
         "enabled": setting.enabled,
         "source": setting.source,
+    }
+
+
+def _impersonation_session_payload(impersonation_session: AdminImpersonationSessionModel) -> dict:
+    return {
+        "id": impersonation_session.id,
+        "tenant_id": impersonation_session.tenant_id,
+        "target_parent_id": impersonation_session.target_parent_id,
+        "actor_id": impersonation_session.actor_id,
+        "status": impersonation_session.status,
+        "reason": impersonation_session.reason,
+        "expires_at": _iso(impersonation_session.expires_at),
+        "created_at": _iso(impersonation_session.created_at),
     }
 
 

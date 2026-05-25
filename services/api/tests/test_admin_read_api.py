@@ -119,6 +119,19 @@ def test_admin_dashboard_allows_local_admin_cors_preflight(api_client) -> None:
     assert module_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
     assert "POST" in module_response.headers["access-control-allow-methods"]
 
+    impersonation_response = api_client.options(
+        "/v1/admin/impersonation-sessions?tenant_scope=all",
+        headers={
+            "Origin": "http://127.0.0.1:5174",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "X-Admin-Token,Content-Type",
+        },
+    )
+
+    assert impersonation_response.status_code == 200
+    assert impersonation_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+    assert "POST" in impersonation_response.headers["access-control-allow-methods"]
+
 
 def test_admin_archive_material_requires_reason(api_client) -> None:
     material_id, _, _ = seed_parent_material(
@@ -413,6 +426,74 @@ def test_admin_tenant_module_toggle_updates_dashboard_and_records_audit_event(ap
         "source": "tenant_override",
     } in module_settings
     assert "ARK_API_KEY" not in str(module_settings)
+
+    access = api_client.get("/v1/admin/access?tenant_scope=all", headers=ADMIN_HEADERS)
+    assert access.status_code == 200
+    assert audit_event["id"] in {event["id"] for event in access.json()["audit_events"]}
+
+
+def test_admin_impersonation_session_requires_reason(api_client) -> None:
+    material_id, _, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-impersonation-reason",
+        phone_number="13800138160",
+        child_name="Mia Impersonation",
+        material_title="Impersonation Reason Worksheet",
+    )
+    dashboard = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+    tenant_id = next(material["tenant_id"] for material in dashboard.json()["materials"] if material["id"] == material_id)
+
+    response = api_client.post(
+        "/v1/admin/impersonation-sessions?tenant_scope=all",
+        json={"tenant_id": tenant_id, "target_parent_id": tenant_id, "reason": "  "},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Impersonation reason is required"
+
+
+def test_admin_impersonation_session_creates_audited_supervised_session(api_client) -> None:
+    material_id, _, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-impersonation-success",
+        phone_number="13800138161",
+        child_name="Nora Impersonation",
+        material_title="Impersonation Success Worksheet",
+    )
+    dashboard = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+    tenant_id = next(material["tenant_id"] for material in dashboard.json()["materials"] if material["id"] == material_id)
+
+    response = api_client.post(
+        "/v1/admin/impersonation-sessions?tenant_scope=all",
+        json={
+            "tenant_id": tenant_id,
+            "target_parent_id": tenant_id,
+            "reason": "Support is reproducing parent-reported upload issue.",
+        },
+        headers={**ADMIN_HEADERS, "X-Request-ID": "req_admin_impersonation"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["required_permission"] == "admin.impersonation.start"
+    assert "access_token" not in str(payload)
+    assert "refresh_token" not in str(payload)
+    session = payload["impersonation_session"]
+    assert session["id"].startswith("imp_")
+    assert session["tenant_id"] == tenant_id
+    assert session["target_parent_id"] == tenant_id
+    assert session["actor_id"] == "admin_local"
+    assert session["status"] == "active"
+    assert session["reason"] == "Support is reproducing parent-reported upload issue."
+    assert datetime.fromisoformat(session["expires_at"]) > datetime.fromisoformat(session["created_at"])
+    audit_event = payload["audit_event"]
+    assert audit_event["action"] == "admin.impersonation.start"
+    assert audit_event["resource_type"] == "admin_impersonation_session"
+    assert audit_event["resource_id"] == session["id"]
+    assert audit_event["reason"] == "Support is reproducing parent-reported upload issue."
+    assert audit_event["risk_level"] == "high"
+    assert audit_event["trace_id"] == "req_admin_impersonation"
 
     access = api_client.get("/v1/admin/access?tenant_scope=all", headers=ADMIN_HEADERS)
     assert access.status_code == 200

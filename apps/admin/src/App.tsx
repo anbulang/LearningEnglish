@@ -6,6 +6,7 @@ import {
   loadAdminDashboard,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
+  startAdminImpersonationSession,
   toggleAdminTenantModule,
   type AdminAccessData,
   type AdminDashboardData
@@ -215,6 +216,30 @@ export function App() {
     );
   }
 
+  async function handleStartImpersonation(input: { tenantId: string; targetParentId: string; reason: string }) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin impersonation API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await startAdminImpersonationSession({
+      apiBaseUrl,
+      adminToken,
+      tenantScope,
+      tenantId: input.tenantId,
+      targetParentId: input.targetParentId,
+      reason: input.reason
+    });
+    setAccessData((current) =>
+      current
+        ? {
+            ...current,
+            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+          }
+        : current
+    );
+  }
+
   return (
     <AppShell
       activePage={activePage}
@@ -258,7 +283,15 @@ export function App() {
           onRetryMaterialJob={dataMode === "live" ? handleRetryMaterialJob : undefined}
         />
       )}
-      {activePage === "audit" && <AuditAccess language={language} accessData={accessData} dataMode={dataMode} />}
+      {activePage === "audit" && (
+        <AuditAccess
+          language={language}
+          accessData={accessData}
+          dataMode={dataMode}
+          tenants={dashboardData.tenants}
+          onStartImpersonation={dataMode === "live" ? handleStartImpersonation : undefined}
+        />
+      )}
       {activePage === "providers" && (
         <ProviderOps
           language={language}

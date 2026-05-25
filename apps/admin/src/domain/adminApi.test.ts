@@ -7,6 +7,7 @@ import {
   normalizeAdminDashboardPayload,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
+  startAdminImpersonationSession,
   toggleAdminTenantModule
 } from "./adminApi";
 
@@ -365,6 +366,65 @@ describe("admin API client", () => {
       body: JSON.stringify({
         enabled: false,
         reason: "Pilot tenant requested speaking score pause."
+      })
+    });
+  });
+
+  it("starts a supervised impersonation session without returning parent tokens", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        required_permission: "admin.impersonation.start",
+        impersonation_session: {
+          id: "imp_123",
+          tenant_id: "parent_1",
+          target_parent_id: "parent_1",
+          actor_id: "admin_local",
+          status: "active",
+          reason: "Support is reproducing parent-reported upload issue.",
+          expires_at: "2026-05-25T10:36:00+00:00",
+          created_at: "2026-05-25T10:06:00+00:00"
+        },
+        audit_event: {
+          ...accessPayload.audit_events[0],
+          action: "admin.impersonation.start",
+          resource_type: "admin_impersonation_session",
+          resource_id: "imp_123",
+          reason: "Support is reproducing parent-reported upload issue."
+        }
+      })
+    });
+
+    const result = await startAdminImpersonationSession({
+      apiBaseUrl: "http://127.0.0.1:8000/",
+      adminToken: "local-admin-token",
+      tenantScope: "all",
+      tenantId: "parent_1",
+      targetParentId: "parent_1",
+      reason: "Support is reproducing parent-reported upload issue.",
+      fetchImpl
+    });
+
+    expect(result.requiredPermission).toBe("admin.impersonation.start");
+    expect(result.impersonationSession).toMatchObject({
+      id: "imp_123",
+      tenantId: "parent_1",
+      targetParentId: "parent_1",
+      actorId: "admin_local",
+      status: "active"
+    });
+    expect(JSON.stringify(result)).not.toContain("access_token");
+    expect(result.auditEvent.action).toBe("admin.impersonation.start");
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/impersonation-sessions?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({
+        tenant_id: "parent_1",
+        target_parent_id: "parent_1",
+        reason: "Support is reproducing parent-reported upload issue."
       })
     });
   });

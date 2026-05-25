@@ -113,3 +113,14 @@ export interface AdminAuditEvent {
   traceId: string;
   createdAt: string;
 }
+
+export interface AdminImpersonationSession {
+  id: string;
+  tenantId: string;
+  targetParentId: string;
+  actorId: string;
+  status: "active" | "ended" | "expired";
+  reason: string;
+  expiresAt: string;
+  createdAt: string;
+}

@@ -1,6 +1,7 @@
 import type {
   AdminAccessUser,
   AdminAuditEvent,
+  AdminImpersonationSession,
   AdminMaterial,
   JobStatus,
   MediaStatus,
@@ -42,6 +43,12 @@ export interface AdminTenantModuleToggleResult {
   auditEvent: AdminAuditEvent;
 }
 
+export interface AdminImpersonationSessionResult {
+  requiredPermission: string;
+  impersonationSession: AdminImpersonationSession;
+  auditEvent: AdminAuditEvent;
+}
+
 interface LoadAdminDashboardOptions {
   apiBaseUrl: string;
   adminToken: string;
@@ -78,6 +85,13 @@ interface ToggleAdminTenantModuleOptions extends LoadAdminDashboardOptions {
   reason: string;
 }
 
+interface StartAdminImpersonationSessionOptions extends LoadAdminDashboardOptions {
+  tenantScope: string;
+  tenantId: string;
+  targetParentId: string;
+  reason: string;
+}
+
 type AdminDashboardPayload = {
   tenants: Array<Record<string, unknown>>;
   materials: Array<Record<string, unknown>>;
@@ -106,6 +120,12 @@ type AdminProviderPolicyOverridePayload = {
 type AdminTenantModuleTogglePayload = {
   required_permission: unknown;
   module_setting: Record<string, unknown>;
+  audit_event: Record<string, unknown>;
+};
+
+type AdminImpersonationSessionPayload = {
+  required_permission: unknown;
+  impersonation_session: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 };
 
@@ -224,6 +244,32 @@ export async function toggleAdminTenantModule(
   return normalizeAdminTenantModuleTogglePayload((await response.json()) as AdminTenantModuleTogglePayload);
 }
 
+export async function startAdminImpersonationSession(
+  options: StartAdminImpersonationSessionOptions
+): Promise<AdminImpersonationSessionResult> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    `${apiBaseUrl}/v1/admin/impersonation-sessions?tenant_scope=${encodeURIComponent(options.tenantScope)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": options.adminToken
+      },
+      body: JSON.stringify({
+        tenant_id: options.tenantId,
+        target_parent_id: options.targetParentId,
+        reason: options.reason
+      })
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Admin impersonation session request failed: ${response.status}`);
+  }
+  return normalizeAdminImpersonationSessionPayload((await response.json()) as AdminImpersonationSessionPayload);
+}
+
 export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): AdminDashboardData {
   return {
     tenants: payload.tenants.map((tenant) => ({
@@ -266,6 +312,16 @@ export function normalizeAdminTenantModuleTogglePayload(payload: AdminTenantModu
   return {
     requiredPermission: stringValue(payload.required_permission),
     moduleSetting: normalizeTenantModuleSettingPayload(payload.module_setting),
+    auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
+  };
+}
+
+export function normalizeAdminImpersonationSessionPayload(
+  payload: AdminImpersonationSessionPayload
+): AdminImpersonationSessionResult {
+  return {
+    requiredPermission: stringValue(payload.required_permission),
+    impersonationSession: normalizeAdminImpersonationSession(payload.impersonation_session),
     auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
@@ -338,6 +394,19 @@ function normalizeProviderPolicyPayload(policy: Record<string, unknown>): Provid
     fallbackMode: stringValue(policy.fallback_mode) as ProviderPolicy["fallbackMode"],
     monthlyGuardrail: numberValue(policy.monthly_guardrail),
     source: stringValue(policy.source) as ProviderPolicy["source"]
+  };
+}
+
+function normalizeAdminImpersonationSession(session: Record<string, unknown>): AdminImpersonationSession {
+  return {
+    id: stringValue(session.id),
+    tenantId: stringValue(session.tenant_id),
+    targetParentId: stringValue(session.target_parent_id),
+    actorId: stringValue(session.actor_id),
+    status: stringValue(session.status) as AdminImpersonationSession["status"],
+    reason: stringValue(session.reason),
+    expiresAt: stringValue(session.expires_at),
+    createdAt: stringValue(session.created_at)
   };
 }
 
