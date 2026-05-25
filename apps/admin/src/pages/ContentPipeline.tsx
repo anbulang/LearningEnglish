@@ -88,10 +88,10 @@ export function ContentPipeline({ language, tenantScope, tenants, materials }: C
                   <th>{copy.material}</th>
                   <th>{copy.materialStatus}</th>
                   <th>{copy.jobStatus}</th>
-                  <th>Provider</th>
-                  <th>Assets</th>
-                  <th>Media</th>
-                  <th>SLA</th>
+                  <th>{copy.provider}</th>
+                  <th>{copy.assets}</th>
+                  <th>{copy.media}</th>
+                  <th>{copy.sla}</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,18 +287,21 @@ const zhCopy = {
   tenant: "租户",
   child: "孩子",
   material: "材料",
-  materialStatus: "Material status",
-  jobStatus: "Job status",
+  materialStatus: "材料状态",
+  jobStatus: "任务状态",
   inspect: "查看",
   inspector: "当前选中",
   inspectorDetail: "材料详情",
   inspectorAria: "选中材料详情",
-  selectedHint: "查看下方 material/job detail",
+  selectedHint: "查看下方 material/job 明细",
   noSelection: "未选择材料",
   parentChild: "家长 / 孩子",
-  pages: "页数 / Source pages",
-  warnings: "Warnings",
-  noWarnings: "None",
+  pages: "页数 / source pages",
+  provider: "Provider",
+  assets: "学习资产",
+  sla: "SLA",
+  warnings: "告警",
+  noWarnings: "无",
   uploaded: "上传",
   sourcePages: "source pages",
   parseJob: "解析任务",
@@ -308,8 +311,8 @@ const zhCopy = {
   timelineAria: "生命周期时间线",
   auditReason: "审计原因",
   auditPlaceholder: "填写重试或归档原因。Phase 1 不会提交真实 API 或 mutation。",
-  retryMock: "Mock retry only (no-op)",
-  archiveMock: "Mock archive only (no-op)",
+  retryMock: "模拟重试（no-op）",
+  archiveMock: "模拟归档（no-op）",
   emptyFiltered: "没有符合当前筛选的材料。",
   emptyFilteredDetail: "切换状态或租户范围查看其他 mock materials。",
   emptyInspector: "当前筛选没有可检查材料。",
@@ -340,6 +343,9 @@ const enCopy = {
   noSelection: "No material selected",
   parentChild: "Parent / child",
   pages: "Pages / source pages",
+  provider: "Provider",
+  assets: "Assets",
+  sla: "SLA",
   warnings: "Warnings",
   noWarnings: "None",
   uploaded: "Uploaded",
