@@ -9,7 +9,7 @@
 当前仍未收口的部分主要有三类：
 
 - `HN-016` OpenAI 真实媒体 provider 证据仍未补齐；`HN-016A` DashScope 已有 provider 直连与 worker/storage 回填证据，但还缺课程详情截图。
-- `HN-017` 已进入设计和实施计划阶段，目标是补齐孩子录音上传、音频 storage、异步转写评分和 speaking 结果页。
+- `HN-017` 已完成录音上传、音频 storage、异步 stub 评分、结果页和自动化测试；readiness 仍待补真机录音上传证据。
 - Doubao、OpenAI、DashScope 真依赖在部分网络环境下仍可能受代理继承影响；如果 shell 已配置 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 但 API / worker 仍无法访问外网，需要额外设置 `AI_HTTP_TRUST_ENV=true` 或 `MEDIA_HTTP_TRUST_ENV=true`。
 
 ## 触发问题时的旧现状
@@ -382,7 +382,7 @@
 
 **目标：** 孩子围绕讲义核心词句录音后，系统保存音频、异步转写评分，并在结果页和周报中展示反馈。
 
-**当前状态：** 已完成中文设计 spec 和 implementation plan。当前代码中 speaking 入口、`SpeakingAttemptModel` 和 `/v1/speaking-attempts` 已存在，但仍是 stub transcript / stub feedback，尚未支持真实录音上传和异步评分。
+**当前状态：** 已完成代码实现和自动化验证。移动端 speaking 页支持录音、上传、轮询和结果展示；后端 `POST /v1/speaking-attempts` 已改为 multipart 音频上传并创建 `recording_uploaded` attempt；worker `speaking.score_attempt` 可用本地 deterministic stub 完成异步评分并回填周报。真实语音评分 provider 和真机证据仍待后续补齐。
 
 **范围内：**
 - 移动端 speaking 页支持录音、重录、上传、处理中、评分成功和失败重试。
@@ -411,7 +411,7 @@
 **Harness：**
 - 自动化：`services/api/.venv/bin/python -m pytest services/api/tests/test_speaking_attempts.py services/api/tests/test_speaking_assessment_provider.py -q`
 - 自动化：`services/workers/.venv/bin/python -m pytest services/workers/tests/test_speaking_attempt_task.py -q`
-- 自动化：`cd apps/mobile && flutter test test/features/speaking/presentation/speaking_partner_screen_test.dart`
+- 自动化：`cd apps/mobile && flutter test test/features/materials/data/app_repository_test.dart test/features/speaking/presentation/speaking_partner_screen_test.dart`
 - 人工：真机录音上传后保存 attempt JSON、storage 摘录、worker log 和结果页截图。
 
 **证据位置：**

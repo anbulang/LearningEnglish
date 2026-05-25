@@ -106,12 +106,13 @@ def test_speaking_attempt_rejects_unknown_material(api_client) -> None:
 
     response = api_client.post(
         "/v1/speaking-attempts",
-        json={
+        data={
             "child_id": child_id,
             "material_id": "material_missing",
             "prompt_text": "What is this?",
-            "transcript": "It is a cat.",
+            "target_text": "It is a cat.",
         },
+        files={"audio": ("answer.m4a", b"fake-audio", "audio/mp4")},
         headers=headers,
     )
     assert response.status_code == 404

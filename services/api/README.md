@@ -27,7 +27,10 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - `GET /v1/knowledge-packs/{material_id}`
 - `GET /v1/review-tasks`
 - `POST /v1/practice-sessions`
-- `GET/POST /v1/speaking-attempts`
+- `GET /v1/speaking-attempts`
+- `POST /v1/speaking-attempts`
+- `GET /v1/speaking-attempts/{attempt_id}`
+- `POST /v1/speaking-attempts/{attempt_id}/retry`
 - `GET /v1/parent-coaching/{material_id}`
 - `GET /v1/reports/weekly`
 
@@ -41,7 +44,8 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - `POST /v1/material-jobs/{job_id}/confirm` 会生成 `KnowledgePack`、`ReviewTask` 和 `ParentCoachingScript`，并触发学习资产媒体补齐任务；默认可走 mock，也可在 `MEDIA_PROVIDER=real` 下切到 OpenAI 或 DashScope。
 - `DELETE /v1/materials/{material_id}` 会把资料归档，并从用户可见入口移除知识包、复习任务和亲子陪练脚本。
 - `POST /v1/practice-sessions` 会完成对应复习任务并更新周报统计。
-- `POST /v1/speaking-attempts` 当前返回 stub 反馈，并累计周报中的口语次数。
+- `POST /v1/speaking-attempts` 接收 multipart 音频上传，保存 `owner_type=speaking_attempt` 的音频对象，创建 `recording_uploaded` attempt，并由 worker 异步评分；接口本身不等待语音 provider 完成。
+- `GET /v1/speaking-attempts/{attempt_id}` 用于移动端轮询评分结果；`POST /v1/speaking-attempts/{attempt_id}/retry` 可对失败 attempt 重新入队。
 
 ## 本地运行
 

@@ -182,7 +182,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除和自动化 Harness 日志已补齐；人工截图可在下一次真机/模拟器回归时补充。
 - [ ] `HN-016` 真实媒体生成 Provider：实现已存在，可通过 `MEDIA_PROVIDER=real` 启用真实彩色配图、US TTS、UK TTS、storage 回填和课程详情失败态；最终 readiness 仍待补齐 HN-016 验证与证据。
 - [ ] `HN-016A` DashScope 国内媒体 Provider：DashScope 直连 provider smoke 与 worker/storage 回填 smoke 已通过；仍待补齐课程详情页截图或真机/模拟器 UI 证据后再勾选 readiness 完成。
-- [ ] `HN-017` 孩子录音上传与 AI 语音评分：设计 spec 和实施计划已完成；录音上传、音频 storage、worker 评分、结果页和真机证据待实现。
+- [ ] `HN-017` 孩子录音上传与 AI 语音评分：录音上传、音频 storage、worker stub 评分、结果页和自动化测试已完成；readiness 待补真机录音上传、worker 日志、attempt JSON 和结果页截图。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.15:8000/v1` 构建、安装并启动成功。

@@ -11,11 +11,11 @@
 
 ## 当前阶段
 
-当前处于 **MVP 主链已打通，真实媒体 provider readiness 待补截图，HN-017 口语评分闭环已完成设计和实施计划** 的阶段。
+当前处于 **MVP 主链已打通，真实媒体 provider readiness 待补截图，HN-017 口语评分闭环代码已落地但真机证据待补** 的阶段。
 
 一句话概括：
 
-> 登录、上传、AI 校对、课程详情、复习、口语入口、周报这条链已经具备代码、测试和 Harness 抓手；当前最需要收口的是 HN-016 / HN-016A 真实媒体证据，并按 HN-017 计划把口语入口推进为录音、评分、结果页和周报闭环。
+> 登录、上传、AI 校对、课程详情、复习、口语评分、周报这条链已经具备代码、测试和 Harness 抓手；当前最需要收口的是 HN-016 / HN-016A 真实媒体证据，以及 HN-017 真机录音上传证据。
 
 ## 里程碑状态
 
@@ -34,7 +34,7 @@
 | 资料路由一致性收口 | 已完成 | `material_navigation.dart` 已成为首页/资料库共享路由规则，相关回归测试已存在 |
 | `HN-016` 真实媒体 Provider（OpenAI） | 代码已完成，readiness 待证据 | `MEDIA_PROVIDER=real` + OpenAI image/TTS 已接入，仍需补 Harness 证据与环境说明 |
 | `HN-016A` DashScope 国内媒体 Provider | 后端媒体链路已验证，readiness 待 UI 证据 | DashScope provider 直连和 worker/storage 回填已通过，仍需补课程详情截图 |
-| `HN-017` 孩子录音上传与 AI 语音评分 | 设计与实施计划已完成，代码待实现 | 已确定异步录音上传、worker 评分、结果页轮询和 Harness 证据口径 |
+| `HN-017` 孩子录音上传与 AI 语音评分 | 代码已完成，readiness 待真机证据 | 已接入 multipart 录音上传、音频 storage、worker stub 评分、结果页轮询和周报回填 |
 | `HN-018` 学习资产掌握度进入报告页 | 未开始 | 周报仍是轻量聚合 |
 
 ## 已经比较稳的部分
@@ -68,7 +68,7 @@
 ### 1. 真实媒体与语音闭环还没真正“验收完成”
 
 - `HN-016A` 已补 DashScope provider 直连与 worker/storage 回填证据；`HN-016` 仍缺 OpenAI 真实 provider 证据，二者都还缺课程详情截图闭环。
-- speaking 还没有真实录音上传、转写、发音评分和反馈闭环；HN-017 已有 spec 和 implementation plan，可以进入实现。
+- speaking 已具备录音上传、音频 storage、stub 异步评分、结果页和周报回填；仍缺真实语音评分 provider 适配和真机证据。
 - 周报还没有基于学习资产掌握度、练习结果和口语表现给出更可信的学习分析。
 
 ### 2. 交付与环境稳定性仍偏“开发者友好”
@@ -82,7 +82,7 @@
 
 - `/reports` 当前仍复用 `ReviewTasksScreen(reportMode: true)`，还不是独立报告模块。
 - 平板端虽然已有适配，但 AI 校对页、课程详情页、资料库的系统性人工验收仍不完整。
-- speaking 入口已存在，但缺少真实录音数据与结果页面；下一步应按 HN-017 计划把“可练”推进到“可评”。
+- speaking 入口已推进到“可录、可传、可评、可展示”；下一步要补真机证据，并为真实语音评分 provider 设计适配与验收路径。
 
 ## 项目级 ToDo
 
@@ -115,11 +115,12 @@
 
 - [x] 完成 `HN-017` 中文设计 spec：`docs/superpowers/specs/2026-05-25-hn017-speaking-assessment-design.md`。
 - [x] 完成 `HN-017` implementation plan：`docs/superpowers/plans/2026-05-25-hn017-speaking-assessment.md`。
-- [ ] 实现孩子录音上传接口、对象存储落盘和移动端上传入口。
-- [ ] 实现 speaking 结果合同，至少包括转写文本、评分、维度反馈和失败态。
-- [ ] 接入 AI 语音评分 provider，并约定可替换的 stub / real 策略。
-- [ ] 把 speaking 结果与 `PracticeSession`、`ReviewTask`、`WeeklyReport` 关联起来。
-- [ ] 为口语闭环增加 API、worker、Flutter 和 Harness 验证路径。
+- [x] 实现孩子录音上传接口、对象存储落盘和移动端上传入口。
+- [x] 实现 speaking 结果合同，至少包括转写文本、评分、维度反馈和失败态。
+- [x] 接入可替换的 speech assessment provider 骨架，并保留 deterministic stub 作为本地默认。
+- [x] 把 speaking 评分结果与 `WeeklyReport` 关联起来；`PracticeSession`、`ReviewTask` 更深层掌握度口径放入 HN-018。
+- [x] 为口语闭环增加 API、worker、Flutter 和 Harness 验证路径。
+- [ ] 补齐 HN-017 真机录音上传、worker 日志、attempt JSON 和结果页截图证据。
 - [ ] 定义 HN-018 周报字段：学习资产掌握度、复习完成度、口语表现、家长建议。
 
 完成标准：
@@ -159,12 +160,12 @@
 ## 建议执行顺序
 
 1. 先完成 `HN-016` / `HN-016A` readiness 证据与环境文档，避免真实媒体能力长期停留在“代码存在但没验收”。
-2. 然后按 `docs/superpowers/plans/2026-05-25-hn017-speaking-assessment.md` 推进 HN-017，让 speaking 从入口变成录音、评分和结果页闭环。
+2. 然后补齐 HN-017 真机录音上传证据，确认 speaking 结果页在真实设备上可用。
 3. 再做 `HN-018` 报告深化，把学习资产掌握度、复习完成度和口语表现接进周报。
 4. 最后处理 Android、CI、证据归档和数据模型演进。
 
 ## 当前结论
 
 - 这个项目最难的“上传识别主链”已经不是空白，文档体系也已经从“设计态描述”回到了“代码态事实”。
-- 当前最该优先做的不是继续堆新页面，而是把 `HN-016` / `HN-016A` 从代码能力补到 readiness 证据，并按 HN-017 计划进入口语闭环实现。
+- 当前最该优先做的不是继续堆新页面，而是把 `HN-016` / `HN-016A` / `HN-017` 从代码能力补到 readiness 证据。
 - 只要真实媒体证据、语音评分闭环和报告深化补上，项目就会从“可跑的家庭英语学习 MVP”明显进入“可持续迭代的学习产品基础版”。

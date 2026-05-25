@@ -46,6 +46,15 @@ class Settings:
     media_http_trust_env: bool
     media_provider_poll_interval_seconds: int
     media_provider_max_poll_seconds: int
+    speech_provider: str
+    speech_assessment_provider: str
+    speech_assessment_base_url: str
+    speech_assessment_app_key: str
+    speech_assessment_secret_key: str
+    speech_assessment_timeout_seconds: int
+    speech_assessment_http_trust_env: bool
+    speech_assessment_default_accent: str
+    speaking_audio_max_bytes: int
     openai_api_key: str
     openai_base_url: str
     dashscope_api_key: str
@@ -99,6 +108,15 @@ def get_settings() -> Settings:
         media_http_trust_env=os.getenv("MEDIA_HTTP_TRUST_ENV", "false").lower() == "true",
         media_provider_poll_interval_seconds=int(os.getenv("MEDIA_PROVIDER_POLL_INTERVAL_SECONDS", "10")),
         media_provider_max_poll_seconds=int(os.getenv("MEDIA_PROVIDER_MAX_POLL_SECONDS", "180")),
+        speech_provider=os.getenv("SPEECH_PROVIDER", "stub"),
+        speech_assessment_provider=os.getenv("SPEECH_ASSESSMENT_PROVIDER", os.getenv("SPEECH_PROVIDER", "stub")),
+        speech_assessment_base_url=os.getenv("SPEECH_ASSESSMENT_BASE_URL", ""),
+        speech_assessment_app_key=os.getenv("SPEECH_ASSESSMENT_APP_KEY", ""),
+        speech_assessment_secret_key=os.getenv("SPEECH_ASSESSMENT_SECRET_KEY", ""),
+        speech_assessment_timeout_seconds=int(os.getenv("SPEECH_ASSESSMENT_TIMEOUT_SECONDS", "120")),
+        speech_assessment_http_trust_env=os.getenv("SPEECH_ASSESSMENT_HTTP_TRUST_ENV", "false").lower() == "true",
+        speech_assessment_default_accent=os.getenv("SPEECH_ASSESSMENT_DEFAULT_ACCENT", "am"),
+        speaking_audio_max_bytes=int(os.getenv("SPEAKING_AUDIO_MAX_BYTES", str(10 * 1024 * 1024))),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", ""),

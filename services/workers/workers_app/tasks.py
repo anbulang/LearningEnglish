@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import sys
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
 from celery import shared_task
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 API_ROOT = Path(__file__).resolve().parents[2] / "api"
@@ -14,19 +16,29 @@ if str(API_ROOT) not in sys.path:
     sys.path.append(str(API_ROOT))
 
 from app.core.db import SessionLocal
+from app.core.settings import get_settings
 from app.db.models import (
     ChildProfileModel,
     CourseMaterialModel,
     KnowledgePackModel,
     MaterialParseJobModel,
     ReviewTaskModel,
+    SpeakingAttemptModel,
     StoredAssetModel,
     WeeklyReportModel,
 )
-from app.models.contracts import JobStatus, LearningAsset, MaterialStatus, MediaGenerationStatus, PrimaryAccent
+from app.models.contracts import (
+    JobStatus,
+    LearningAsset,
+    MaterialStatus,
+    MediaGenerationStatus,
+    PrimaryAccent,
+    SpeakingAttemptStatus,
+)
 from app.services.learning_asset_media import MediaProviderConfigurationError, build_media_provider_bundle
 from app.services.mappers import course_material_from_model, material_job_from_model
 from app.services.pipeline import build_pipeline_service
+from app.services.speaking_assessment import SpeechAssessmentError, build_speech_assessment_provider
 from app.services.storage import get_storage_service
 
 
@@ -95,6 +107,88 @@ def process_material_job(job_id: str) -> dict[str, str]:
         db.commit()
         return {"job_id": job.id, "status": job.status}
     finally:
+        db.close()
+
+
+@shared_task(name="speaking.score_attempt")
+def score_speaking_attempt(attempt_id: str) -> dict[str, str]:
+    db = SessionLocal()
+    provider = None
+    try:
+        row = db.execute(
+            select(SpeakingAttemptModel, CourseMaterialModel)
+            .join(CourseMaterialModel, CourseMaterialModel.id == SpeakingAttemptModel.material_id)
+            .where(SpeakingAttemptModel.id == attempt_id)
+        ).first()
+        if row is None:
+            return {"attempt_id": attempt_id, "status": "missing"}
+        attempt, material = row
+        if material.status == MaterialStatus.archived.value:
+            return {"attempt_id": attempt.id, "status": "archived"}
+        if attempt.status not in {
+            SpeakingAttemptStatus.queued.value,
+            SpeakingAttemptStatus.recording_uploaded.value,
+            SpeakingAttemptStatus.transcribing.value,
+        }:
+            return {"attempt_id": attempt.id, "status": attempt.status}
+
+        attempt.status = SpeakingAttemptStatus.transcribing.value
+        db.add(attempt)
+        db.commit()
+
+        storage = get_storage_service()
+        audio_asset = db.scalar(
+            select(StoredAssetModel).where(
+                StoredAssetModel.owner_type == "speaking_attempt",
+                StoredAssetModel.owner_id == attempt.id,
+                StoredAssetModel.object_key == attempt.audio_object_key,
+            )
+        )
+        if audio_asset is None:
+            raise SpeechAssessmentError("录音文件不存在。")
+        audio_path = storage.resolve_local_path(audio_asset)
+        provider = build_speech_assessment_provider()
+        result = provider.assess(
+            audio_path=audio_path,
+            target_text=attempt.target_text or attempt.prompt_text,
+            prompt_text=attempt.prompt_text,
+            attempt_id=attempt.id,
+            accent=get_settings().speech_assessment_default_accent,
+        )
+
+        db.refresh(material)
+        if material.status == MaterialStatus.archived.value:
+            return {"attempt_id": attempt.id, "status": "archived"}
+        attempt.status = SpeakingAttemptStatus.scored.value
+        attempt.transcript = result.transcript
+        attempt.overall_score = result.overall_score
+        attempt.pronunciation_score = result.pronunciation_score
+        attempt.accuracy_score = result.accuracy_score
+        attempt.fluency_score = result.fluency_score
+        attempt.completeness_score = result.completeness_score
+        attempt.feedback = result.feedback
+        attempt.word_feedback = [item.model_dump(mode="json") for item in result.word_feedback]
+        attempt.suggestions = result.suggestions
+        attempt.provider = result.provider
+        attempt.raw_result = result.raw_result
+        attempt.failure_reason = ""
+        _update_speaking_report(db, attempt)
+        db.add(attempt)
+        db.commit()
+        return {"attempt_id": attempt.id, "status": attempt.status}
+    except Exception as exc:
+        attempt = db.get(SpeakingAttemptModel, attempt_id)
+        if attempt is not None:
+            attempt.status = SpeakingAttemptStatus.failed.value
+            attempt.failure_reason = f"口语评分失败：{exc}"
+            attempt.feedback = "口语评分失败，请稍后重试。"
+            db.add(attempt)
+            db.commit()
+        return {"attempt_id": attempt_id, "status": "failed"}
+    finally:
+        close = getattr(provider, "close", None)
+        if callable(close):
+            close()
         db.close()
 
 
@@ -267,6 +361,30 @@ def process_learning_asset_media(material_id: str) -> dict[str, str]:
         return {"material_id": material_id, "status": status_value}
     finally:
         db.close()
+
+
+def _update_speaking_report(db: Session, attempt: SpeakingAttemptModel) -> None:
+    child = db.get(ChildProfileModel, attempt.child_id)
+    if child is None:
+        return
+    report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == attempt.child_id))
+    if report is None:
+        week_start = child.created_at.date()
+        report = WeeklyReportModel(
+            child_id=attempt.child_id,
+            week_start=week_start,
+            week_end=week_start + timedelta(days=6),
+            recommended_actions=["保持每周至少完成一次口语跟读。"],
+        )
+        db.add(report)
+    report.speaking_attempts = (report.speaking_attempts or 0) + 1
+    weak_words = [
+        item.get("word", "")
+        for item in (attempt.word_feedback or [])
+        if item.get("status") == "needs_practice" and item.get("word")
+    ]
+    report.weak_items = list(dict.fromkeys([*(report.weak_items or []), *weak_words]))
+    db.add(report)
 
 
 class _ArchivedDuringMediaGeneration(Exception):
@@ -557,8 +675,3 @@ def generate_review_tasks(material_id: str) -> dict[str, str]:
 @shared_task(name="speaking.generate_tts")
 def generate_tts(material_id: str) -> dict[str, str]:
     return {"material_id": material_id, "status": "tts_generated"}
-
-
-@shared_task(name="speaking.score_attempt")
-def score_attempt(attempt_id: str) -> dict[str, str]:
-    return {"attempt_id": attempt_id, "status": "scored"}
