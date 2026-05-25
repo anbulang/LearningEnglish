@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
 import { EmptyPhase } from "./components/ui";
-import { mockMaterials, mockTenants } from "./domain/mockData";
+import { mockMaterials, mockProviderPolicies, mockTenants } from "./domain/mockData";
 import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
 import { CommandCenter } from "./pages/CommandCenter";
+import { TenantDetail } from "./pages/TenantDetail";
 
 const pageTitles: Record<PageKey, MessageKey> = {
   command: "page.commandCenter.title",
@@ -25,6 +26,7 @@ export function App() {
   const [tenantScope, setTenantScope] = useState<TenantScope>("all");
   const [activePage, setActivePage] = useState<PageKey>("command");
   const t = createTranslator(language);
+  const selectedTenantId = tenantScope === "all" ? mockTenants[0]?.id ?? "" : tenantScope;
 
   return (
     <AppShell
@@ -36,9 +38,19 @@ export function App() {
       onTenantScopeChange={setTenantScope}
       onPageChange={setActivePage}
     >
-      {activePage === "command" ? (
+      {activePage === "command" && (
         <CommandCenter language={language} tenantScope={tenantScope} tenants={mockTenants} materials={mockMaterials} />
-      ) : (
+      )}
+      {activePage === "tenants" && (
+        <TenantDetail
+          language={language}
+          tenantId={selectedTenantId}
+          tenants={mockTenants}
+          materials={mockMaterials}
+          policies={mockProviderPolicies}
+        />
+      )}
+      {activePage !== "command" && activePage !== "tenants" && (
         <>
           <section className="page-header">
             <p className="eyebrow">Phase 1 mock prototype</p>

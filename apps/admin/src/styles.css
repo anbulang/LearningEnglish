@@ -403,6 +403,75 @@ td small {
   font-size: 24px;
 }
 
+.tenant-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.tenant-profile h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.tenant-badge {
+  display: grid;
+  flex: 0 0 auto;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-weight: 900;
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: 144px minmax(0, 1fr);
+  gap: 10px 14px;
+  margin: 0;
+}
+
+.detail-list dt {
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.detail-list dd {
+  min-width: 0;
+  margin: 0;
+  color: #111827;
+  overflow-wrap: anywhere;
+}
+
+.module-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.module-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.module-row span {
+  min-width: 0;
+  color: #111827;
+  font-weight: 700;
+}
+
 .empty-phase {
   display: grid;
   align-items: start;
@@ -475,6 +544,10 @@ td small {
 
   .metric-row,
   .tenant-health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-list {
     grid-template-columns: 1fr;
   }
 }

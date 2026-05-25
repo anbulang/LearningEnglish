@@ -1,0 +1,293 @@
+import { MetricCard, StatusChip } from "../components/ui";
+import { getEffectiveProviderPolicy } from "../domain/selectors";
+import type { AdminMaterial, Language, MaterialStatus, MediaStatus, ProviderPolicy, Tenant, TenantStatus } from "../domain/types";
+
+interface TenantDetailProps {
+  language: Language;
+  tenantId: string;
+  tenants: Tenant[];
+  materials: AdminMaterial[];
+  policies: ProviderPolicy[];
+}
+
+export function TenantDetail({ language, tenantId, tenants, materials, policies }: TenantDetailProps) {
+  const tenant = tenants.find((item) => item.id === tenantId) ?? tenants[0];
+  const copy = language === "zh" ? zhCopy : enCopy;
+
+  if (!tenant) {
+    return (
+      <section className="surface empty-phase">
+        <h1>{copy.emptyTitle}</h1>
+        <p>{copy.emptyDetail}</p>
+      </section>
+    );
+  }
+
+  const tenantMaterials = materials.filter((material) => material.tenantId === tenant.id);
+  const policy = getEffectiveProviderPolicy(policies, tenant.id);
+  const failedJobs = tenantMaterials.filter((item) => item.jobStatus === "failed" || item.materialStatus === "failed").length;
+  const processingMedia = tenantMaterials.filter((item) => item.mediaStatus === "pending" || item.mediaStatus === "processing").length;
+
+  return (
+    <div className="page-grid">
+      <section className="page-header wide">
+        <p className="eyebrow">Tenants / {tenant.name}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.subtitle}</p>
+      </section>
+
+      <section className="surface span-5">
+        <div className="tenant-profile">
+          <div className="tenant-badge" aria-hidden="true">
+            {getTenantInitials(tenant.name)}
+          </div>
+          <div>
+            <h2>{tenant.name}</h2>
+            <StatusChip tone={getTenantStatusTone(tenant.status)}>{tenant.status}</StatusChip>
+          </div>
+        </div>
+        <dl className="detail-list">
+          <dt>Tenant ID</dt>
+          <dd>{tenant.id}</dd>
+          <dt>{copy.type}</dt>
+          <dd>{tenant.tenantType}</dd>
+          <dt>{copy.region}</dt>
+          <dd>{tenant.region}</dd>
+          <dt>{copy.owner}</dt>
+          <dd>{tenant.ownerContact}</dd>
+          <dt>{copy.tier}</dt>
+          <dd>{tenant.tier}</dd>
+          <dt>{copy.created}</dt>
+          <dd>{tenant.createdAt}</dd>
+        </dl>
+      </section>
+
+      <section className="metric-row span-7" aria-label={copy.metrics}>
+        <MetricCard label={copy.parents} value={tenant.activeParents.toLocaleString()} detail={copy.parentsDetail} />
+        <MetricCard label={copy.children} value={tenant.children.toLocaleString()} detail={copy.childrenDetail} />
+        <MetricCard label={copy.materialsMetric} value={tenantMaterials.length} detail={copy.materialsDetail} />
+        <MetricCard label={copy.failedJobs} value={failedJobs} detail={copy.failedJobsDetail} />
+      </section>
+
+      <section className="surface span-5">
+        <div className="section-title">
+          <h2>{copy.policy}</h2>
+          <StatusChip tone={policy.source === "tenant_override" ? "warning" : "neutral"}>{policy.source}</StatusChip>
+        </div>
+        <dl className="detail-list">
+          <dt>AI_PROVIDER</dt>
+          <dd>{policy.aiProvider}</dd>
+          <dt>MEDIA_PROVIDER</dt>
+          <dd>{policy.mediaProvider}</dd>
+          <dt>{copy.fallback}</dt>
+          <dd>{policy.fallbackMode}</dd>
+          <dt>{copy.guardrail}</dt>
+          <dd>{policy.monthlyGuardrail.toLocaleString()}</dd>
+          <dt>{copy.policySource}</dt>
+          <dd>{policy.source}</dd>
+        </dl>
+      </section>
+
+      <section className="surface span-7">
+        <div className="section-title">
+          <h2>{copy.modules}</h2>
+          <StatusChip tone={processingMedia > 0 ? "warning" : "success"}>
+            {processingMedia > 0 ? copy.mediaProcessing : copy.allClear}
+          </StatusChip>
+        </div>
+        <div className="module-grid">
+          {buildModules(policy, failedJobs).map((module) => (
+            <div key={module.name} className="module-row">
+              <span>{module.name}</span>
+              <StatusChip tone={module.tone}>{module.status}</StatusChip>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="surface wide table-panel">
+        <div className="section-title">
+          <h2>{copy.materials}</h2>
+          <StatusChip tone={tenantMaterials.length > 0 ? "success" : "neutral"}>{tenantMaterials.length}</StatusChip>
+        </div>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{copy.material}</th>
+                <th>{copy.child}</th>
+                <th>{copy.parent}</th>
+                <th>{copy.materialStatus}</th>
+                <th>{copy.jobStatus}</th>
+                <th>{copy.media}</th>
+                <th>{copy.updated}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tenantMaterials.map((material) => (
+                <tr key={material.id}>
+                  <td>
+                    <strong className="table-title">{material.title}</strong>
+                    <small>
+                      {material.pageCount} pages / {material.learningAssets} assets
+                    </small>
+                  </td>
+                  <td>
+                    {material.childName}
+                    <small>
+                      {material.childAge} {copy.yearsOld}
+                    </small>
+                  </td>
+                  <td>{material.parentName}</td>
+                  <td>
+                    <StatusChip tone={getMaterialStatusTone(material.materialStatus)}>{material.materialStatus}</StatusChip>
+                  </td>
+                  <td>
+                    <StatusChip tone={getMaterialStatusTone(material.jobStatus)}>{material.jobStatus}</StatusChip>
+                  </td>
+                  <td>
+                    <StatusChip tone={getMediaStatusTone(material.mediaStatus)}>{material.mediaStatus}</StatusChip>
+                  </td>
+                  <td>{material.updatedAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+type ModuleRow = {
+  name: string;
+  status: string;
+  tone: "success" | "warning" | "danger" | "neutral";
+};
+
+function buildModules(policy: ProviderPolicy, failedJobs: number): ModuleRow[] {
+  return [
+    { name: "Worksheet import", status: "Enabled", tone: "success" },
+    { name: "AI review", status: policy.aiProvider === "stub" ? "Mock" : "Enabled", tone: policy.aiProvider === "stub" ? "neutral" : "success" },
+    { name: "Real media", status: policy.mediaProvider === "real" ? "Enabled" : "Mock media", tone: policy.mediaProvider === "real" ? "success" : "warning" },
+    { name: "Speaking score", status: "Pilot", tone: "warning" },
+    { name: "Weekly reports", status: failedJobs > 0 ? "Watch" : "Enabled", tone: failedJobs > 0 ? "warning" : "success" }
+  ];
+}
+
+function getTenantInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function getTenantStatusTone(status: TenantStatus): "success" | "warning" | "danger" {
+  if (status === "active") {
+    return "success";
+  }
+  if (status === "suspended") {
+    return "danger";
+  }
+  return "warning";
+}
+
+function getMaterialStatusTone(status: MaterialStatus | AdminMaterial["jobStatus"]): "success" | "warning" | "danger" | "neutral" {
+  if (status === "ready") {
+    return "success";
+  }
+  if (status === "failed") {
+    return "danger";
+  }
+  if (status === "processing" || status === "needs_review" || status === "queued") {
+    return "warning";
+  }
+  return "neutral";
+}
+
+function getMediaStatusTone(status: MediaStatus): "success" | "warning" | "danger" {
+  if (status === "ready") {
+    return "success";
+  }
+  if (status === "failed") {
+    return "danger";
+  }
+  return "warning";
+}
+
+const zhCopy = {
+  title: "租户详情",
+  subtitle: "查看租户身份、配额使用、模块访问、Provider 策略和内容材料状态。",
+  emptyTitle: "未找到租户",
+  emptyDetail: "当前 mock 数据中没有可展示的租户。",
+  type: "类型",
+  region: "区域",
+  owner: "负责人",
+  tier: "套餐",
+  created: "创建时间",
+  metrics: "租户指标",
+  parents: "家长账号",
+  parentsDetail: "active parent accounts",
+  children: "孩子档案",
+  childrenDetail: "child profiles",
+  materialsMetric: "材料",
+  materialsDetail: "current tenant scope",
+  failedJobs: "失败任务",
+  failedJobsDetail: "requires attention",
+  policy: "Effective provider policy",
+  fallback: "Fallback",
+  guardrail: "Monthly guardrail",
+  policySource: "Policy source",
+  modules: "Module access",
+  mediaProcessing: "Media processing",
+  allClear: "All clear",
+  materials: "Tenant materials",
+  material: "Material",
+  child: "Child",
+  parent: "Parent",
+  materialStatus: "Material status",
+  jobStatus: "Job status",
+  media: "Media",
+  updated: "Updated",
+  yearsOld: "years old"
+};
+
+const enCopy = {
+  title: "Tenant Detail",
+  subtitle: "Tenant identity, quota usage, module access, provider policy, and tenant content health.",
+  emptyTitle: "Tenant not found",
+  emptyDetail: "No tenant is available in the current mock dataset.",
+  type: "Type",
+  region: "Region",
+  owner: "Owner",
+  tier: "Tier",
+  created: "Created",
+  metrics: "Tenant metrics",
+  parents: "Parents",
+  parentsDetail: "active parent accounts",
+  children: "Children",
+  childrenDetail: "child profiles",
+  materialsMetric: "Materials",
+  materialsDetail: "current tenant scope",
+  failedJobs: "Failed jobs",
+  failedJobsDetail: "requires attention",
+  policy: "Effective provider policy",
+  fallback: "Fallback",
+  guardrail: "Monthly guardrail",
+  policySource: "Policy source",
+  modules: "Module access",
+  mediaProcessing: "Media processing",
+  allClear: "All clear",
+  materials: "Tenant materials",
+  material: "Material",
+  child: "Child",
+  parent: "Parent",
+  materialStatus: "Material status",
+  jobStatus: "Job status",
+  media: "Media",
+  updated: "Updated",
+  yearsOld: "years old"
+};
