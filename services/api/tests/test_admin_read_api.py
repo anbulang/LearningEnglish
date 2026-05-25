@@ -17,19 +17,51 @@ def test_admin_dashboard_requires_admin_token_and_explicit_tenant_scope(api_clie
     assert missing_scope.status_code == 422
 
 
-def test_admin_dashboard_allows_local_admin_cors_preflight(api_client) -> None:
-    response = api_client.options(
-        "/v1/admin/dashboard?tenant_scope=all",
-        headers={
-            "Origin": "http://127.0.0.1:5173",
-            "Access-Control-Request-Method": "GET",
-            "Access-Control-Request-Headers": "X-Admin-Token",
-        },
-    )
+def test_admin_access_returns_actor_permissions_and_dashboard_audit_event(api_client) -> None:
+    dashboard = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+    assert dashboard.status_code == 200
 
-    assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
-    assert "X-Admin-Token" in response.headers["access-control-allow-headers"]
+    access = api_client.get("/v1/admin/access?tenant_scope=all", headers=ADMIN_HEADERS)
+
+    assert access.status_code == 200
+    payload = access.json()
+    assert payload["current_admin"] == {
+        "id": "admin_local",
+        "display_name": "Local Platform Admin",
+        "email": "admin@learningenglish.local",
+        "role": "Platform Owner",
+        "status": "active",
+    }
+    assert "admin.dashboard.read" in payload["permissions"]
+    assert "admin.audit.read" in payload["permissions"]
+    assert "local-admin-token" not in str(payload)
+    assert payload["audit_events"]
+    latest = payload["audit_events"][0]
+    assert latest["actor_id"] == "admin_local"
+    assert latest["tenant_scope"] == "all"
+    assert latest["action"] == "admin.dashboard.read"
+    assert latest["resource_type"] == "admin_dashboard"
+    assert latest["resource_id"] == "dashboard"
+    assert latest["result"] == "success"
+    assert latest["risk_level"] == "low"
+    assert latest["trace_id"].startswith("req_")
+    assert latest["created_at"]
+
+
+def test_admin_dashboard_allows_local_admin_cors_preflight(api_client) -> None:
+    for origin in ("http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://localhost:52464"):
+        response = api_client.options(
+            "/v1/admin/dashboard?tenant_scope=all",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "X-Admin-Token",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == origin
+        assert "X-Admin-Token" in response.headers["access-control-allow-headers"]
 
 
 def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> None:

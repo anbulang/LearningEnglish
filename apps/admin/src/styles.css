@@ -564,6 +564,29 @@ td small {
   font-weight: 700;
 }
 
+.permission-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.permission-pill {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid var(--outline-warm);
+  border-radius: 8px;
+  color: var(--cocoa-ink);
+  background: #fff7f2;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.audit-table {
+  min-width: 940px;
+}
+
 .empty-phase {
   display: grid;
   align-items: start;

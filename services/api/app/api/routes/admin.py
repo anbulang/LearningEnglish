@@ -1,32 +1,68 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.settings import get_settings
-from app.db.models import ChildProfileModel, CourseMaterialModel, MaterialParseJobModel, ParentAccountModel
+from app.db.models import (
+    AdminAuditEventModel,
+    AdminUserModel,
+    ChildProfileModel,
+    CourseMaterialModel,
+    MaterialParseJobModel,
+    ParentAccountModel,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+ADMIN_PERMISSIONS = [
+    "admin.dashboard.read",
+    "admin.tenant.read",
+    "admin.material.read",
+    "admin.audit.read",
+]
 
-def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> None:
+
+@dataclass(frozen=True)
+class AdminActor:
+    id: str
+    display_name: str
+    email: str
+    role: str
+    status: str
+    permissions: list[str]
+
+
+def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> AdminActor:
     if not x_admin_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing admin token")
     if x_admin_token != get_settings().admin_api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin token")
+    return AdminActor(
+        id="admin_local",
+        display_name="Local Platform Admin",
+        email="admin@learningenglish.local",
+        role="Platform Owner",
+        status="active",
+        permissions=ADMIN_PERMISSIONS,
+    )
 
 
 @router.get("/dashboard")
 def get_admin_dashboard(
+    request: Request,
     tenant_scope: str = Query(..., min_length=1),
-    _: None = Depends(require_admin_token),
+    actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
+    _ensure_admin_user(db, actor)
     tenants = db.scalars(select(ParentAccountModel).order_by(ParentAccountModel.created_at.asc())).all()
     tenant_ids = {tenant.id for tenant in tenants}
     if tenant_scope != "all" and tenant_scope not in tenant_ids:
@@ -54,12 +90,129 @@ def get_admin_dashboard(
         _admin_material_payload(material, child, parent, job_by_material.get(material.id))
         for material, child, parent in material_rows
     ]
+    _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant_scope,
+        action="admin.dashboard.read",
+        resource_type="admin_dashboard",
+        resource_id="dashboard",
+        risk_level="low",
+        result="success",
+        trace_id=_trace_id(request),
+    )
 
     return {
         "tenants": [_admin_tenant_payload(tenant, children_by_parent.get(tenant.id, 0), materials) for tenant in scoped_tenants],
         "materials": materials,
         "provider_policies": [_global_provider_policy()],
     }
+
+
+@router.get("/access")
+def get_admin_access(
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    _ensure_admin_user(db, actor)
+    events = db.scalars(
+        select(AdminAuditEventModel)
+        .where(_audit_scope_filter(tenant_scope))
+        .order_by(AdminAuditEventModel.created_at.desc())
+        .limit(50)
+    ).all()
+    return {
+        "current_admin": {
+            "id": actor.id,
+            "display_name": actor.display_name,
+            "email": actor.email,
+            "role": actor.role,
+            "status": actor.status,
+        },
+        "permissions": actor.permissions,
+        "audit_events": [_audit_event_payload(event) for event in events],
+    }
+
+
+def _audit_scope_filter(tenant_scope: str):
+    if tenant_scope == "all":
+        return AdminAuditEventModel.tenant_scope != ""
+    return AdminAuditEventModel.tenant_scope.in_(["all", tenant_scope])
+
+
+def _ensure_admin_user(db: Session, actor: AdminActor) -> None:
+    user = db.get(AdminUserModel, actor.id)
+    if user is None:
+        user = AdminUserModel(
+            id=actor.id,
+            email=actor.email,
+            display_name=actor.display_name,
+            role=actor.role,
+            status=actor.status,
+            permissions=actor.permissions,
+        )
+    else:
+        user.email = actor.email
+        user.display_name = actor.display_name
+        user.role = actor.role
+        user.status = actor.status
+        user.permissions = actor.permissions
+    db.add(user)
+    db.commit()
+
+
+def _record_audit_event(
+    db: Session,
+    *,
+    actor: AdminActor,
+    tenant_scope: str,
+    action: str,
+    resource_type: str,
+    resource_id: str,
+    risk_level: str,
+    result: str,
+    trace_id: str,
+    reason: str = "",
+) -> None:
+    db.add(
+        AdminAuditEventModel(
+            actor_id=actor.id,
+            actor_role=actor.role,
+            tenant_scope=tenant_scope,
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            risk_level=risk_level,
+            result=result,
+            reason=reason,
+            trace_id=trace_id,
+            content_json={},
+        )
+    )
+    db.commit()
+
+
+def _audit_event_payload(event: AdminAuditEventModel) -> dict:
+    return {
+        "id": event.id,
+        "actor_id": event.actor_id,
+        "actor_role": event.actor_role,
+        "tenant_scope": event.tenant_scope,
+        "action": event.action,
+        "resource_type": event.resource_type,
+        "resource_id": event.resource_id,
+        "risk_level": event.risk_level,
+        "result": event.result,
+        "reason": event.reason,
+        "trace_id": event.trace_id,
+        "created_at": _iso(event.created_at),
+    }
+
+
+def _trace_id(request: Request) -> str:
+    value = getattr(request.state, "request_id", "")
+    return value if value else f"req_{uuid4().hex[:8]}"
 
 
 def _count_children_by_parent(children: list[ChildProfileModel]) -> dict[str, int]:

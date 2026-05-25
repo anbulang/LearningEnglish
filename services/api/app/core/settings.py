@@ -49,6 +49,7 @@ class Settings:
     qwen_model: str
     admin_api_token: str
     admin_cors_origins: tuple[str, ...]
+    admin_cors_origin_regex: str
     sentry_dsn: str
 
 
@@ -100,6 +101,7 @@ def get_settings() -> Settings:
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
         admin_api_token=os.getenv("ADMIN_API_TOKEN", "local-admin-token"),
         admin_cors_origins=_csv_tuple(os.getenv("ADMIN_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173")),
+        admin_cors_origin_regex=os.getenv("ADMIN_CORS_ORIGIN_REGEX", r"^http://(127\.0\.0\.1|localhost):[0-9]+$"),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
     )
 

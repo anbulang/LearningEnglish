@@ -57,60 +57,87 @@ describe("AppShell", () => {
   it("shows live API mode when the admin dashboard endpoint responds", async () => {
     vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
     vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    const dashboardPayload = {
+      tenants: [
+        {
+          id: "parent_live",
+          name: "微信家长live",
+          tenant_type: "pilot_family",
+          status: "active",
+          region: "local",
+          owner_contact: "13800138110",
+          tier: "pilot",
+          created_at: "2026-05-25T10:00:00+00:00",
+          active_parents: 1,
+          children: 1
+        }
+      ],
+      materials: [
+        {
+          id: "material_live",
+          tenant_id: "parent_live",
+          parent_name: "微信家长live",
+          child_name: "Mia Wang",
+          child_age: 6,
+          title: "Live API Worksheet",
+          page_count: 1,
+          job_id: "job_live",
+          confidence_summary: "上传完成，等待 OCR 与解析。",
+          ocr_confidence: 0.72,
+          source_pages: [],
+          material_status: "processing",
+          job_status: "processing",
+          provider: "stub",
+          learning_assets: 0,
+          media_status: "pending",
+          sla_minutes: 12,
+          updated_at: "2026-05-25T10:05:00+00:00",
+          warnings: []
+        }
+      ],
+      provider_policies: [
+        {
+          tenant_id: "global",
+          ai_provider: "stub",
+          media_provider: "mock",
+          fallback_mode: "global_stub",
+          monthly_guardrail: 0,
+          source: "global_default"
+        }
+      ]
+    };
+    const accessPayload = {
+      current_admin: {
+        id: "admin_local",
+        display_name: "Local Platform Admin",
+        email: "admin@learningenglish.local",
+        role: "Platform Owner",
+        status: "active"
+      },
+      permissions: ["admin.dashboard.read", "admin.audit.read"],
+      audit_events: [
+        {
+          id: "audit_1",
+          actor_id: "admin_local",
+          actor_role: "Platform Owner",
+          tenant_scope: "all",
+          action: "admin.dashboard.read",
+          resource_type: "admin_dashboard",
+          resource_id: "dashboard",
+          risk_level: "low",
+          result: "success",
+          reason: "",
+          trace_id: "req_12345678",
+          created_at: "2026-05-25T10:06:00+00:00"
+        }
+      ]
+    };
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
+      vi.fn(async (input: Parameters<typeof fetch>[0]) => ({
         ok: true,
-        json: async () => ({
-          tenants: [
-            {
-              id: "parent_live",
-              name: "微信家长live",
-              tenant_type: "pilot_family",
-              status: "active",
-              region: "local",
-              owner_contact: "13800138110",
-              tier: "pilot",
-              created_at: "2026-05-25T10:00:00+00:00",
-              active_parents: 1,
-              children: 1
-            }
-          ],
-          materials: [
-            {
-              id: "material_live",
-              tenant_id: "parent_live",
-              parent_name: "微信家长live",
-              child_name: "Mia Wang",
-              child_age: 6,
-              title: "Live API Worksheet",
-              page_count: 1,
-              job_id: "job_live",
-              confidence_summary: "上传完成，等待 OCR 与解析。",
-              ocr_confidence: 0.72,
-              source_pages: [],
-              material_status: "processing",
-              job_status: "processing",
-              provider: "stub",
-              learning_assets: 0,
-              media_status: "pending",
-              sla_minutes: 12,
-              updated_at: "2026-05-25T10:05:00+00:00",
-              warnings: []
-            }
-          ],
-          provider_policies: [
-            {
-              tenant_id: "global",
-              ai_provider: "stub",
-              media_provider: "mock",
-              fallback_mode: "global_stub",
-              monthly_guardrail: 0,
-              source: "global_default"
-            }
-          ]
-        })
-      })
+        json: async () => (String(input).includes("/v1/admin/access") ? accessPayload : dashboardPayload)
+      }))
     );
 
     render(<App />);

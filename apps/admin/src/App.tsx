@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
-import { loadAdminDashboard, type AdminDashboardData } from "./domain/adminApi";
+import { loadAdminAccess, loadAdminDashboard, type AdminAccessData, type AdminDashboardData } from "./domain/adminApi";
 import { mockMaterials, mockProviderPolicies, mockTenants } from "./domain/mockData";
 import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
+import { AuditAccess } from "./pages/AuditAccess";
 import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
@@ -32,6 +33,7 @@ export function App() {
     materials: mockMaterials,
     providerPolicies: mockProviderPolicies
   });
+  const [accessData, setAccessData] = useState<AdminAccessData | null>(null);
   const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
   const t = createTranslator(language);
   const selectedTenantId = tenantScope === "all" ? dashboardData.tenants[0]?.id ?? "" : tenantScope;
@@ -42,15 +44,22 @@ export function App() {
       return;
     }
     let isCancelled = false;
-    loadAdminDashboard({
-      apiBaseUrl,
-      adminToken: import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token"
-    })
-      .then((data) => {
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      try {
+        const data = await loadAdminDashboard({
+          apiBaseUrl,
+          adminToken
+        });
+        const access = await loadAdminAccess({
+          apiBaseUrl,
+          adminToken
+        });
         if (isCancelled) {
           return;
         }
         setDashboardData(data);
+        setAccessData(access);
         setDataMode("live");
         setTenantScope((currentScope) => {
           if (currentScope === "all" || data.tenants.some((tenant) => tenant.id === currentScope)) {
@@ -58,12 +67,13 @@ export function App() {
           }
           return "all";
         });
-      })
-      .catch(() => {
+      } catch {
         if (!isCancelled) {
           setDataMode("mock");
+          setAccessData(null);
         }
-      });
+      }
+    })();
     return () => {
       isCancelled = true;
     };
@@ -106,7 +116,8 @@ export function App() {
           materials={dashboardData.materials}
         />
       )}
-      {activePage !== "command" && activePage !== "tenants" && activePage !== "pipeline" && (
+      {activePage === "audit" && <AuditAccess language={language} accessData={accessData} dataMode={dataMode} />}
+      {activePage !== "command" && activePage !== "tenants" && activePage !== "pipeline" && activePage !== "audit" && (
         <PlaceholderPage language={language} title={t(pageTitles[activePage])} />
       )}
     </AppShell>

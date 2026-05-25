@@ -41,6 +41,7 @@ ensure_local_paths(settings)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.admin_cors_origins),
+    allow_origin_regex=settings.admin_cors_origin_regex or None,
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["X-Admin-Token", "Content-Type"],
 )
@@ -67,6 +68,7 @@ app.include_router(api_router)
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next) -> Response:
     request_id = request.headers.get("x-request-id", f"req_{uuid4().hex[:8]}")
+    request.state.request_id = request_id
     started = perf_counter()
     response = await call_next(request)
     elapsed_ms = (perf_counter() - started) * 1000

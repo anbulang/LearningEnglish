@@ -1,9 +1,24 @@
-import type { AdminMaterial, JobStatus, MediaStatus, ProviderPolicy, Tenant, MaterialStatus } from "./types";
+import type {
+  AdminAccessUser,
+  AdminAuditEvent,
+  AdminMaterial,
+  JobStatus,
+  MediaStatus,
+  ProviderPolicy,
+  Tenant,
+  MaterialStatus
+} from "./types";
 
 export interface AdminDashboardData {
   tenants: Tenant[];
   materials: AdminMaterial[];
   providerPolicies: ProviderPolicy[];
+}
+
+export interface AdminAccessData {
+  currentAdmin: AdminAccessUser;
+  permissions: string[];
+  auditEvents: AdminAuditEvent[];
 }
 
 interface LoadAdminDashboardOptions {
@@ -18,6 +33,12 @@ type AdminDashboardPayload = {
   provider_policies: Array<Record<string, unknown>>;
 };
 
+type AdminAccessPayload = {
+  current_admin: Record<string, unknown>;
+  permissions: unknown[];
+  audit_events: Array<Record<string, unknown>>;
+};
+
 export async function loadAdminDashboard(options: LoadAdminDashboardOptions): Promise<AdminDashboardData> {
   const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -28,6 +49,18 @@ export async function loadAdminDashboard(options: LoadAdminDashboardOptions): Pr
     throw new Error(`Admin dashboard request failed: ${response.status}`);
   }
   return normalizeAdminDashboardPayload((await response.json()) as AdminDashboardPayload);
+}
+
+export async function loadAdminAccess(options: LoadAdminDashboardOptions): Promise<AdminAccessData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(`${apiBaseUrl}/v1/admin/access?tenant_scope=all`, {
+    headers: { "X-Admin-Token": options.adminToken }
+  });
+  if (!response.ok) {
+    throw new Error(`Admin access request failed: ${response.status}`);
+  }
+  return normalizeAdminAccessPayload((await response.json()) as AdminAccessPayload);
 }
 
 export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): AdminDashboardData {
@@ -77,6 +110,33 @@ export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): 
       fallbackMode: stringValue(policy.fallback_mode) as ProviderPolicy["fallbackMode"],
       monthlyGuardrail: numberValue(policy.monthly_guardrail),
       source: stringValue(policy.source) as ProviderPolicy["source"]
+    }))
+  };
+}
+
+export function normalizeAdminAccessPayload(payload: AdminAccessPayload): AdminAccessData {
+  return {
+    currentAdmin: {
+      id: stringValue(payload.current_admin.id),
+      displayName: stringValue(payload.current_admin.display_name),
+      email: stringValue(payload.current_admin.email),
+      role: stringValue(payload.current_admin.role),
+      status: stringValue(payload.current_admin.status)
+    },
+    permissions: payload.permissions.map((item) => stringValue(item)).filter(Boolean),
+    auditEvents: payload.audit_events.map((event) => ({
+      id: stringValue(event.id),
+      actorId: stringValue(event.actor_id),
+      actorRole: stringValue(event.actor_role),
+      tenantScope: stringValue(event.tenant_scope),
+      action: stringValue(event.action),
+      resourceType: stringValue(event.resource_type),
+      resourceId: stringValue(event.resource_id),
+      riskLevel: stringValue(event.risk_level) as AdminAuditEvent["riskLevel"],
+      result: stringValue(event.result) as AdminAuditEvent["result"],
+      reason: stringValue(event.reason),
+      traceId: stringValue(event.trace_id),
+      createdAt: stringValue(event.created_at)
     }))
   };
 }

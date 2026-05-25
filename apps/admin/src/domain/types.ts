@@ -81,3 +81,26 @@ export interface AdminUser {
   name: string;
   role: "Platform Owner" | "Support Admin" | "Content QA" | "Provider Operator" | "Read-only Auditor";
 }
+
+export interface AdminAccessUser {
+  id: string;
+  displayName: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+export interface AdminAuditEvent {
+  id: string;
+  actorId: string;
+  actorRole: string;
+  tenantScope: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  riskLevel: "low" | "medium" | "high";
+  result: "success" | "failed";
+  reason: string;
+  traceId: string;
+  createdAt: string;
+}

@@ -42,6 +42,37 @@ class AuthSessionModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class AdminUserModel(Base):
+    __tablename__ = "admin_users"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    permissions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class AdminAuditEventModel(Base):
+    __tablename__ = "admin_audit_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"audit_{uuid4().hex[:12]}")
+    actor_id: Mapped[str] = mapped_column(String(64), index=True)
+    actor_role: Mapped[str] = mapped_column(String(128))
+    tenant_scope: Mapped[str] = mapped_column(String(64), index=True)
+    action: Mapped[str] = mapped_column(String(128), index=True)
+    resource_type: Mapped[str] = mapped_column(String(128))
+    resource_id: Mapped[str] = mapped_column(String(128))
+    risk_level: Mapped[str] = mapped_column(String(32), default="low")
+    result: Mapped[str] = mapped_column(String(32), default="success")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    trace_id: Mapped[str] = mapped_column(String(64), index=True)
+    content_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class PhoneBindingModel(Base):
     __tablename__ = "phone_bindings"
 

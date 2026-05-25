@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadAdminDashboard, normalizeAdminDashboardPayload } from "./adminApi";
+import { loadAdminAccess, loadAdminDashboard, normalizeAdminAccessPayload, normalizeAdminDashboardPayload } from "./adminApi";
 
 const apiPayload = {
   tenants: [
@@ -51,6 +51,33 @@ const apiPayload = {
   ]
 };
 
+const accessPayload = {
+  current_admin: {
+    id: "admin_local",
+    display_name: "Local Platform Admin",
+    email: "admin@learningenglish.local",
+    role: "Platform Owner",
+    status: "active"
+  },
+  permissions: ["admin.dashboard.read", "admin.audit.read"],
+  audit_events: [
+    {
+      id: "audit_1",
+      actor_id: "admin_local",
+      actor_role: "Platform Owner",
+      tenant_scope: "all",
+      action: "admin.dashboard.read",
+      resource_type: "admin_dashboard",
+      resource_id: "dashboard",
+      risk_level: "low",
+      result: "success",
+      reason: "",
+      trace_id: "req_12345678",
+      created_at: "2026-05-25T10:06:00+00:00"
+    }
+  ]
+};
+
 describe("admin API client", () => {
   it("normalizes backend snake_case payloads into admin domain data", () => {
     const normalized = normalizeAdminDashboardPayload(apiPayload);
@@ -97,5 +124,41 @@ describe("admin API client", () => {
       headers: { "X-Admin-Token": "local-admin-token" }
     });
     expect(result.materials).toHaveLength(1);
+  });
+
+  it("normalizes admin access and audit events", () => {
+    const normalized = normalizeAdminAccessPayload(accessPayload);
+
+    expect(normalized.currentAdmin).toMatchObject({
+      id: "admin_local",
+      displayName: "Local Platform Admin",
+      role: "Platform Owner"
+    });
+    expect(normalized.permissions).toContain("admin.audit.read");
+    expect(normalized.auditEvents[0]).toMatchObject({
+      actorId: "admin_local",
+      tenantScope: "all",
+      action: "admin.dashboard.read",
+      resourceType: "admin_dashboard",
+      traceId: "req_12345678"
+    });
+  });
+
+  it("loads admin access with the configured admin token", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => accessPayload
+    });
+
+    const result = await loadAdminAccess({
+      apiBaseUrl: "http://127.0.0.1:8000/",
+      adminToken: "local-admin-token",
+      fetchImpl
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/access?tenant_scope=all", {
+      headers: { "X-Admin-Token": "local-admin-token" }
+    });
+    expect(result.auditEvents).toHaveLength(1);
   });
 });
