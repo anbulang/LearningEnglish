@@ -27,6 +27,12 @@ export interface AdminArchiveMaterialResult {
   auditEvent: AdminAuditEvent;
 }
 
+export interface AdminProviderPolicyOverrideResult {
+  requiredPermission: string;
+  providerPolicy: ProviderPolicy;
+  auditEvent: AdminAuditEvent;
+}
+
 interface LoadAdminDashboardOptions {
   apiBaseUrl: string;
   adminToken: string;
@@ -45,6 +51,16 @@ interface RetryAdminMaterialJobOptions extends LoadAdminDashboardOptions {
   reason: string;
 }
 
+interface OverrideAdminProviderPolicyOptions extends LoadAdminDashboardOptions {
+  tenantScope: string;
+  tenantId: string;
+  aiProvider: ProviderPolicy["aiProvider"];
+  mediaProvider: ProviderPolicy["mediaProvider"];
+  fallbackMode: ProviderPolicy["fallbackMode"];
+  monthlyGuardrail: number;
+  reason: string;
+}
+
 type AdminDashboardPayload = {
   tenants: Array<Record<string, unknown>>;
   materials: Array<Record<string, unknown>>;
@@ -60,6 +76,12 @@ type AdminAccessPayload = {
 type AdminArchiveMaterialPayload = {
   required_permission: unknown;
   material: Record<string, unknown>;
+  audit_event: Record<string, unknown>;
+};
+
+type AdminProviderPolicyOverridePayload = {
+  required_permission: unknown;
+  provider_policy: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 };
 
@@ -127,6 +149,32 @@ export async function retryAdminMaterialJob(options: RetryAdminMaterialJobOption
   return normalizeAdminArchiveMaterialPayload((await response.json()) as AdminArchiveMaterialPayload);
 }
 
+export async function overrideAdminProviderPolicy(
+  options: OverrideAdminProviderPolicyOptions
+): Promise<AdminProviderPolicyOverrideResult> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(`${apiBaseUrl}/v1/admin/providers/policies?tenant_scope=${encodeURIComponent(options.tenantScope)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Token": options.adminToken
+    },
+    body: JSON.stringify({
+      tenant_id: options.tenantId,
+      ai_provider: options.aiProvider,
+      media_provider: options.mediaProvider,
+      fallback_mode: options.fallbackMode,
+      monthly_guardrail: options.monthlyGuardrail,
+      reason: options.reason
+    })
+  });
+  if (!response.ok) {
+    throw new Error(`Admin provider policy override request failed: ${response.status}`);
+  }
+  return normalizeAdminProviderPolicyOverridePayload((await response.json()) as AdminProviderPolicyOverridePayload);
+}
+
 export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): AdminDashboardData {
   return {
     tenants: payload.tenants.map((tenant) => ({
@@ -142,15 +190,7 @@ export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): 
       children: numberValue(tenant.children)
     })),
     materials: payload.materials.map((material) => normalizeAdminMaterialPayload(material)),
-    providerPolicies: payload.provider_policies.map((policy) => ({
-      tenantId: stringValue(policy.tenant_id),
-      tier: optionalStringValue(policy.tier),
-      aiProvider: stringValue(policy.ai_provider) as ProviderPolicy["aiProvider"],
-      mediaProvider: stringValue(policy.media_provider) as ProviderPolicy["mediaProvider"],
-      fallbackMode: stringValue(policy.fallback_mode) as ProviderPolicy["fallbackMode"],
-      monthlyGuardrail: numberValue(policy.monthly_guardrail),
-      source: stringValue(policy.source) as ProviderPolicy["source"]
-    }))
+    providerPolicies: payload.provider_policies.map((policy) => normalizeProviderPolicyPayload(policy))
   };
 }
 
@@ -158,6 +198,16 @@ export function normalizeAdminArchiveMaterialPayload(payload: AdminArchiveMateri
   return {
     requiredPermission: stringValue(payload.required_permission),
     material: normalizeAdminMaterialPayload(payload.material),
+    auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
+  };
+}
+
+export function normalizeAdminProviderPolicyOverridePayload(
+  payload: AdminProviderPolicyOverridePayload
+): AdminProviderPolicyOverrideResult {
+  return {
+    requiredPermission: stringValue(payload.required_permission),
+    providerPolicy: normalizeProviderPolicyPayload(payload.provider_policy),
     auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
@@ -218,6 +268,18 @@ function normalizeAdminAuditEventPayload(event: Record<string, unknown>): AdminA
     reason: stringValue(event.reason),
     traceId: stringValue(event.trace_id),
     createdAt: stringValue(event.created_at)
+  };
+}
+
+function normalizeProviderPolicyPayload(policy: Record<string, unknown>): ProviderPolicy {
+  return {
+    tenantId: stringValue(policy.tenant_id),
+    tier: optionalStringValue(policy.tier),
+    aiProvider: stringValue(policy.ai_provider) as ProviderPolicy["aiProvider"],
+    mediaProvider: stringValue(policy.media_provider) as ProviderPolicy["mediaProvider"],
+    fallbackMode: stringValue(policy.fallback_mode) as ProviderPolicy["fallbackMode"],
+    monthlyGuardrail: numberValue(policy.monthly_guardrail),
+    source: stringValue(policy.source) as ProviderPolicy["source"]
   };
 }
 

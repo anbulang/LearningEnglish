@@ -629,7 +629,10 @@ td small {
 }
 
 .filter-bar select,
-.audit-reason textarea {
+.audit-reason textarea,
+.provider-form select,
+.provider-form input,
+.provider-form textarea {
   border: 1px solid var(--outline-warm);
   border-radius: 8px;
   color: var(--cocoa-ink);
@@ -650,6 +653,41 @@ td small {
 
 .pipeline-table {
   min-width: 940px;
+}
+
+.provider-policy-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.provider-policy-table th,
+.provider-policy-table td {
+  padding: 8px 9px;
+}
+
+.provider-policy-table .status-chip {
+  min-height: 24px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.provider-control-stack strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--cocoa-ink);
+  font-size: 14px;
+}
+
+.provider-control-stack span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.provider-control-stack small {
+  margin: 0;
+  font-size: 11px;
 }
 
 .pipeline-table tbody tr.selected-row {
@@ -772,6 +810,24 @@ td small {
   font-weight: 800;
 }
 
+.provider-form {
+  display: grid;
+  gap: 12px;
+}
+
+.provider-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--cocoa-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.provider-form textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
 .inspector-empty {
   margin-top: 6px;
 }
@@ -843,7 +899,15 @@ td small {
     min-width: 0;
   }
 
+  .provider-policy-table {
+    min-width: 0;
+  }
+
   .audit-table thead {
+    display: none;
+  }
+
+  .provider-policy-table thead {
     display: none;
   }
 
@@ -855,7 +919,20 @@ td small {
     width: 100%;
   }
 
+  .provider-policy-table,
+  .provider-policy-table tbody,
+  .provider-policy-table tr,
+  .provider-policy-table td {
+    display: block;
+    width: 100%;
+  }
+
   .audit-table tr {
+    padding: 8px 0;
+    border-bottom: 1px solid #f1e1da;
+  }
+
+  .provider-policy-table tr {
     padding: 8px 0;
     border-bottom: 1px solid #f1e1da;
   }
@@ -869,11 +946,33 @@ td small {
     overflow-wrap: anywhere;
   }
 
+  .provider-policy-table td {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 0;
+    overflow-wrap: anywhere;
+  }
+
   .audit-table td::before {
     content: attr(data-label);
     color: var(--dust-brown);
     font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
+  }
+
+  .provider-policy-table td::before {
+    content: attr(data-label);
+    color: var(--dust-brown);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .provider-control-stack strong {
+    margin-bottom: 0;
   }
 }

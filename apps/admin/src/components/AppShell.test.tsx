@@ -391,6 +391,143 @@ describe("AppShell", () => {
     });
   });
 
+  it("submits live provider policy override and shows the audit reason", async () => {
+    vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    const dashboardPayload = {
+      tenants: [
+        {
+          id: "parent_live",
+          name: "微信家长live",
+          tenant_type: "pilot_family",
+          status: "active",
+          region: "local",
+          owner_contact: "13800138110",
+          tier: "pilot",
+          created_at: "2026-05-25T10:00:00+00:00",
+          active_parents: 1,
+          children: 1
+        }
+      ],
+      materials: [
+        {
+          id: "material_live",
+          tenant_id: "parent_live",
+          parent_name: "微信家长live",
+          child_name: "Mia Wang",
+          child_age: 6,
+          title: "Live API Worksheet",
+          page_count: 1,
+          job_id: "job_live",
+          confidence_summary: "上传完成，等待 OCR 与解析。",
+          ocr_confidence: 0.72,
+          source_pages: [],
+          material_status: "processing",
+          job_status: "processing",
+          provider: "stub",
+          learning_assets: 0,
+          media_status: "pending",
+          sla_minutes: 12,
+          updated_at: "2026-05-25T10:05:00+00:00",
+          warnings: []
+        }
+      ],
+      provider_policies: [
+        {
+          tenant_id: "global",
+          ai_provider: "stub",
+          media_provider: "mock",
+          fallback_mode: "global_stub",
+          monthly_guardrail: 0,
+          source: "global_default"
+        }
+      ]
+    };
+    const accessPayload = {
+      current_admin: {
+        id: "admin_local",
+        display_name: "Local Platform Admin",
+        email: "admin@learningenglish.local",
+        role: "Platform Owner",
+        status: "active"
+      },
+      permissions: ["admin.dashboard.read", "admin.provider.override", "admin.audit.read"],
+      audit_events: []
+    };
+    const providerEvent = {
+      id: "audit_provider",
+      actor_id: "admin_local",
+      actor_role: "Platform Owner",
+      tenant_scope: "parent_live",
+      action: "admin.provider_policy.override",
+      resource_type: "tenant_provider_policy",
+      resource_id: "parent_live",
+      risk_level: "high",
+      result: "success",
+      reason: "Pilot tenant approved for real media provider.",
+      trace_id: "req_provider",
+      created_at: "2026-05-25T10:09:00+00:00"
+    };
+    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      const url = String(input);
+      if (url.includes("/v1/admin/providers/policies")) {
+        return {
+          ok: true,
+          json: async () => ({
+            required_permission: "admin.provider.override",
+            provider_policy: {
+              tenant_id: "parent_live",
+              ai_provider: "doubao",
+              media_provider: "real",
+              fallback_mode: "per_tenant",
+              monthly_guardrail: 500,
+              source: "tenant_override"
+            },
+            audit_event: providerEvent
+          })
+        };
+      }
+      return {
+        ok: true,
+        json: async () => (url.includes("/v1/admin/access") ? accessPayload : dashboardPayload)
+      };
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+
+    render(<App />);
+
+    expect(await screen.findByText("真实 API")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Provider 运维" }));
+    await userEvent.selectOptions(screen.getByLabelText("AI provider"), "doubao");
+    await userEvent.selectOptions(screen.getByLabelText("Media provider"), "real");
+    await userEvent.selectOptions(screen.getByLabelText("Fallback mode"), "per_tenant");
+    await userEvent.clear(screen.getByLabelText("Monthly guardrail"));
+    await userEvent.type(screen.getByLabelText("Monthly guardrail"), "500");
+    await userEvent.type(screen.getByLabelText("审计原因"), "Pilot tenant approved for real media provider.");
+    await userEvent.click(screen.getByRole("button", { name: "写入 override" }));
+
+    expect(await screen.findByText("Provider policy override 已记录。")).toBeInTheDocument();
+    expect(screen.getAllByText("租户 override").length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole("button", { name: "审计与权限" }));
+    expect(await screen.findByText("admin.provider_policy.override")).toBeInTheDocument();
+    expect(screen.getByText("Pilot tenant approved for real media provider.")).toBeInTheDocument();
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/providers/policies?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({
+        tenant_id: "parent_live",
+        ai_provider: "doubao",
+        media_provider: "real",
+        fallback_mode: "per_tenant",
+        monthly_guardrail: 500,
+        reason: "Pilot tenant approved for real media provider."
+      })
+    });
+  });
+
   it("ignores unknown tenant scope values", async () => {
     const onTenantScopeChange = vi.fn();
     render(

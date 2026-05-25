@@ -73,6 +73,22 @@ class AdminAuditEventModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class TenantProviderPolicyModel(Base):
+    __tablename__ = "tenant_provider_policies"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"policy_{uuid4().hex[:12]}")
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), unique=True, index=True)
+    ai_provider: Mapped[str] = mapped_column(String(32), default="stub")
+    media_provider: Mapped[str] = mapped_column(String(32), default="mock")
+    fallback_mode: Mapped[str] = mapped_column(String(64), default="global_stub")
+    monthly_guardrail: Mapped[int] = mapped_column(Integer, default=0)
+    source: Mapped[str] = mapped_column(String(64), default="tenant_override")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class PhoneBindingModel(Base):
     __tablename__ = "phone_bindings"
 

@@ -4,6 +4,7 @@ import {
   archiveAdminMaterial,
   loadAdminAccess,
   loadAdminDashboard,
+  overrideAdminProviderPolicy,
   retryAdminMaterialJob,
   type AdminAccessData,
   type AdminDashboardData
@@ -16,6 +17,7 @@ import { AuditAccess } from "./pages/AuditAccess";
 import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { ProviderOps, type ProviderPolicyOverrideInput } from "./pages/ProviderOps";
 import { TenantDetail } from "./pages/TenantDetail";
 
 const pageTitles: Record<PageKey, MessageKey> = {
@@ -140,6 +142,42 @@ export function App() {
     );
   }
 
+  async function handleOverrideProviderPolicy(input: ProviderPolicyOverrideInput) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin provider policy API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await overrideAdminProviderPolicy({
+      apiBaseUrl,
+      adminToken,
+      tenantScope,
+      tenantId: input.tenantId,
+      aiProvider: input.aiProvider,
+      mediaProvider: input.mediaProvider,
+      fallbackMode: input.fallbackMode,
+      monthlyGuardrail: input.monthlyGuardrail,
+      reason: input.reason
+    });
+    setDashboardData((current) => ({
+      ...current,
+      providerPolicies: [
+        ...current.providerPolicies.filter(
+          (policy) => !(policy.tenantId === result.providerPolicy.tenantId && policy.source === "tenant_override")
+        ),
+        result.providerPolicy
+      ]
+    }));
+    setAccessData((current) =>
+      current
+        ? {
+            ...current,
+            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+          }
+        : current
+    );
+  }
+
   return (
     <AppShell
       activePage={activePage}
@@ -181,7 +219,22 @@ export function App() {
         />
       )}
       {activePage === "audit" && <AuditAccess language={language} accessData={accessData} dataMode={dataMode} />}
-      {activePage !== "command" && activePage !== "tenants" && activePage !== "pipeline" && activePage !== "audit" && (
+      {activePage === "providers" && (
+        <ProviderOps
+          language={language}
+          tenantScope={tenantScope}
+          tenants={dashboardData.tenants}
+          materials={dashboardData.materials}
+          policies={dashboardData.providerPolicies}
+          dataMode={dataMode}
+          onOverrideProviderPolicy={dataMode === "live" ? handleOverrideProviderPolicy : undefined}
+        />
+      )}
+      {activePage !== "command" &&
+        activePage !== "tenants" &&
+        activePage !== "pipeline" &&
+        activePage !== "audit" &&
+        activePage !== "providers" && (
         <PlaceholderPage language={language} title={t(pageTitles[activePage])} />
       )}
     </AppShell>

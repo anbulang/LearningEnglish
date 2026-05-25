@@ -5,6 +5,7 @@ import {
   loadAdminDashboard,
   normalizeAdminAccessPayload,
   normalizeAdminDashboardPayload,
+  overrideAdminProviderPolicy,
   retryAdminMaterialJob
 } from "./adminApi";
 
@@ -236,6 +237,67 @@ describe("admin API client", () => {
         "X-Admin-Token": "local-admin-token"
       },
       body: JSON.stringify({ reason: "OCR provider recovered." })
+    });
+  });
+
+  it("overrides an admin provider policy with tenant scope and reason", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        required_permission: "admin.provider.override",
+        provider_policy: {
+          tenant_id: "parent_1",
+          ai_provider: "doubao",
+          media_provider: "real",
+          fallback_mode: "per_tenant",
+          monthly_guardrail: 500,
+          source: "tenant_override"
+        },
+        audit_event: {
+          ...accessPayload.audit_events[0],
+          action: "admin.provider_policy.override",
+          resource_type: "tenant_provider_policy",
+          resource_id: "parent_1",
+          reason: "Pilot tenant approved for real media provider."
+        }
+      })
+    });
+
+    const result = await overrideAdminProviderPolicy({
+      apiBaseUrl: "http://127.0.0.1:8000/",
+      adminToken: "local-admin-token",
+      tenantScope: "all",
+      tenantId: "parent_1",
+      aiProvider: "doubao",
+      mediaProvider: "real",
+      fallbackMode: "per_tenant",
+      monthlyGuardrail: 500,
+      reason: "Pilot tenant approved for real media provider.",
+      fetchImpl
+    });
+
+    expect(result.requiredPermission).toBe("admin.provider.override");
+    expect(result.providerPolicy).toMatchObject({
+      tenantId: "parent_1",
+      aiProvider: "doubao",
+      mediaProvider: "real",
+      source: "tenant_override"
+    });
+    expect(result.auditEvent.action).toBe("admin.provider_policy.override");
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/providers/policies?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({
+        tenant_id: "parent_1",
+        ai_provider: "doubao",
+        media_provider: "real",
+        fallback_mode: "per_tenant",
+        monthly_guardrail: 500,
+        reason: "Pilot tenant approved for real media provider."
+      })
     });
   });
 });

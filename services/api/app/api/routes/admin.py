@@ -23,6 +23,7 @@ from app.db.models import (
     ParentAccountModel,
     ParentCoachingScriptModel,
     ReviewTaskModel,
+    TenantProviderPolicyModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus
 from app.services.job_queue import enqueue_material_job
@@ -35,8 +36,13 @@ ADMIN_PERMISSIONS = [
     "admin.material.read",
     "admin.material.archive",
     "admin.material.retry",
+    "admin.provider.override",
     "admin.audit.read",
 ]
+
+AI_PROVIDERS = {"stub", "doubao"}
+MEDIA_PROVIDERS = {"mock", "real"}
+FALLBACK_MODES = {"global_stub", "auto_to_mock", "per_tenant"}
 
 
 @dataclass(frozen=True)
@@ -54,6 +60,15 @@ class AdminArchiveMaterialRequest(BaseModel):
 
 
 class AdminRetryMaterialJobRequest(BaseModel):
+    reason: str = ""
+
+
+class AdminProviderPolicyOverrideRequest(BaseModel):
+    tenant_id: str = ""
+    ai_provider: str = "stub"
+    media_provider: str = "mock"
+    fallback_mode: str = "global_stub"
+    monthly_guardrail: int = 0
     reason: str = ""
 
 
@@ -91,7 +106,6 @@ def get_admin_dashboard(
         select(ChildProfileModel).where(ChildProfileModel.parent_account_id.in_(scoped_tenant_ids or [""]))
     ).all()
     child_by_id = {child.id: child for child in children}
-    parent_by_id = {tenant.id: tenant for tenant in scoped_tenants}
     children_by_parent = _count_children_by_parent(children)
     material_rows = db.execute(
         select(CourseMaterialModel, ChildProfileModel, ParentAccountModel)
@@ -107,6 +121,11 @@ def get_admin_dashboard(
         _admin_material_payload(material, child, parent, job_by_material.get(material.id))
         for material, child, parent in material_rows
     ]
+    policy_rows = db.scalars(
+        select(TenantProviderPolicyModel)
+        .where(TenantProviderPolicyModel.tenant_id.in_(scoped_tenant_ids or [""]))
+        .order_by(TenantProviderPolicyModel.updated_at.desc())
+    ).all()
     _record_audit_event(
         db,
         actor=actor,
@@ -122,7 +141,7 @@ def get_admin_dashboard(
     return {
         "tenants": [_admin_tenant_payload(tenant, children_by_parent.get(tenant.id, 0), materials) for tenant in scoped_tenants],
         "materials": materials,
-        "provider_policies": [_global_provider_policy()],
+        "provider_policies": [_global_provider_policy(), *[_tenant_provider_policy_payload(policy) for policy in policy_rows]],
     }
 
 
@@ -281,6 +300,71 @@ def retry_admin_material_job(
     return {
         "required_permission": "admin.material.retry",
         "material": _admin_material_payload(material, child, parent, job),
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
+@router.post("/providers/policies")
+def override_admin_provider_policy(
+    payload: AdminProviderPolicyOverrideRequest,
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    reason = payload.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=422, detail="Provider policy override reason is required")
+    if "admin.provider.override" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.provider.override permission")
+
+    tenant_id = payload.tenant_id.strip()
+    tenant = db.get(ParentAccountModel, tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    if tenant_scope != "all" and tenant.id != tenant_scope:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found in tenant scope")
+    ai_provider = payload.ai_provider.strip().lower()
+    media_provider = payload.media_provider.strip().lower()
+    fallback_mode = payload.fallback_mode.strip().lower()
+    if ai_provider not in AI_PROVIDERS:
+        raise HTTPException(status_code=422, detail="Unsupported ai_provider")
+    if media_provider not in MEDIA_PROVIDERS:
+        raise HTTPException(status_code=422, detail="Unsupported media_provider")
+    if fallback_mode not in FALLBACK_MODES:
+        raise HTTPException(status_code=422, detail="Unsupported fallback_mode")
+    if payload.monthly_guardrail < 0:
+        raise HTTPException(status_code=422, detail="monthly_guardrail must be >= 0")
+
+    _ensure_admin_user(db, actor)
+    policy = db.scalar(select(TenantProviderPolicyModel).where(TenantProviderPolicyModel.tenant_id == tenant.id))
+    if policy is None:
+        policy = TenantProviderPolicyModel(tenant_id=tenant.id)
+    policy.ai_provider = ai_provider
+    policy.media_provider = media_provider
+    policy.fallback_mode = fallback_mode
+    policy.monthly_guardrail = payload.monthly_guardrail
+    policy.source = "tenant_override"
+    policy.reason = reason
+    policy.created_by = actor.id
+    db.add(policy)
+    db.commit()
+    db.refresh(policy)
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant.id,
+        action="admin.provider_policy.override",
+        resource_type="tenant_provider_policy",
+        resource_id=tenant.id,
+        risk_level="high",
+        result="success",
+        trace_id=_trace_id(request),
+        reason=reason,
+    )
+    return {
+        "required_permission": "admin.provider.override",
+        "provider_policy": _tenant_provider_policy_payload(policy),
         "audit_event": _audit_event_payload(audit_event),
     }
 
@@ -475,6 +559,17 @@ def _global_provider_policy() -> dict:
         "fallback_mode": "global_stub" if settings.ai_provider != "doubao" else "auto_to_mock",
         "monthly_guardrail": 0,
         "source": "global_default",
+    }
+
+
+def _tenant_provider_policy_payload(policy: TenantProviderPolicyModel) -> dict:
+    return {
+        "tenant_id": policy.tenant_id,
+        "ai_provider": policy.ai_provider,
+        "media_provider": policy.media_provider,
+        "fallback_mode": policy.fallback_mode,
+        "monthly_guardrail": policy.monthly_guardrail,
+        "source": policy.source,
     }
 
 
