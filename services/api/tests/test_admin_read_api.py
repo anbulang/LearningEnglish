@@ -106,6 +106,19 @@ def test_admin_dashboard_allows_local_admin_cors_preflight(api_client) -> None:
     assert provider_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
     assert "POST" in provider_response.headers["access-control-allow-methods"]
 
+    module_response = api_client.options(
+        "/v1/admin/tenants/tenant_test/modules/speaking_score?tenant_scope=all",
+        headers={
+            "Origin": "http://127.0.0.1:5174",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "X-Admin-Token,Content-Type",
+        },
+    )
+
+    assert module_response.status_code == 200
+    assert module_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+    assert "POST" in module_response.headers["access-control-allow-methods"]
+
 
 def test_admin_archive_material_requires_reason(api_client) -> None:
     material_id, _, _ = seed_parent_material(
@@ -335,6 +348,77 @@ def test_admin_provider_policy_override_updates_dashboard_and_records_audit_even
     assert audit_event["id"] in {event["id"] for event in access.json()["audit_events"]}
 
 
+def test_admin_tenant_module_toggle_requires_reason(api_client) -> None:
+    material_id, _, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-module-reason",
+        phone_number="13800138150",
+        child_name="Mia Module",
+        material_title="Module Reason Worksheet",
+    )
+    dashboard = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+    tenant_id = next(material["tenant_id"] for material in dashboard.json()["materials"] if material["id"] == material_id)
+
+    response = api_client.post(
+        f"/v1/admin/tenants/{tenant_id}/modules/speaking_score?tenant_scope=all",
+        json={"enabled": False, "reason": "  "},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Module toggle reason is required"
+
+
+def test_admin_tenant_module_toggle_updates_dashboard_and_records_audit_event(api_client) -> None:
+    material_id, _, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-module-success",
+        phone_number="13800138151",
+        child_name="Nora Module",
+        material_title="Module Success Worksheet",
+    )
+    dashboard = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+    tenant_id = next(material["tenant_id"] for material in dashboard.json()["materials"] if material["id"] == material_id)
+
+    response = api_client.post(
+        f"/v1/admin/tenants/{tenant_id}/modules/speaking_score?tenant_scope=all",
+        json={"enabled": False, "reason": "Pilot tenant requested speaking score pause."},
+        headers={**ADMIN_HEADERS, "X-Request-ID": "req_admin_module"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["required_permission"] == "admin.tenant.module.toggle"
+    assert payload["module_setting"] == {
+        "tenant_id": tenant_id,
+        "module_key": "speaking_score",
+        "enabled": False,
+        "source": "tenant_override",
+    }
+    audit_event = payload["audit_event"]
+    assert audit_event["action"] == "admin.tenant_module.toggle"
+    assert audit_event["resource_type"] == "tenant_module_setting"
+    assert audit_event["resource_id"] == f"{tenant_id}:speaking_score"
+    assert audit_event["reason"] == "Pilot tenant requested speaking score pause."
+    assert audit_event["risk_level"] == "high"
+    assert audit_event["trace_id"] == "req_admin_module"
+
+    updated_dashboard = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+    assert updated_dashboard.status_code == 200
+    module_settings = updated_dashboard.json()["module_settings"]
+    assert {
+        "tenant_id": tenant_id,
+        "module_key": "speaking_score",
+        "enabled": False,
+        "source": "tenant_override",
+    } in module_settings
+    assert "ARK_API_KEY" not in str(module_settings)
+
+    access = api_client.get("/v1/admin/access?tenant_scope=all", headers=ADMIN_HEADERS)
+    assert access.status_code == 200
+    assert audit_event["id"] in {event["id"] for event in access.json()["audit_events"]}
+
+
 def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> None:
     sunny_material_id, _, _ = seed_parent_material(
         api_client,
@@ -368,6 +452,7 @@ def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> N
     assert all(material["job_id"] for material in seeded_materials)
     assert all(material["provider"] == "stub" for material in seeded_materials)
     assert all(material["page_count"] == 1 for material in seeded_materials)
+    sunny_tenant_id = next(material["tenant_id"] for material in seeded_materials if material["id"] == sunny_material_id)
     assert {
         "tenant_id": "global",
         "ai_provider": "stub",
@@ -376,8 +461,13 @@ def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> N
         "monthly_guardrail": 0,
         "source": "global_default",
     } in payload["provider_policies"]
+    assert {
+        "tenant_id": sunny_tenant_id,
+        "module_key": "speaking_score",
+        "enabled": True,
+        "source": "global_default",
+    } in payload["module_settings"]
 
-    sunny_tenant_id = next(material["tenant_id"] for material in seeded_materials if material["id"] == sunny_material_id)
     scoped = api_client.get(f"/v1/admin/dashboard?tenant_scope={sunny_tenant_id}", headers=ADMIN_HEADERS)
     assert scoped.status_code == 200
     scoped_payload = scoped.json()

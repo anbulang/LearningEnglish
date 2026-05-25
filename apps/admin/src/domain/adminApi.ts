@@ -4,7 +4,9 @@ import type {
   AdminMaterial,
   JobStatus,
   MediaStatus,
+  ModuleKey,
   ProviderPolicy,
+  TenantModuleSetting,
   Tenant,
   MaterialStatus
 } from "./types";
@@ -13,6 +15,7 @@ export interface AdminDashboardData {
   tenants: Tenant[];
   materials: AdminMaterial[];
   providerPolicies: ProviderPolicy[];
+  moduleSettings: TenantModuleSetting[];
 }
 
 export interface AdminAccessData {
@@ -30,6 +33,12 @@ export interface AdminArchiveMaterialResult {
 export interface AdminProviderPolicyOverrideResult {
   requiredPermission: string;
   providerPolicy: ProviderPolicy;
+  auditEvent: AdminAuditEvent;
+}
+
+export interface AdminTenantModuleToggleResult {
+  requiredPermission: string;
+  moduleSetting: TenantModuleSetting;
   auditEvent: AdminAuditEvent;
 }
 
@@ -61,10 +70,19 @@ interface OverrideAdminProviderPolicyOptions extends LoadAdminDashboardOptions {
   reason: string;
 }
 
+interface ToggleAdminTenantModuleOptions extends LoadAdminDashboardOptions {
+  tenantScope: string;
+  tenantId: string;
+  moduleKey: ModuleKey;
+  enabled: boolean;
+  reason: string;
+}
+
 type AdminDashboardPayload = {
   tenants: Array<Record<string, unknown>>;
   materials: Array<Record<string, unknown>>;
   provider_policies: Array<Record<string, unknown>>;
+  module_settings?: Array<Record<string, unknown>>;
 };
 
 type AdminAccessPayload = {
@@ -82,6 +100,12 @@ type AdminArchiveMaterialPayload = {
 type AdminProviderPolicyOverridePayload = {
   required_permission: unknown;
   provider_policy: Record<string, unknown>;
+  audit_event: Record<string, unknown>;
+};
+
+type AdminTenantModuleTogglePayload = {
+  required_permission: unknown;
+  module_setting: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 };
 
@@ -175,6 +199,31 @@ export async function overrideAdminProviderPolicy(
   return normalizeAdminProviderPolicyOverridePayload((await response.json()) as AdminProviderPolicyOverridePayload);
 }
 
+export async function toggleAdminTenantModule(
+  options: ToggleAdminTenantModuleOptions
+): Promise<AdminTenantModuleToggleResult> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    `${apiBaseUrl}/v1/admin/tenants/${encodeURIComponent(options.tenantId)}/modules/${encodeURIComponent(options.moduleKey)}?tenant_scope=${encodeURIComponent(options.tenantScope)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": options.adminToken
+      },
+      body: JSON.stringify({
+        enabled: options.enabled,
+        reason: options.reason
+      })
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Admin tenant module toggle request failed: ${response.status}`);
+  }
+  return normalizeAdminTenantModuleTogglePayload((await response.json()) as AdminTenantModuleTogglePayload);
+}
+
 export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): AdminDashboardData {
   return {
     tenants: payload.tenants.map((tenant) => ({
@@ -190,7 +239,8 @@ export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): 
       children: numberValue(tenant.children)
     })),
     materials: payload.materials.map((material) => normalizeAdminMaterialPayload(material)),
-    providerPolicies: payload.provider_policies.map((policy) => normalizeProviderPolicyPayload(policy))
+    providerPolicies: payload.provider_policies.map((policy) => normalizeProviderPolicyPayload(policy)),
+    moduleSettings: (payload.module_settings ?? []).map((setting) => normalizeTenantModuleSettingPayload(setting))
   };
 }
 
@@ -208,6 +258,14 @@ export function normalizeAdminProviderPolicyOverridePayload(
   return {
     requiredPermission: stringValue(payload.required_permission),
     providerPolicy: normalizeProviderPolicyPayload(payload.provider_policy),
+    auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
+  };
+}
+
+export function normalizeAdminTenantModuleTogglePayload(payload: AdminTenantModuleTogglePayload): AdminTenantModuleToggleResult {
+  return {
+    requiredPermission: stringValue(payload.required_permission),
+    moduleSetting: normalizeTenantModuleSettingPayload(payload.module_setting),
     auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
@@ -283,6 +341,15 @@ function normalizeProviderPolicyPayload(policy: Record<string, unknown>): Provid
   };
 }
 
+function normalizeTenantModuleSettingPayload(setting: Record<string, unknown>): TenantModuleSetting {
+  return {
+    tenantId: stringValue(setting.tenant_id),
+    moduleKey: stringValue(setting.module_key) as ModuleKey,
+    enabled: booleanValue(setting.enabled),
+    source: stringValue(setting.source) as TenantModuleSetting["source"]
+  };
+}
+
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -293,6 +360,10 @@ function optionalStringValue(value: unknown): string | undefined {
 
 function numberValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function booleanValue(value: unknown): boolean {
+  return typeof value === "boolean" ? value : false;
 }
 
 function arrayValue(value: unknown): Array<Record<string, unknown>> {

@@ -7,7 +7,7 @@ LearningEnglish Admin 是 Phase 1 的 production-shaped 多租户后台原型，
 - 默认使用 typed mock data，保证没有后端时页面仍可打开。
 - 可通过 `VITE_ADMIN_API_BASE_URL` 接入本地 FastAPI admin API，当前读取 dashboard、access / audit 数据，并支持少量受控 mutation。
 - 首版 admin auth 使用本地 `X-Admin-Token` 静态 token；当前已落库管理员身份和 read audit event，生产级 admin session / role mutation 仍在后续阶段。
-- 已支持首批受控 mutation：Content Pipeline live mode 可带 reason 重试 material job 或归档 material，Provider Ops live mode 可写入 tenant provider policy override，所有变更都会写入 `AuditEvent`。
+- 已支持首批受控 mutation：Content Pipeline live mode 可带 reason 重试 material job 或归档 material，Provider Ops live mode 可写入 tenant provider policy override，Tenant Detail live mode 可切换 tenant module access，所有变更都会写入 `AuditEvent`。
 - 验证 `Platform -> Tenant -> ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob -> LearningAsset -> ReviewTask / PracticeSession / SpeakingAttempt -> WeeklyReport` 的后台运营视角。
 - 支持中文 / English UI 切换。
 - API paths、env keys、model names、task names、permission keys 保持 English。
@@ -44,4 +44,4 @@ ADMIN_API_BASE_URL=http://127.0.0.1:8000 ADMIN_API_TOKEN=local-admin-token make 
 - Infrastructure
 - Developer API
 
-这些页面在 Phase 1 只保留导航入口和租户范围上下文；当前已接入最小 dashboard API、admin access API、dashboard read audit event、material job retry mutation、material archive mutation 和 provider policy override mutation。后续仍需要补齐独立 admin session、权限变更、更多运营页面和完整审计链路后才能作为生产后台能力使用。
+这些页面在 Phase 1 只保留导航入口和租户范围上下文；当前已接入最小 dashboard API、admin access API、dashboard read audit event、material job retry mutation、material archive mutation、provider policy override mutation 和 tenant module toggle mutation。后续仍需要补齐独立 admin session、权限变更、更多运营页面和完整审计链路后才能作为生产后台能力使用。

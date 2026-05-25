@@ -23,6 +23,7 @@ from app.db.models import (
     ParentAccountModel,
     ParentCoachingScriptModel,
     ReviewTaskModel,
+    TenantModuleSettingModel,
     TenantProviderPolicyModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus
@@ -36,6 +37,7 @@ ADMIN_PERMISSIONS = [
     "admin.material.read",
     "admin.material.archive",
     "admin.material.retry",
+    "admin.tenant.module.toggle",
     "admin.provider.override",
     "admin.audit.read",
 ]
@@ -43,6 +45,7 @@ ADMIN_PERMISSIONS = [
 AI_PROVIDERS = {"stub", "doubao"}
 MEDIA_PROVIDERS = {"mock", "real"}
 FALLBACK_MODES = {"global_stub", "auto_to_mock", "per_tenant"}
+MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")
 
 
 @dataclass(frozen=True)
@@ -69,6 +72,11 @@ class AdminProviderPolicyOverrideRequest(BaseModel):
     media_provider: str = "mock"
     fallback_mode: str = "global_stub"
     monthly_guardrail: int = 0
+    reason: str = ""
+
+
+class AdminTenantModuleToggleRequest(BaseModel):
+    enabled: bool = True
     reason: str = ""
 
 
@@ -126,6 +134,11 @@ def get_admin_dashboard(
         .where(TenantProviderPolicyModel.tenant_id.in_(scoped_tenant_ids or [""]))
         .order_by(TenantProviderPolicyModel.updated_at.desc())
     ).all()
+    module_rows = db.scalars(
+        select(TenantModuleSettingModel)
+        .where(TenantModuleSettingModel.tenant_id.in_(scoped_tenant_ids or [""]))
+        .order_by(TenantModuleSettingModel.updated_at.desc())
+    ).all()
     _record_audit_event(
         db,
         actor=actor,
@@ -142,6 +155,7 @@ def get_admin_dashboard(
         "tenants": [_admin_tenant_payload(tenant, children_by_parent.get(tenant.id, 0), materials) for tenant in scoped_tenants],
         "materials": materials,
         "provider_policies": [_global_provider_policy(), *[_tenant_provider_policy_payload(policy) for policy in policy_rows]],
+        "module_settings": _module_settings_payload(scoped_tenants, module_rows),
     }
 
 
@@ -369,6 +383,66 @@ def override_admin_provider_policy(
     }
 
 
+@router.post("/tenants/{tenant_id}/modules/{module_key}")
+def toggle_admin_tenant_module(
+    tenant_id: str,
+    module_key: str,
+    payload: AdminTenantModuleToggleRequest,
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    reason = payload.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=422, detail="Module toggle reason is required")
+    if "admin.tenant.module.toggle" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.tenant.module.toggle permission")
+
+    normalized_module_key = module_key.strip().lower()
+    if normalized_module_key not in MODULE_KEYS:
+        raise HTTPException(status_code=422, detail="Unsupported module_key")
+    tenant = db.get(ParentAccountModel, tenant_id.strip())
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    if tenant_scope != "all" and tenant.id != tenant_scope:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found in tenant scope")
+
+    _ensure_admin_user(db, actor)
+    setting = db.scalar(
+        select(TenantModuleSettingModel).where(
+            TenantModuleSettingModel.tenant_id == tenant.id,
+            TenantModuleSettingModel.module_key == normalized_module_key,
+        )
+    )
+    if setting is None:
+        setting = TenantModuleSettingModel(tenant_id=tenant.id, module_key=normalized_module_key)
+    setting.enabled = payload.enabled
+    setting.source = "tenant_override"
+    setting.reason = reason
+    setting.created_by = actor.id
+    db.add(setting)
+    db.commit()
+    db.refresh(setting)
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant.id,
+        action="admin.tenant_module.toggle",
+        resource_type="tenant_module_setting",
+        resource_id=f"{tenant.id}:{normalized_module_key}",
+        risk_level="high",
+        result="success",
+        trace_id=_trace_id(request),
+        reason=reason,
+    )
+    return {
+        "required_permission": "admin.tenant.module.toggle",
+        "module_setting": _tenant_module_setting_payload(setting),
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
 def _audit_scope_filter(tenant_scope: str):
     if tenant_scope == "all":
         return AdminAuditEventModel.tenant_scope != ""
@@ -570,6 +644,35 @@ def _tenant_provider_policy_payload(policy: TenantProviderPolicyModel) -> dict:
         "fallback_mode": policy.fallback_mode,
         "monthly_guardrail": policy.monthly_guardrail,
         "source": policy.source,
+    }
+
+
+def _module_settings_payload(tenants: list[ParentAccountModel], rows: list[TenantModuleSettingModel]) -> list[dict]:
+    row_by_key = {(row.tenant_id, row.module_key): row for row in rows}
+    payloads: list[dict] = []
+    for tenant in tenants:
+        for module_key in MODULE_KEYS:
+            row = row_by_key.get((tenant.id, module_key))
+            if row is not None:
+                payloads.append(_tenant_module_setting_payload(row))
+            else:
+                payloads.append(
+                    {
+                        "tenant_id": tenant.id,
+                        "module_key": module_key,
+                        "enabled": True,
+                        "source": "global_default",
+                    }
+                )
+    return payloads
+
+
+def _tenant_module_setting_payload(setting: TenantModuleSettingModel) -> dict:
+    return {
+        "tenant_id": setting.tenant_id,
+        "module_key": setting.module_key,
+        "enabled": setting.enabled,
+        "source": setting.source,
     }
 
 

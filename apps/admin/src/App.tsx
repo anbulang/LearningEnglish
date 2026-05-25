@@ -6,10 +6,11 @@ import {
   loadAdminDashboard,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
+  toggleAdminTenantModule,
   type AdminAccessData,
   type AdminDashboardData
 } from "./domain/adminApi";
-import { mockMaterials, mockProviderPolicies, mockTenants } from "./domain/mockData";
+import { mockMaterials, mockModuleSettings, mockProviderPolicies, mockTenants } from "./domain/mockData";
 import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
@@ -18,7 +19,7 @@ import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { ProviderOps, type ProviderPolicyOverrideInput } from "./pages/ProviderOps";
-import { TenantDetail } from "./pages/TenantDetail";
+import { TenantDetail, type TenantModuleToggleInput } from "./pages/TenantDetail";
 
 const pageTitles: Record<PageKey, MessageKey> = {
   command: "page.commandCenter.title",
@@ -40,7 +41,8 @@ export function App() {
   const [dashboardData, setDashboardData] = useState<AdminDashboardData>({
     tenants: mockTenants,
     materials: mockMaterials,
-    providerPolicies: mockProviderPolicies
+    providerPolicies: mockProviderPolicies,
+    moduleSettings: mockModuleSettings
   });
   const [accessData, setAccessData] = useState<AdminAccessData | null>(null);
   const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
@@ -178,6 +180,41 @@ export function App() {
     );
   }
 
+  async function handleToggleTenantModule(input: TenantModuleToggleInput) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin tenant module API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await toggleAdminTenantModule({
+      apiBaseUrl,
+      adminToken,
+      tenantScope,
+      tenantId: input.tenantId,
+      moduleKey: input.moduleKey,
+      enabled: input.enabled,
+      reason: input.reason
+    });
+    setDashboardData((current) => ({
+      ...current,
+      moduleSettings: [
+        ...current.moduleSettings.filter(
+          (setting) =>
+            !(setting.tenantId === result.moduleSetting.tenantId && setting.moduleKey === result.moduleSetting.moduleKey)
+        ),
+        result.moduleSetting
+      ]
+    }));
+    setAccessData((current) =>
+      current
+        ? {
+            ...current,
+            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+          }
+        : current
+    );
+  }
+
   return (
     <AppShell
       activePage={activePage}
@@ -204,7 +241,10 @@ export function App() {
           tenants={dashboardData.tenants}
           materials={dashboardData.materials}
           policies={dashboardData.providerPolicies}
+          moduleSettings={dashboardData.moduleSettings}
           isAllTenantPreview={tenantScope === "all"}
+          dataMode={dataMode}
+          onToggleTenantModule={dataMode === "live" ? handleToggleTenantModule : undefined}
         />
       )}
       {activePage === "pipeline" && (

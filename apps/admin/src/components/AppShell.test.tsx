@@ -104,6 +104,14 @@ describe("AppShell", () => {
           monthly_guardrail: 0,
           source: "global_default"
         }
+      ],
+      module_settings: [
+        {
+          tenant_id: "parent_live",
+          module_key: "speaking_score",
+          enabled: true,
+          source: "global_default"
+        }
       ]
     };
     const accessPayload = {
@@ -524,6 +532,118 @@ describe("AppShell", () => {
         fallback_mode: "per_tenant",
         monthly_guardrail: 500,
         reason: "Pilot tenant approved for real media provider."
+      })
+    });
+  });
+
+  it("submits live tenant module toggle and shows the audit reason", async () => {
+    vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    const dashboardPayload = {
+      tenants: [
+        {
+          id: "parent_live",
+          name: "微信家长live",
+          tenant_type: "pilot_family",
+          status: "active",
+          region: "local",
+          owner_contact: "13800138110",
+          tier: "pilot",
+          created_at: "2026-05-25T10:00:00+00:00",
+          active_parents: 1,
+          children: 1
+        }
+      ],
+      materials: [],
+      provider_policies: [
+        {
+          tenant_id: "global",
+          ai_provider: "stub",
+          media_provider: "mock",
+          fallback_mode: "global_stub",
+          monthly_guardrail: 0,
+          source: "global_default"
+        }
+      ],
+      module_settings: [
+        {
+          tenant_id: "parent_live",
+          module_key: "speaking_score",
+          enabled: true,
+          source: "global_default"
+        }
+      ]
+    };
+    const accessPayload = {
+      current_admin: {
+        id: "admin_local",
+        display_name: "Local Platform Admin",
+        email: "admin@learningenglish.local",
+        role: "Platform Owner",
+        status: "active"
+      },
+      permissions: ["admin.dashboard.read", "admin.tenant.module.toggle", "admin.audit.read"],
+      audit_events: []
+    };
+    const moduleEvent = {
+      id: "audit_module",
+      actor_id: "admin_local",
+      actor_role: "Platform Owner",
+      tenant_scope: "parent_live",
+      action: "admin.tenant_module.toggle",
+      resource_type: "tenant_module_setting",
+      resource_id: "parent_live:speaking_score",
+      risk_level: "high",
+      result: "success",
+      reason: "Pilot asked to pause speaking score.",
+      trace_id: "req_module",
+      created_at: "2026-05-25T10:10:00+00:00"
+    };
+    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      const url = String(input);
+      if (url.includes("/v1/admin/tenants/parent_live/modules/speaking_score")) {
+        return {
+          ok: true,
+          json: async () => ({
+            required_permission: "admin.tenant.module.toggle",
+            module_setting: {
+              tenant_id: "parent_live",
+              module_key: "speaking_score",
+              enabled: false,
+              source: "tenant_override"
+            },
+            audit_event: moduleEvent
+          })
+        };
+      }
+      return {
+        ok: true,
+        json: async () => (url.includes("/v1/admin/access") ? accessPayload : dashboardPayload)
+      };
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+
+    render(<App />);
+
+    expect(await screen.findByText("真实 API")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "租户管理" }));
+    await userEvent.type(screen.getByLabelText("模块变更原因"), "Pilot asked to pause speaking score.");
+    await userEvent.click(screen.getByRole("button", { name: "禁用 口语评分" }));
+
+    expect(await screen.findByText("模块设置已更新。")).toBeInTheDocument();
+    expect(screen.getAllByText("disabled").length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole("button", { name: "审计与权限" }));
+    expect(await screen.findByText("admin.tenant_module.toggle")).toBeInTheDocument();
+    expect(screen.getByText("Pilot asked to pause speaking score.")).toBeInTheDocument();
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/tenants/parent_live/modules/speaking_score?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({
+        enabled: false,
+        reason: "Pilot asked to pause speaking score."
       })
     });
   });

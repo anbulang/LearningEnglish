@@ -21,6 +21,7 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - `POST /v1/admin/material-jobs/{job_id}/retry?tenant_scope=all`
 - `POST /v1/admin/materials/{material_id}/archive?tenant_scope=all`
 - `POST /v1/admin/providers/policies?tenant_scope=all`
+- `POST /v1/admin/tenants/{tenant_id}/modules/{module_key}?tenant_scope=all`
 - `GET/POST /v1/children`
 - `GET/POST /v1/materials`
 - `GET /v1/materials/{material_id}`
@@ -42,6 +43,7 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - Admin material job retry 是受控 mutation：必须提供 `reason`，需要 `admin.material.retry` 权限，会把解析任务和材料重新置为 `processing`、重新排队识别任务，并写入 high-risk `AuditEvent`。
 - Admin material archive 是受控 mutation：必须提供 `reason`，需要 `admin.material.archive` 权限，会把材料置为 `archived`、清理用户可见衍生内容，并写入 high-risk `AuditEvent`。
 - Admin provider policy override 是受控 mutation：必须提供 `reason`，需要 `admin.provider.override` 权限，会写入租户级 `TenantProviderPolicy`，并写入 high-risk `AuditEvent`；接口只返回 provider key、fallback、guardrail 和 source，不返回 secret 明文。
+- Admin tenant module toggle 是受控 mutation：必须提供 `reason`，需要 `admin.tenant.module.toggle` 权限，会写入租户级 `TenantModuleSetting`，并写入 high-risk `AuditEvent`；当前支持 `worksheet_import`、`ai_review`、`media_pipeline`、`speaking_score` 和 `weekly_reports`。
 - 本地 admin CORS 默认允许 `http://127.0.0.1:<port>` 和 `http://localhost:<port>`，可用 `ADMIN_CORS_ORIGINS` 配置固定来源，用 `ADMIN_CORS_ORIGIN_REGEX` 调整本地端口匹配。
 - 上传讲义会创建 `CourseMaterial` 和 `MaterialParseJob`，然后通过 `Celery` 排队到后台识别，不再依赖前端首次读取 job 时才触发。
 - 默认 `AI_PROVIDER=stub`，可以直接跑通本地 MVP。

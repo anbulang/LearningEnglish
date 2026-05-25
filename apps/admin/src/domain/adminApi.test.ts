@@ -6,7 +6,8 @@ import {
   normalizeAdminAccessPayload,
   normalizeAdminDashboardPayload,
   overrideAdminProviderPolicy,
-  retryAdminMaterialJob
+  retryAdminMaterialJob,
+  toggleAdminTenantModule
 } from "./adminApi";
 
 const apiPayload = {
@@ -54,6 +55,14 @@ const apiPayload = {
       media_provider: "mock",
       fallback_mode: "global_stub",
       monthly_guardrail: 0,
+      source: "global_default"
+    }
+  ],
+  module_settings: [
+    {
+      tenant_id: "parent_1",
+      module_key: "speaking_score",
+      enabled: true,
       source: "global_default"
     }
   ]
@@ -113,6 +122,12 @@ describe("admin API client", () => {
       mediaProvider: "mock",
       fallbackMode: "global_stub",
       monthlyGuardrail: 0
+    });
+    expect(normalized.moduleSettings[0]).toMatchObject({
+      tenantId: "parent_1",
+      moduleKey: "speaking_score",
+      enabled: true,
+      source: "global_default"
     });
   });
 
@@ -297,6 +312,59 @@ describe("admin API client", () => {
         fallback_mode: "per_tenant",
         monthly_guardrail: 500,
         reason: "Pilot tenant approved for real media provider."
+      })
+    });
+  });
+
+  it("toggles a tenant module with tenant scope and reason", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        required_permission: "admin.tenant.module.toggle",
+        module_setting: {
+          tenant_id: "parent_1",
+          module_key: "speaking_score",
+          enabled: false,
+          source: "tenant_override"
+        },
+        audit_event: {
+          ...accessPayload.audit_events[0],
+          action: "admin.tenant_module.toggle",
+          resource_type: "tenant_module_setting",
+          resource_id: "parent_1:speaking_score",
+          reason: "Pilot tenant requested speaking score pause."
+        }
+      })
+    });
+
+    const result = await toggleAdminTenantModule({
+      apiBaseUrl: "http://127.0.0.1:8000/",
+      adminToken: "local-admin-token",
+      tenantScope: "all",
+      tenantId: "parent_1",
+      moduleKey: "speaking_score",
+      enabled: false,
+      reason: "Pilot tenant requested speaking score pause.",
+      fetchImpl
+    });
+
+    expect(result.requiredPermission).toBe("admin.tenant.module.toggle");
+    expect(result.moduleSetting).toMatchObject({
+      tenantId: "parent_1",
+      moduleKey: "speaking_score",
+      enabled: false,
+      source: "tenant_override"
+    });
+    expect(result.auditEvent.action).toBe("admin.tenant_module.toggle");
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/tenants/parent_1/modules/speaking_score?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({
+        enabled: false,
+        reason: "Pilot tenant requested speaking score pause."
       })
     });
   });

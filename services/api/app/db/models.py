@@ -89,6 +89,20 @@ class TenantProviderPolicyModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class TenantModuleSettingModel(Base):
+    __tablename__ = "tenant_module_settings"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"module_{uuid4().hex[:12]}")
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), index=True)
+    module_key: Mapped[str] = mapped_column(String(64), index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    source: Mapped[str] = mapped_column(String(64), default="tenant_override")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class PhoneBindingModel(Base):
     __tablename__ = "phone_bindings"
 

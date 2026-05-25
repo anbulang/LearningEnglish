@@ -59,6 +59,15 @@ export interface ProviderPolicy {
   source: "global_default" | "tenant_override" | "tier_default" | "emergency_global";
 }
 
+export type ModuleKey = "worksheet_import" | "ai_review" | "media_pipeline" | "speaking_score" | "weekly_reports";
+
+export interface TenantModuleSetting {
+  tenantId: string;
+  moduleKey: ModuleKey;
+  enabled: boolean;
+  source: "global_default" | "tenant_override";
+}
+
 export interface TenantHealthRow {
   tenant: Tenant;
   blockedJobs: number;

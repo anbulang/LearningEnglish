@@ -1,4 +1,4 @@
-import type { AdminMaterial, AdminUser, ProviderPolicy, SourcePage, Tenant } from "./types";
+import type { AdminMaterial, AdminUser, ModuleKey, ProviderPolicy, SourcePage, Tenant, TenantModuleSetting } from "./types";
 
 function createSourcePages(slug: string, pageCount: number, sourceType: SourcePage["sourceType"]): SourcePage[] {
   return Array.from({ length: pageCount }, (_, index) => ({
@@ -199,3 +199,14 @@ export const mockProviderPolicies: ProviderPolicy[] = [
     source: "tenant_override"
   }
 ];
+
+const moduleKeys: ModuleKey[] = ["worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports"];
+
+export const mockModuleSettings: TenantModuleSetting[] = mockTenants.flatMap((tenant) =>
+  moduleKeys.map((moduleKey) => ({
+    tenantId: tenant.id,
+    moduleKey,
+    enabled: true,
+    source: "global_default"
+  }))
+);
