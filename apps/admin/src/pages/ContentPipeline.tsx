@@ -8,15 +8,27 @@ interface ContentPipelineProps {
   tenantScope: TenantScope;
   tenants: Tenant[];
   materials: AdminMaterial[];
+  dataMode?: "mock" | "live";
+  onArchiveMaterial?: (materialId: string, reason: string) => Promise<void>;
 }
 
 type StatusFilter = "all" | MaterialStatus;
 
 const statusFilterOptions: StatusFilter[] = ["all", "uploaded", "processing", "needs_review", "ready", "failed", "archived"];
 
-export function ContentPipeline({ language, tenantScope, tenants, materials }: ContentPipelineProps) {
+export function ContentPipeline({
+  language,
+  tenantScope,
+  tenants,
+  materials,
+  dataMode = "mock",
+  onArchiveMaterial
+}: ContentPipelineProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+  const [auditReason, setAuditReason] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+  const [isArchiving, setIsArchiving] = useState(false);
   const copy = language === "zh" ? zhCopy : enCopy;
   const tenantNameById = useMemo(() => new Map(tenants.map((tenant) => [tenant.id, tenant.name])), [tenants]);
   const scopedMaterials = useMemo(() => getMaterialsForScope(materials, tenantScope), [materials, tenantScope]);
@@ -32,6 +44,25 @@ export function ContentPipeline({ language, tenantScope, tenants, materials }: C
     if (isStatusFilter(value)) {
       setStatusFilter(value);
       setSelectedMaterialId(null);
+      setAuditReason("");
+      setActionMessage("");
+    }
+  }
+
+  async function handleArchiveMaterial(material: AdminMaterial) {
+    if (!onArchiveMaterial || !auditReason.trim()) {
+      return;
+    }
+    setIsArchiving(true);
+    setActionMessage("");
+    try {
+      await onArchiveMaterial(material.id, auditReason.trim());
+      setAuditReason("");
+      setActionMessage(copy.archiveRecorded);
+    } catch {
+      setActionMessage(copy.archiveFailed);
+    } finally {
+      setIsArchiving(false);
     }
   }
 
@@ -150,7 +181,18 @@ export function ContentPipeline({ language, tenantScope, tenants, materials }: C
           </div>
         </div>
         {selectedMaterial ? (
-          <MaterialInspector material={selectedMaterial} tenantName={tenantNameById.get(selectedMaterial.tenantId)} copy={copy} />
+          <MaterialInspector
+            material={selectedMaterial}
+            tenantName={tenantNameById.get(selectedMaterial.tenantId)}
+            copy={copy}
+            dataMode={dataMode}
+            auditReason={auditReason}
+            actionMessage={actionMessage}
+            isArchiving={isArchiving}
+            canArchive={Boolean(onArchiveMaterial)}
+            onAuditReasonChange={setAuditReason}
+            onArchiveMaterial={handleArchiveMaterial}
+          />
         ) : (
           <div className="pipeline-empty inspector-empty">
             <strong>{copy.emptyInspector}</strong>
@@ -165,11 +207,25 @@ export function ContentPipeline({ language, tenantScope, tenants, materials }: C
 function MaterialInspector({
   material,
   tenantName,
-  copy
+  copy,
+  dataMode,
+  auditReason,
+  actionMessage,
+  isArchiving,
+  canArchive,
+  onAuditReasonChange,
+  onArchiveMaterial
 }: {
   material: AdminMaterial;
   tenantName: string | undefined;
   copy: typeof zhCopy;
+  dataMode: "mock" | "live";
+  auditReason: string;
+  actionMessage: string;
+  isArchiving: boolean;
+  canArchive: boolean;
+  onAuditReasonChange: (value: string) => void;
+  onArchiveMaterial: (material: AdminMaterial) => Promise<void>;
 }) {
   const timelineItems = [
     `${copy.uploaded}: ${material.sourcePages.length} ${copy.sourcePages}`,
@@ -218,16 +274,27 @@ function MaterialInspector({
       <div className="audit-reason">
         <label>
           <span>{copy.auditReason}</span>
-          <textarea maxLength={240} placeholder={copy.auditPlaceholder} />
+          <textarea
+            maxLength={240}
+            placeholder={dataMode === "live" ? copy.auditPlaceholderLive : copy.auditPlaceholder}
+            value={auditReason}
+            onChange={(event) => onAuditReasonChange(event.target.value)}
+          />
         </label>
         <div className="audit-actions">
-          <button type="button" className="primary-button">
+          <button type="button" className="primary-button" disabled>
             {copy.retryMock}
           </button>
-          <button type="button" className="ghost-button">
-            {copy.archiveMock}
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={dataMode !== "live" || !canArchive || material.materialStatus === "archived" || !auditReason.trim() || isArchiving}
+            onClick={() => void onArchiveMaterial(material)}
+          >
+            {dataMode === "live" ? copy.archiveMaterial : copy.archiveMock}
           </button>
         </div>
+        {actionMessage && <p className="action-message">{actionMessage}</p>}
       </div>
     </>
   );
@@ -275,7 +342,7 @@ function toneForMediaStatus(status: MediaStatus): "success" | "warning" | "dange
 
 const zhCopy = {
   title: "内容流水线",
-  subtitle: "按租户追踪讲义、解析任务、学习资产和媒体生成的生命周期；Phase 1 仅使用 mock data。",
+  subtitle: "按租户追踪讲义、解析任务、学习资产和媒体生成的生命周期。",
   filters: "内容流水线筛选",
   status: "状态",
   statusFilter: "状态筛选",
@@ -310,9 +377,13 @@ const zhCopy = {
   timeline: "生命周期时间线",
   timelineAria: "生命周期时间线",
   auditReason: "审计原因",
-  auditPlaceholder: "填写重试或归档原因。Phase 1 不会提交真实 API 或 mutation。",
+  auditPlaceholder: "填写重试或归档原因。Mock mode 不会提交真实 API 或 mutation。",
+  auditPlaceholderLive: "填写归档原因；live mode 会提交 admin mutation 并写入审计。",
   retryMock: "模拟重试（no-op）",
   archiveMock: "模拟归档（no-op）",
+  archiveMaterial: "归档材料",
+  archiveRecorded: "归档请求已记录。",
+  archiveFailed: "归档失败，请稍后重试。",
   emptyFiltered: "没有符合当前筛选的材料。",
   emptyFilteredDetail: "切换状态或租户范围查看其他 mock materials。",
   emptyInspector: "当前筛选没有可检查材料。",
@@ -321,7 +392,7 @@ const zhCopy = {
 
 const enCopy = {
   title: "Content Pipeline",
-  subtitle: "Track tenant-scoped worksheet, parse job, learning asset, and media lifecycle states with mock data only.",
+  subtitle: "Track tenant-scoped worksheet, parse job, learning asset, and media lifecycle states.",
   filters: "Content pipeline filters",
   status: "Status",
   statusFilter: "Status filter",
@@ -356,9 +427,13 @@ const enCopy = {
   timeline: "Lifecycle timeline",
   timelineAria: "Lifecycle timeline",
   auditReason: "Audit reason",
-  auditPlaceholder: "Enter retry or archive reason. Phase 1 will not call a real API or mutation.",
+  auditPlaceholder: "Enter retry or archive reason. Mock mode will not call a real API or mutation.",
+  auditPlaceholderLive: "Enter the archive reason; live mode submits an admin mutation and audit event.",
   retryMock: "Mock retry only (no-op)",
   archiveMock: "Mock archive only (no-op)",
+  archiveMaterial: "Archive material",
+  archiveRecorded: "Archive request recorded.",
+  archiveFailed: "Archive failed. Try again later.",
   emptyFiltered: "No materials match this filter.",
   emptyFilteredDetail: "Change status or tenant scope to inspect other mock materials.",
   emptyInspector: "No material is available for inspection.",

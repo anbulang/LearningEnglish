@@ -221,6 +221,13 @@ button:disabled {
   font-weight: 700;
 }
 
+.ghost-button:disabled,
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  box-shadow: none;
+}
+
 .page-content {
   min-width: 0;
   flex: 1;
@@ -758,6 +765,13 @@ td small {
   flex-wrap: wrap;
 }
 
+.action-message {
+  margin: 0;
+  color: var(--forest-mint);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .inspector-empty {
   margin-top: 6px;
 }
@@ -823,5 +837,43 @@ td small {
 
   .detail-list {
     grid-template-columns: 1fr;
+  }
+
+  .audit-table {
+    min-width: 0;
+  }
+
+  .audit-table thead {
+    display: none;
+  }
+
+  .audit-table,
+  .audit-table tbody,
+  .audit-table tr,
+  .audit-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .audit-table tr {
+    padding: 8px 0;
+    border-bottom: 1px solid #f1e1da;
+  }
+
+  .audit-table td {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .audit-table td::before {
+    content: attr(data-label);
+    color: var(--dust-brown);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
   }
 }

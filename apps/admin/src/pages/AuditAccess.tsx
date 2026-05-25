@@ -79,27 +79,29 @@ export function AuditAccess({ language, accessData, dataMode }: AuditAccessProps
                     <th>{copy.action}</th>
                     <th>{copy.resource}</th>
                     <th>{copy.result}</th>
+                    <th>{copy.reason}</th>
                     <th>{copy.trace}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {accessData.auditEvents.map((event) => (
                     <tr key={event.id}>
-                      <td>{event.createdAt}</td>
-                      <td>
+                      <td data-label={copy.time}>{event.createdAt}</td>
+                      <td data-label={copy.actor}>
                         <strong className="table-title">{event.actorId}</strong>
                         <small>{event.actorRole}</small>
                       </td>
-                      <td>{event.tenantScope}</td>
-                      <td>{event.action}</td>
-                      <td>
+                      <td data-label={copy.tenant}>{event.tenantScope}</td>
+                      <td data-label={copy.action}>{event.action}</td>
+                      <td data-label={copy.resource}>
                         {event.resourceType}
                         <small>{event.resourceId}</small>
                       </td>
-                      <td>
+                      <td data-label={copy.result}>
                         <StatusChip tone={event.result === "success" ? "success" : "danger"}>{event.result}</StatusChip>
                       </td>
-                      <td>{event.traceId}</td>
+                      <td data-label={copy.reason}>{event.reason || copy.noReason}</td>
+                      <td data-label={copy.trace}>{event.traceId}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -134,6 +136,8 @@ const zhCopy = {
   action: "动作",
   resource: "资源",
   result: "结果",
+  reason: "原因",
+  noReason: "-",
   trace: "Trace"
 };
 
@@ -159,5 +163,7 @@ const enCopy = {
   action: "Action",
   resource: "Resource",
   result: "Result",
+  reason: "Reason",
+  noReason: "-",
   trace: "Trace"
 };

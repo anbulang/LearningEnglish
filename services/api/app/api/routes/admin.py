@@ -6,7 +6,9 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -16,9 +18,13 @@ from app.db.models import (
     AdminUserModel,
     ChildProfileModel,
     CourseMaterialModel,
+    KnowledgePackModel,
     MaterialParseJobModel,
     ParentAccountModel,
+    ParentCoachingScriptModel,
+    ReviewTaskModel,
 )
+from app.models.contracts import MaterialStatus
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -26,6 +32,7 @@ ADMIN_PERMISSIONS = [
     "admin.dashboard.read",
     "admin.tenant.read",
     "admin.material.read",
+    "admin.material.archive",
     "admin.audit.read",
 ]
 
@@ -38,6 +45,10 @@ class AdminActor:
     role: str
     status: str
     permissions: list[str]
+
+
+class AdminArchiveMaterialRequest(BaseModel):
+    reason: str = ""
 
 
 def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> AdminActor:
@@ -135,6 +146,66 @@ def get_admin_access(
     }
 
 
+@router.post("/materials/{material_id}/archive")
+def archive_admin_material(
+    material_id: str,
+    payload: AdminArchiveMaterialRequest,
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    reason = payload.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=422, detail="Archive reason is required")
+    if "admin.material.archive" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.material.archive permission")
+
+    _ensure_admin_user(db, actor)
+    row = db.execute(
+        select(CourseMaterialModel, ChildProfileModel, ParentAccountModel)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .join(ParentAccountModel, ParentAccountModel.id == ChildProfileModel.parent_account_id)
+        .where(CourseMaterialModel.id == material_id)
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
+    material, child, parent = row
+    if tenant_scope != "all" and parent.id != tenant_scope:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found in tenant scope")
+
+    material.status = MaterialStatus.archived.value
+    db.add(material)
+    db.execute(delete(KnowledgePackModel).where(KnowledgePackModel.material_id == material.id))
+    db.execute(delete(ParentCoachingScriptModel).where(ParentCoachingScriptModel.material_id == material.id))
+    db.execute(delete(ReviewTaskModel).where(ReviewTaskModel.material_id == material.id))
+    db.commit()
+    db.refresh(material)
+
+    job = db.scalar(
+        select(MaterialParseJobModel)
+        .where(MaterialParseJobModel.material_id == material.id)
+        .order_by(MaterialParseJobModel.started_at.desc(), MaterialParseJobModel.id.desc())
+    )
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=parent.id,
+        action="admin.material.archive",
+        resource_type="course_material",
+        resource_id=material.id,
+        risk_level="high",
+        result="success",
+        trace_id=_trace_id(request),
+        reason=reason,
+    )
+    return {
+        "required_permission": "admin.material.archive",
+        "material": _admin_material_payload(material, child, parent, job),
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
 def _audit_scope_filter(tenant_scope: str):
     if tenant_scope == "all":
         return AdminAuditEventModel.tenant_scope != ""
@@ -174,23 +245,24 @@ def _record_audit_event(
     result: str,
     trace_id: str,
     reason: str = "",
-) -> None:
-    db.add(
-        AdminAuditEventModel(
-            actor_id=actor.id,
-            actor_role=actor.role,
-            tenant_scope=tenant_scope,
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            risk_level=risk_level,
-            result=result,
-            reason=reason,
-            trace_id=trace_id,
-            content_json={},
-        )
+) -> AdminAuditEventModel:
+    event = AdminAuditEventModel(
+        actor_id=actor.id,
+        actor_role=actor.role,
+        tenant_scope=tenant_scope,
+        action=action,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        risk_level=risk_level,
+        result=result,
+        reason=reason,
+        trace_id=trace_id,
+        content_json={},
     )
+    db.add(event)
     db.commit()
+    db.refresh(event)
+    return event
 
 
 def _audit_event_payload(event: AdminAuditEventModel) -> dict:

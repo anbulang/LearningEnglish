@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockMaterials, mockTenants } from "../domain/mockData";
 import { ContentPipeline } from "./ContentPipeline";
 
@@ -60,5 +60,26 @@ describe("ContentPipeline", () => {
 
     expect(screen.getByText("No materials match this filter.")).toBeInTheDocument();
     expect(screen.queryByText("HN-014 Phonics Worksheet")).not.toBeInTheDocument();
+  });
+
+  it("submits a live archive mutation with the selected material and audit reason", async () => {
+    const onArchiveMaterial = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ContentPipeline
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        dataMode="live"
+        onArchiveMaterial={onArchiveMaterial}
+      />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Inspect Weekend Reading Worksheet/ }));
+    await userEvent.type(screen.getByLabelText("Audit reason"), "Duplicate worksheet uploaded by parent.");
+    await userEvent.click(screen.getByRole("button", { name: "Archive material" }));
+
+    expect(onArchiveMaterial).toHaveBeenCalledWith("mat_weekend", "Duplicate worksheet uploaded by parent.");
+    expect(await screen.findByText("Archive request recorded.")).toBeInTheDocument();
   });
 });

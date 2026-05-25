@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
-import { loadAdminAccess, loadAdminDashboard, type AdminAccessData, type AdminDashboardData } from "./domain/adminApi";
+import {
+  archiveAdminMaterial,
+  loadAdminAccess,
+  loadAdminDashboard,
+  type AdminAccessData,
+  type AdminDashboardData
+} from "./domain/adminApi";
 import { mockMaterials, mockProviderPolicies, mockTenants } from "./domain/mockData";
 import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
@@ -79,6 +85,33 @@ export function App() {
     };
   }, []);
 
+  async function handleArchiveMaterial(materialId: string, reason: string) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin archive API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await archiveAdminMaterial({
+      apiBaseUrl,
+      adminToken,
+      tenantScope,
+      materialId,
+      reason
+    });
+    setDashboardData((current) => ({
+      ...current,
+      materials: current.materials.map((material) => (material.id === result.material.id ? result.material : material))
+    }));
+    setAccessData((current) =>
+      current
+        ? {
+            ...current,
+            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+          }
+        : current
+    );
+  }
+
   return (
     <AppShell
       activePage={activePage}
@@ -114,6 +147,8 @@ export function App() {
           tenantScope={tenantScope}
           tenants={dashboardData.tenants}
           materials={dashboardData.materials}
+          dataMode={dataMode}
+          onArchiveMaterial={dataMode === "live" ? handleArchiveMaterial : undefined}
         />
       )}
       {activePage === "audit" && <AuditAccess language={language} accessData={accessData} dataMode={dataMode} />}

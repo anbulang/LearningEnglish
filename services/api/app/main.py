@@ -42,7 +42,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.admin_cors_origins),
     allow_origin_regex=settings.admin_cors_origin_regex or None,
-    allow_methods=["GET", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["X-Admin-Token", "Content-Type"],
 )
 if settings.storage_backend == "s3":

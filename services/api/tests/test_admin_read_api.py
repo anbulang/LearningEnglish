@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
+from app.core.db import SessionLocal
+from app.db.models import KnowledgePackModel, ParentCoachingScriptModel, ReviewTaskModel
 from conftest import auth_headers, configure_test_environment
 
 
@@ -63,16 +67,89 @@ def test_admin_dashboard_allows_local_admin_cors_preflight(api_client) -> None:
         assert response.headers["access-control-allow-origin"] == origin
         assert "X-Admin-Token" in response.headers["access-control-allow-headers"]
 
+    archive_response = api_client.options(
+        "/v1/admin/materials/material_test/archive?tenant_scope=all",
+        headers={
+            "Origin": "http://127.0.0.1:5174",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "X-Admin-Token,Content-Type",
+        },
+    )
+
+    assert archive_response.status_code == 200
+    assert archive_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+    assert "POST" in archive_response.headers["access-control-allow-methods"]
+
+
+def test_admin_archive_material_requires_reason(api_client) -> None:
+    material_id, _, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-archive-reason",
+        phone_number="13800138120",
+        child_name="Mia Archive",
+        material_title="Archive Reason Worksheet",
+    )
+
+    response = api_client.post(
+        f"/v1/admin/materials/{material_id}/archive?tenant_scope=all",
+        json={"reason": "  "},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Archive reason is required"
+
+
+def test_admin_archive_material_updates_status_and_records_audit_event(api_client) -> None:
+    material_id, job_id, child_id = seed_parent_material(
+        api_client,
+        auth_code="admin-archive-success",
+        phone_number="13800138121",
+        child_name="Nora Archive",
+        material_title="Archive Success Worksheet",
+    )
+    knowledge_id, coach_id, task_id = seed_ready_derivatives(material_id, child_id)
+
+    response = api_client.post(
+        f"/v1/admin/materials/{material_id}/archive?tenant_scope=all",
+        json={"reason": "Duplicate worksheet uploaded by parent."},
+        headers={**ADMIN_HEADERS, "X-Request-ID": "req_admin_archive"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["required_permission"] == "admin.material.archive"
+    assert payload["material"]["id"] == material_id
+    assert payload["material"]["job_id"] == job_id
+    assert payload["material"]["material_status"] == "archived"
+    audit_event = payload["audit_event"]
+    assert audit_event["action"] == "admin.material.archive"
+    assert audit_event["resource_type"] == "course_material"
+    assert audit_event["resource_id"] == material_id
+    assert audit_event["reason"] == "Duplicate worksheet uploaded by parent."
+    assert audit_event["risk_level"] == "high"
+    assert audit_event["result"] == "success"
+    assert audit_event["trace_id"] == "req_admin_archive"
+
+    access = api_client.get("/v1/admin/access?tenant_scope=all", headers=ADMIN_HEADERS)
+    assert access.status_code == 200
+    assert access.json()["audit_events"][0]["id"] == audit_event["id"]
+
+    with SessionLocal() as db:
+        assert db.get(KnowledgePackModel, knowledge_id) is None
+        assert db.get(ParentCoachingScriptModel, coach_id) is None
+        assert db.get(ReviewTaskModel, task_id) is None
+
 
 def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> None:
-    seed_parent_material(
+    sunny_material_id, _, _ = seed_parent_material(
         api_client,
         auth_code="admin-read-sunny",
         phone_number="13800138110",
         child_name="Mia Wang",
         material_title="Colors Mini Test",
     )
-    seed_parent_material(
+    maple_material_id, _, _ = seed_parent_material(
         api_client,
         auth_code="admin-read-maple",
         phone_number="13800138111",
@@ -85,17 +162,18 @@ def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> N
     assert response.status_code == 200
     payload = response.json()
     assert {tenant["tenant_type"] for tenant in payload["tenants"]} == {"pilot_family"}
-    assert len(payload["tenants"]) == 2
-    assert len(payload["materials"]) == 2
-    assert {material["title"] for material in payload["materials"]} == {
+    assert len(payload["tenants"]) >= 2
+    assert len(payload["materials"]) >= 2
+    seeded_materials = [material for material in payload["materials"] if material["id"] in {sunny_material_id, maple_material_id}]
+    assert {material["title"] for material in seeded_materials} == {
         "Colors Mini Test",
         "HN-014 Phonics Worksheet",
     }
-    assert {material["child_name"] for material in payload["materials"]} == {"Mia Wang", "Tom Zhang"}
-    assert all(material["tenant_id"] for material in payload["materials"])
-    assert all(material["job_id"] for material in payload["materials"])
-    assert all(material["provider"] == "stub" for material in payload["materials"])
-    assert all(material["page_count"] == 1 for material in payload["materials"])
+    assert {material["child_name"] for material in seeded_materials} == {"Mia Wang", "Tom Zhang"}
+    assert all(material["tenant_id"] for material in seeded_materials)
+    assert all(material["job_id"] for material in seeded_materials)
+    assert all(material["provider"] == "stub" for material in seeded_materials)
+    assert all(material["page_count"] == 1 for material in seeded_materials)
     assert payload["provider_policies"] == [
         {
             "tenant_id": "global",
@@ -107,12 +185,13 @@ def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> N
         }
     ]
 
-    first_tenant_id = payload["tenants"][0]["id"]
-    scoped = api_client.get(f"/v1/admin/dashboard?tenant_scope={first_tenant_id}", headers=ADMIN_HEADERS)
+    sunny_tenant_id = next(material["tenant_id"] for material in seeded_materials if material["id"] == sunny_material_id)
+    scoped = api_client.get(f"/v1/admin/dashboard?tenant_scope={sunny_tenant_id}", headers=ADMIN_HEADERS)
     assert scoped.status_code == 200
     scoped_payload = scoped.json()
-    assert [tenant["id"] for tenant in scoped_payload["tenants"]] == [first_tenant_id]
-    assert {material["tenant_id"] for material in scoped_payload["materials"]} == {first_tenant_id}
+    assert [tenant["id"] for tenant in scoped_payload["tenants"]] == [sunny_tenant_id]
+    assert {material["tenant_id"] for material in scoped_payload["materials"]} == {sunny_tenant_id}
+    assert sunny_material_id in {material["id"] for material in scoped_payload["materials"]}
 
     missing = api_client.get("/v1/admin/dashboard?tenant_scope=tenant_missing", headers=ADMIN_HEADERS)
     assert missing.status_code == 404
@@ -126,7 +205,7 @@ def seed_parent_material(
     phone_number: str,
     child_name: str,
     material_title: str,
-) -> None:
+) -> tuple[str, str, str]:
     headers, _ = auth_headers(api_client, auth_code=auth_code)
     child_response = api_client.post(
         "/v1/children",
@@ -157,3 +236,47 @@ def seed_parent_material(
         headers=headers,
     )
     assert upload_response.status_code == 201
+    payload = upload_response.json()
+    return payload["material"]["id"], payload["job"]["id"], child_id
+
+
+def seed_ready_derivatives(material_id: str, child_id: str) -> tuple[str, str, str]:
+    knowledge_id = f"admin_knowledge_{material_id}"
+    coach_id = f"admin_coach_{material_id}"
+    task_id = f"admin_task_{material_id}"
+    with SessionLocal() as db:
+        db.add(
+            KnowledgePackModel(
+                id=knowledge_id,
+                material_id=material_id,
+                topic="archive",
+                difficulty_band="repeat",
+                lesson_summary="Ready for admin archive.",
+                review_recommendation="Archive duplicate.",
+                vocabulary_items=[],
+                sentence_patterns=[],
+            )
+        )
+        db.add(
+            ParentCoachingScriptModel(
+                id=coach_id,
+                material_id=material_id,
+                title="Archive coaching",
+                intro="Duplicate worksheet.",
+                steps=[],
+            )
+        )
+        db.add(
+            ReviewTaskModel(
+                id=task_id,
+                child_id=child_id,
+                material_id=material_id,
+                task_type="flashcard",
+                difficulty="easy",
+                content_json={"word": "archive"},
+                due_date=datetime(2026, 5, 25, tzinfo=timezone.utc),
+                status="pending",
+            )
+        )
+        db.commit()
+    return knowledge_id, coach_id, task_id

@@ -24,7 +24,7 @@ const accessData: AdminAccessData = {
       resourceId: "dashboard",
       riskLevel: "low",
       result: "success",
-      reason: "",
+      reason: "Duplicate worksheet uploaded by parent.",
       traceId: "req_12345678",
       createdAt: "2026-05-25T10:06:00+00:00"
     }
@@ -40,6 +40,7 @@ describe("AuditAccess", () => {
     expect(screen.getAllByText("Platform Owner").length).toBeGreaterThan(0);
     expect(screen.getAllByText("admin.dashboard.read").length).toBeGreaterThan(0);
     expect(screen.getByText("admin.audit.read")).toBeInTheDocument();
+    expect(screen.getByText("Duplicate worksheet uploaded by parent.")).toBeInTheDocument();
     expect(screen.getByText("req_12345678")).toBeInTheDocument();
   });
 

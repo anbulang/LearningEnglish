@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadAdminAccess, loadAdminDashboard, normalizeAdminAccessPayload, normalizeAdminDashboardPayload } from "./adminApi";
+import {
+  archiveAdminMaterial,
+  loadAdminAccess,
+  loadAdminDashboard,
+  normalizeAdminAccessPayload,
+  normalizeAdminDashboardPayload
+} from "./adminApi";
 
 const apiPayload = {
   tenants: [
@@ -160,5 +166,37 @@ describe("admin API client", () => {
       headers: { "X-Admin-Token": "local-admin-token" }
     });
     expect(result.auditEvents).toHaveLength(1);
+  });
+
+  it("archives an admin material with tenant scope and reason", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        required_permission: "admin.material.archive",
+        material: apiPayload.materials[0],
+        audit_event: accessPayload.audit_events[0]
+      })
+    });
+
+    const result = await archiveAdminMaterial({
+      apiBaseUrl: "http://127.0.0.1:8000/",
+      adminToken: "local-admin-token",
+      tenantScope: "all",
+      materialId: "material_1",
+      reason: "Duplicate worksheet uploaded by parent.",
+      fetchImpl
+    });
+
+    expect(result.requiredPermission).toBe("admin.material.archive");
+    expect(result.material.id).toBe("material_1");
+    expect(result.auditEvent.action).toBe("admin.dashboard.read");
+    expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/materials/material_1/archive?tenant_scope=all", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": "local-admin-token"
+      },
+      body: JSON.stringify({ reason: "Duplicate worksheet uploaded by parent." })
+    });
   });
 });

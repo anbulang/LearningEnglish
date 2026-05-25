@@ -21,10 +21,22 @@ export interface AdminAccessData {
   auditEvents: AdminAuditEvent[];
 }
 
+export interface AdminArchiveMaterialResult {
+  requiredPermission: string;
+  material: AdminMaterial;
+  auditEvent: AdminAuditEvent;
+}
+
 interface LoadAdminDashboardOptions {
   apiBaseUrl: string;
   adminToken: string;
   fetchImpl?: typeof fetch;
+}
+
+interface ArchiveAdminMaterialOptions extends LoadAdminDashboardOptions {
+  tenantScope: string;
+  materialId: string;
+  reason: string;
 }
 
 type AdminDashboardPayload = {
@@ -37,6 +49,12 @@ type AdminAccessPayload = {
   current_admin: Record<string, unknown>;
   permissions: unknown[];
   audit_events: Array<Record<string, unknown>>;
+};
+
+type AdminArchiveMaterialPayload = {
+  required_permission: unknown;
+  material: Record<string, unknown>;
+  audit_event: Record<string, unknown>;
 };
 
 export async function loadAdminDashboard(options: LoadAdminDashboardOptions): Promise<AdminDashboardData> {
@@ -63,6 +81,26 @@ export async function loadAdminAccess(options: LoadAdminDashboardOptions): Promi
   return normalizeAdminAccessPayload((await response.json()) as AdminAccessPayload);
 }
 
+export async function archiveAdminMaterial(options: ArchiveAdminMaterialOptions): Promise<AdminArchiveMaterialResult> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    `${apiBaseUrl}/v1/admin/materials/${encodeURIComponent(options.materialId)}/archive?tenant_scope=${encodeURIComponent(options.tenantScope)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": options.adminToken
+      },
+      body: JSON.stringify({ reason: options.reason })
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Admin archive material request failed: ${response.status}`);
+  }
+  return normalizeAdminArchiveMaterialPayload((await response.json()) as AdminArchiveMaterialPayload);
+}
+
 export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): AdminDashboardData {
   return {
     tenants: payload.tenants.map((tenant) => ({
@@ -77,31 +115,7 @@ export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): 
       activeParents: numberValue(tenant.active_parents),
       children: numberValue(tenant.children)
     })),
-    materials: payload.materials.map((material) => ({
-      id: stringValue(material.id),
-      tenantId: stringValue(material.tenant_id),
-      parentName: stringValue(material.parent_name),
-      childName: stringValue(material.child_name),
-      childAge: numberValue(material.child_age),
-      title: stringValue(material.title),
-      pageCount: numberValue(material.page_count),
-      jobId: stringValue(material.job_id),
-      confidenceSummary: stringValue(material.confidence_summary),
-      ocrConfidence: numberValue(material.ocr_confidence),
-      sourcePages: arrayValue(material.source_pages).map((page) => ({
-        pageIndex: numberValue(page.page_index),
-        thumbnailUrl: stringValue(page.thumbnail_url),
-        sourceType: stringValue(page.source_type) as AdminMaterial["sourcePages"][number]["sourceType"]
-      })),
-      materialStatus: stringValue(material.material_status) as MaterialStatus,
-      jobStatus: stringValue(material.job_status) as JobStatus,
-      provider: stringValue(material.provider) as AdminMaterial["provider"],
-      learningAssets: numberValue(material.learning_assets),
-      mediaStatus: stringValue(material.media_status) as MediaStatus,
-      slaMinutes: numberValue(material.sla_minutes),
-      updatedAt: stringValue(material.updated_at),
-      warnings: arrayValue(material.warnings).map((item) => stringValue(item))
-    })),
+    materials: payload.materials.map((material) => normalizeAdminMaterialPayload(material)),
     providerPolicies: payload.provider_policies.map((policy) => ({
       tenantId: stringValue(policy.tenant_id),
       tier: optionalStringValue(policy.tier),
@@ -111,6 +125,14 @@ export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): 
       monthlyGuardrail: numberValue(policy.monthly_guardrail),
       source: stringValue(policy.source) as ProviderPolicy["source"]
     }))
+  };
+}
+
+export function normalizeAdminArchiveMaterialPayload(payload: AdminArchiveMaterialPayload): AdminArchiveMaterialResult {
+  return {
+    requiredPermission: stringValue(payload.required_permission),
+    material: normalizeAdminMaterialPayload(payload.material),
+    auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
 
@@ -124,20 +146,52 @@ export function normalizeAdminAccessPayload(payload: AdminAccessPayload): AdminA
       status: stringValue(payload.current_admin.status)
     },
     permissions: payload.permissions.map((item) => stringValue(item)).filter(Boolean),
-    auditEvents: payload.audit_events.map((event) => ({
-      id: stringValue(event.id),
-      actorId: stringValue(event.actor_id),
-      actorRole: stringValue(event.actor_role),
-      tenantScope: stringValue(event.tenant_scope),
-      action: stringValue(event.action),
-      resourceType: stringValue(event.resource_type),
-      resourceId: stringValue(event.resource_id),
-      riskLevel: stringValue(event.risk_level) as AdminAuditEvent["riskLevel"],
-      result: stringValue(event.result) as AdminAuditEvent["result"],
-      reason: stringValue(event.reason),
-      traceId: stringValue(event.trace_id),
-      createdAt: stringValue(event.created_at)
-    }))
+    auditEvents: payload.audit_events.map((event) => normalizeAdminAuditEventPayload(event))
+  };
+}
+
+function normalizeAdminMaterialPayload(material: Record<string, unknown>): AdminMaterial {
+  return {
+    id: stringValue(material.id),
+    tenantId: stringValue(material.tenant_id),
+    parentName: stringValue(material.parent_name),
+    childName: stringValue(material.child_name),
+    childAge: numberValue(material.child_age),
+    title: stringValue(material.title),
+    pageCount: numberValue(material.page_count),
+    jobId: stringValue(material.job_id),
+    confidenceSummary: stringValue(material.confidence_summary),
+    ocrConfidence: numberValue(material.ocr_confidence),
+    sourcePages: arrayValue(material.source_pages).map((page) => ({
+      pageIndex: numberValue(page.page_index),
+      thumbnailUrl: stringValue(page.thumbnail_url),
+      sourceType: stringValue(page.source_type) as AdminMaterial["sourcePages"][number]["sourceType"]
+    })),
+    materialStatus: stringValue(material.material_status) as MaterialStatus,
+    jobStatus: stringValue(material.job_status) as JobStatus,
+    provider: stringValue(material.provider) as AdminMaterial["provider"],
+    learningAssets: numberValue(material.learning_assets),
+    mediaStatus: stringValue(material.media_status) as MediaStatus,
+    slaMinutes: numberValue(material.sla_minutes),
+    updatedAt: stringValue(material.updated_at),
+    warnings: arrayValue(material.warnings).map((item) => stringValue(item))
+  };
+}
+
+function normalizeAdminAuditEventPayload(event: Record<string, unknown>): AdminAuditEvent {
+  return {
+    id: stringValue(event.id),
+    actorId: stringValue(event.actor_id),
+    actorRole: stringValue(event.actor_role),
+    tenantScope: stringValue(event.tenant_scope),
+    action: stringValue(event.action),
+    resourceType: stringValue(event.resource_type),
+    resourceId: stringValue(event.resource_id),
+    riskLevel: stringValue(event.risk_level) as AdminAuditEvent["riskLevel"],
+    result: stringValue(event.result) as AdminAuditEvent["result"],
+    reason: stringValue(event.reason),
+    traceId: stringValue(event.trace_id),
+    createdAt: stringValue(event.created_at)
   };
 }
 
