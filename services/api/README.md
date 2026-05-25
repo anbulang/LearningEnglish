@@ -38,6 +38,7 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 - 上传讲义会创建 `CourseMaterial` 和 `MaterialParseJob`，然后通过 `Celery` 排队到后台识别，不再依赖前端首次读取 job 时才触发。
 - 默认 `AI_PROVIDER=stub`，可以直接跑通本地 MVP。
+- 默认 `SPEECH_PROVIDER=stub`，这是当前唯一完成端到端验证的口语评分模式；真实 speech assessment provider 只有配置骨架，尚未进入可验收状态。
 - 配置 `AI_PROVIDER=doubao`、`ARK_API_KEY`、`DOUBAO_VISION_MODEL_OR_ENDPOINT`、`DOUBAO_TEXT_MODEL_OR_ENDPOINT` 后，可走 Volcengine Ark / Doubao 真识别。
 - 如果当前网络依赖系统代理，需额外配置 `AI_HTTP_TRUST_ENV=true`；默认值 `false` 不会继承 shell 中的 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`。
 - `GET /v1/material-jobs/{job_id}` 用于查看后台识别状态；成功后状态推进到 `needs_review`。

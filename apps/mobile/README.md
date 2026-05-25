@@ -32,6 +32,6 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 
 ## 当前限制
 
-- speaking 页已支持真实录音上传和异步评分结果展示；真机录音上传证据仍需补齐到 `dist/harness/HN-017/`。
+- speaking 页已支持真实录音上传和异步 stub 评分结果展示；真实语音评分 provider 仍未实现，真机录音上传证据仍需补齐到 `dist/harness/HN-017/`。
 - `/reports` 当前复用 `ReviewTasksScreen(reportMode: true)`，还不是独立复杂报告模块。
 - MVP 主链截图证据已补齐；真实媒体 provider 的 readiness 证据仍在 `docs/harness/` 和 `dist/harness/HN-016*/` 继续补充。

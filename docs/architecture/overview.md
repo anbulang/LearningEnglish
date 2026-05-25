@@ -45,6 +45,6 @@ flowchart TD
 ## 当前不是的东西
 
 - 还不是生产级多环境系统：目前以本地 `Docker Compose` + 本地/局域网验证为主。
-- 还没有真实语音评分闭环：`speaking_attempts` 已有接口和 UI 入口，但评分仍是 stub。
+- 已具备录音上传 + 异步 stub 评分闭环：`speaking_attempts` 已有 multipart 上传、worker 评分、结果页和周报回填；真实语音评分 provider 仍未接通。
 - HN-016 / HN-016A 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用，并按 `MEDIA_IMAGE_PROVIDER` / `MEDIA_TTS_PROVIDER` 选择 OpenAI 或 DashScope；本地测试默认仍使用 mock provider。
 - 还没有完整 Android 可交付链路：iOS 内测链路已跑通，Android 仍受本机 SDK 环境阻塞。

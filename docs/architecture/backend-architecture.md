@@ -63,6 +63,11 @@
   - 回填 `CourseMaterial`、`KnowledgePack`、`ReviewTask`
 - `reporting.aggregate_weekly_report`
   - 生成轻量推荐语
+- `speaking.score_attempt`
+  - 读取已上传的孩子跟读音频
+  - 调用 speech assessment provider
+  - 回写 transcript、维度分、逐词反馈和中文建议
+  - 评分成功后累计 `WeeklyReport.speaking_attempts`
 
 以下任务名已预留，但当前仍是占位：
 
@@ -71,7 +76,6 @@
 - `knowledge.parse_material`
 - `review.generate_tasks`
 - `speaking.generate_tts`
-- `speaking.score_attempt`
 
 ## 当前状态机
 
@@ -116,6 +120,6 @@
 
 ## 当前限制
 
-- 真正的 OCR 和语音评分还没有全部生产化；真实媒体 provider 已有代码路径，但 readiness 证据仍待补齐。
+- 真正的 OCR 和语音评分还没有全部生产化；speech assessment 当前只有 stub 可稳定运行，真实媒体 provider 已有代码路径，但 readiness 证据仍待补齐。
 - 周报聚合仍是轻量逻辑，不是完整学习分析系统。
 - 任务队列默认面向本地环境验证，尚未形成生产级重试、监控和告警规范。

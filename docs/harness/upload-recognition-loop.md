@@ -9,7 +9,7 @@
 当前仍未收口的部分主要有三类：
 
 - `HN-016` OpenAI 真实媒体 provider 证据仍未补齐；`HN-016A` DashScope 已有 provider 直连与 worker/storage 回填证据，但还缺课程详情截图。
-- `HN-017` 已完成录音上传、音频 storage、异步 stub 评分、结果页和自动化测试；readiness 仍待补真机录音上传证据。
+- `HN-017` 已完成录音上传、音频 storage、异步 stub 评分、结果页和自动化测试；API/worker/storage 与真机安装连通证据已补，真实语音评分 provider 和物理手机录音提交截图仍待补。
 - Doubao、OpenAI、DashScope 真依赖在部分网络环境下仍可能受代理继承影响；如果 shell 已配置 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 但 API / worker 仍无法访问外网，需要额外设置 `AI_HTTP_TRUST_ENV=true` 或 `MEDIA_HTTP_TRUST_ENV=true`。
 
 ## 触发问题时的旧现状
@@ -382,14 +382,14 @@
 
 **目标：** 孩子围绕讲义核心词句录音后，系统保存音频、异步转写评分，并在结果页和周报中展示反馈。
 
-**当前状态：** 已完成代码实现和自动化验证。移动端 speaking 页支持录音、上传、轮询和结果展示；后端 `POST /v1/speaking-attempts` 已改为 multipart 音频上传并创建 `recording_uploaded` attempt；worker `speaking.score_attempt` 可用本地 deterministic stub 完成异步评分并回填周报。真实语音评分 provider 和真机证据仍待后续补齐。
+**当前状态：** 已完成 stub 闭环代码实现和自动化验证。移动端 speaking 页支持录音、上传、轮询和结果展示；后端 `POST /v1/speaking-attempts` 已改为 multipart 音频上传并创建 `recording_uploaded` attempt；worker `speaking.score_attempt` 可用本地 deterministic stub 完成异步评分并回填周报。2026-05-25 已完成真机安装启动和局域网 API 连通验证，并补齐 API multipart 上传、音频 storage、worker stub 评分和 scored attempt JSON 证据；真实语音评分 provider、物理手机录音提交流程截图仍待补齐。
 
 **范围内：**
 - 移动端 speaking 页支持录音、重录、上传、处理中、评分成功和失败重试。
 - 后端 `POST /v1/speaking-attempts` 接收 multipart 音频并保存到 storage。
 - `SpeakingAttempt` 合同扩展为包含目标文本、音频 object key、转写文本、总分、发音分、准确度、完整度、流利度、逐词反馈和中文建议。
 - worker 注册 `speaking.score_attempt`，异步调用 speech assessment provider。
-- 本地默认 `SPEECH_PROVIDER=stub`，真实 provider 显式配置后启用，缺配置不静默回退 stub。
+- 本地默认 `SPEECH_PROVIDER=stub`；真实 provider 目前只有配置边界和失败可见约束，尚未进入可验收状态。
 - 评分成功后累计 `WeeklyReport.speaking_attempts`，低分词句写入 `weak_items`。
 
 **范围外：**
@@ -412,10 +412,21 @@
 - 自动化：`services/api/.venv/bin/python -m pytest services/api/tests/test_speaking_attempts.py services/api/tests/test_speaking_assessment_provider.py -q`
 - 自动化：`services/workers/.venv/bin/python -m pytest services/workers/tests/test_speaking_attempt_task.py -q`
 - 自动化：`cd apps/mobile && flutter test test/features/materials/data/app_repository_test.dart test/features/speaking/presentation/speaking_partner_screen_test.dart`
-- 人工：真机录音上传后保存 attempt JSON、storage 摘录、worker log 和结果页截图。
+- 真机安装/连通：`xcrun devicectl device install app --device Chaucer ...`、`xcrun devicectl device process launch --device Chaucer ...`；API 日志已出现 iPhone `GET /healthz`。
+- 本地闭环证据：`POST /v1/speaking-attempts` multipart 上传后保存 attempt JSON，手动执行 `score_speaking_attempt()` 后保存 worker log 和 scored attempt JSON。
+- 待补人工：物理手机完成录音提交后保存 API 日志、worker 日志、attempt JSON 和结果页截图。
 
 **证据位置：**
 - `dist/harness/HN-017/`
+  - `speaking-attempt-upload.json`
+  - `speaking-attempt-scored.json`
+  - `speaking-worker.log`
+  - `api-worker-summary.json`
+  - `real-device-install-summary.json`
+  - `real-device-apps.json`
+  - `real-device-lock-state.json`
+  - `real-device-processes.json`
+  - `seed-summary.json`
 
 **设计与计划：**
 - `docs/superpowers/specs/2026-05-25-hn017-speaking-assessment-design.md`
