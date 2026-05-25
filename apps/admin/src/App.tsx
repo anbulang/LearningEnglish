@@ -6,6 +6,7 @@ import type { Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
 import { CommandCenter } from "./pages/CommandCenter";
+import { ContentPipeline } from "./pages/ContentPipeline";
 import { TenantDetail } from "./pages/TenantDetail";
 
 const pageTitles: Record<PageKey, MessageKey> = {
@@ -51,7 +52,10 @@ export function App() {
           isAllTenantPreview={tenantScope === "all"}
         />
       )}
-      {activePage !== "command" && activePage !== "tenants" && (
+      {activePage === "pipeline" && (
+        <ContentPipeline language={language} tenantScope={tenantScope} tenants={mockTenants} materials={mockMaterials} />
+      )}
+      {activePage !== "command" && activePage !== "tenants" && activePage !== "pipeline" && (
         <>
           <section className="page-header">
             <p className="eyebrow">Phase 1 mock prototype</p>
