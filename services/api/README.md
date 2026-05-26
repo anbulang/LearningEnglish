@@ -16,6 +16,13 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 ### 业务接口
 
+- `GET /v1/admin/dashboard?tenant_scope=all`
+- `GET /v1/admin/access?tenant_scope=all`
+- `POST /v1/admin/material-jobs/{job_id}/retry?tenant_scope=all`
+- `POST /v1/admin/materials/{material_id}/archive?tenant_scope=all`
+- `POST /v1/admin/providers/policies?tenant_scope=all`
+- `POST /v1/admin/tenants/{tenant_id}/modules/{module_key}?tenant_scope=all`
+- `POST /v1/admin/impersonation-sessions?tenant_scope=all`
 - `GET/POST /v1/children`
 - `GET/POST /v1/materials`
 - `GET /v1/materials/{material_id}`
@@ -36,6 +43,13 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 ## 当前行为
 
+- Admin read API 需要 `X-Admin-Token`，默认本地 token 为 `local-admin-token`。`/v1/admin/dashboard` 只读聚合当前数据库中的家长、孩子、讲义和解析任务，`/v1/admin/access` 返回当前管理员、权限和最近审计事件；生产级 admin session、role mutation、permission mutation 后续补齐。
+- Admin material job retry 是受控 mutation：必须提供 `reason`，需要 `admin.material.retry` 权限，会把解析任务和材料重新置为 `processing`、重新排队识别任务，并写入 high-risk `AuditEvent`。
+- Admin material archive 是受控 mutation：必须提供 `reason`，需要 `admin.material.archive` 权限，会把材料置为 `archived`、清理用户可见衍生内容，并写入 high-risk `AuditEvent`。
+- Admin provider policy override 是受控 mutation：必须提供 `reason`，需要 `admin.provider.override` 权限，会写入租户级 `TenantProviderPolicy`，并写入 high-risk `AuditEvent`；接口只返回 provider key、fallback、guardrail 和 source，不返回 secret 明文。
+- Admin tenant module toggle 是受控 mutation：必须提供 `reason`，需要 `admin.tenant.module.toggle` 权限，会写入租户级 `TenantModuleSetting`，并写入 high-risk `AuditEvent`；当前支持 `worksheet_import`、`ai_review`、`media_pipeline`、`speaking_score` 和 `weekly_reports`。
+- Admin supervised impersonation 是受控 mutation：必须提供 `reason`，需要 `admin.impersonation.start` 权限，会创建短期 `AdminImpersonationSession` 并写入 high-risk `AuditEvent`；接口不返回 parent access token 或 refresh token。
+- 本地 admin CORS 默认允许 `http://127.0.0.1:<port>` 和 `http://localhost:<port>`，可用 `ADMIN_CORS_ORIGINS` 配置固定来源，用 `ADMIN_CORS_ORIGIN_REGEX` 调整本地端口匹配。
 - 上传讲义会创建 `CourseMaterial` 和 `MaterialParseJob`，然后通过 `Celery` 排队到后台识别，不再依赖前端首次读取 job 时才触发。
 - 默认 `AI_PROVIDER=stub`，可以直接跑通本地 MVP。
 - 默认 `SPEECH_PROVIDER=stub`，这是当前唯一完成端到端验证的口语评分模式；真实 speech assessment provider 只有配置骨架，尚未进入可验收状态。
@@ -53,7 +67,13 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 ```bash
 UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
 .venv/bin/alembic upgrade head
-.venv/bin/uvicorn app.main:app --reload
+ADMIN_API_TOKEN=local-admin-token .venv/bin/uvicorn app.main:app --reload
+```
+
+本地 admin 页面如需接入 API：
+
+```bash
+ADMIN_API_BASE_URL=http://127.0.0.1:8000 ADMIN_API_TOKEN=local-admin-token make admin-dev-live
 ```
 
 ## 测试

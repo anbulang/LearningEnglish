@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
@@ -37,6 +38,13 @@ app = FastAPI(
 
 settings = get_settings()
 ensure_local_paths(settings)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings.admin_cors_origins),
+    allow_origin_regex=settings.admin_cors_origin_regex or None,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Token", "X-Request-ID"],
+)
 if settings.storage_backend == "s3":
     @app.get("/uploads/{object_key:path}", include_in_schema=False)
     def uploaded_asset(object_key: str) -> FileResponse:
@@ -60,6 +68,7 @@ app.include_router(api_router)
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next) -> Response:
     request_id = request.headers.get("x-request-id", f"req_{uuid4().hex[:8]}")
+    request.state.request_id = request_id
     started = perf_counter()
     response = await call_next(request)
     elapsed_ms = (perf_counter() - started) * 1000

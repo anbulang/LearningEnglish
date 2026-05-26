@@ -42,6 +42,82 @@ class AuthSessionModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class AdminUserModel(Base):
+    __tablename__ = "admin_users"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    permissions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class AdminAuditEventModel(Base):
+    __tablename__ = "admin_audit_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"audit_{uuid4().hex[:12]}")
+    actor_id: Mapped[str] = mapped_column(String(64), index=True)
+    actor_role: Mapped[str] = mapped_column(String(128))
+    tenant_scope: Mapped[str] = mapped_column(String(64), index=True)
+    action: Mapped[str] = mapped_column(String(128), index=True)
+    resource_type: Mapped[str] = mapped_column(String(128))
+    resource_id: Mapped[str] = mapped_column(String(128))
+    risk_level: Mapped[str] = mapped_column(String(32), default="low")
+    result: Mapped[str] = mapped_column(String(32), default="success")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    trace_id: Mapped[str] = mapped_column(String(64), index=True)
+    content_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AdminImpersonationSessionModel(Base):
+    __tablename__ = "admin_impersonation_sessions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"imp_{uuid4().hex[:12]}")
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), index=True)
+    target_parent_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), index=True)
+    actor_id: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="active", index=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class TenantProviderPolicyModel(Base):
+    __tablename__ = "tenant_provider_policies"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"policy_{uuid4().hex[:12]}")
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), unique=True, index=True)
+    ai_provider: Mapped[str] = mapped_column(String(32), default="stub")
+    media_provider: Mapped[str] = mapped_column(String(32), default="mock")
+    fallback_mode: Mapped[str] = mapped_column(String(64), default="global_stub")
+    monthly_guardrail: Mapped[int] = mapped_column(Integer, default=0)
+    source: Mapped[str] = mapped_column(String(64), default="tenant_override")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class TenantModuleSettingModel(Base):
+    __tablename__ = "tenant_module_settings"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"module_{uuid4().hex[:12]}")
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("parent_accounts.id"), index=True)
+    module_key: Mapped[str] = mapped_column(String(64), index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    source: Mapped[str] = mapped_column(String(64), default="tenant_override")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class PhoneBindingModel(Base):
     __tablename__ = "phone_bindings"
 
