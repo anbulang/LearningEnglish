@@ -62,7 +62,7 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 ```bash
 UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
 .venv/bin/alembic upgrade head
-.venv/bin/uvicorn app.main:app --reload
+ADMIN_API_TOKEN=local-admin-token .venv/bin/uvicorn app.main:app --reload
 ```
 
 本地 admin 页面如需接入 API：

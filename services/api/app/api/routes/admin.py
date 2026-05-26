@@ -6,6 +6,7 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy import delete
@@ -91,7 +92,10 @@ class AdminImpersonationSessionRequest(BaseModel):
 def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> AdminActor:
     if not x_admin_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing admin token")
-    if x_admin_token != get_settings().admin_api_token:
+    settings = get_settings()
+    if not settings.admin_api_token:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Admin API token is not configured")
+    if x_admin_token != settings.admin_api_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin token")
     return AdminActor(
         id="admin_local",
@@ -298,14 +302,17 @@ def retry_admin_material_job(
     try:
         enqueue_material_job(job.id)
     except Exception as exc:
+        enqueue_error = str(exc)
         job.status = JobStatus.failed.value
-        job.confidence_summary = f"识别任务排队失败：{exc}"
-        job.warnings = [f"识别任务排队失败：{exc}", "请稍后重新识别。"]
+        job.confidence_summary = f"识别任务排队失败：{enqueue_error}"
+        job.warnings = [f"识别任务排队失败：{enqueue_error}", "请稍后重新识别。"]
         material.status = MaterialStatus.failed.value
         db.add_all([job, material])
         db.commit()
         db.refresh(job)
         db.refresh(material)
+    else:
+        enqueue_error = ""
 
     audit_event = _record_audit_event(
         db,
@@ -315,15 +322,19 @@ def retry_admin_material_job(
         resource_type="material_parse_job",
         resource_id=job.id,
         risk_level="high",
-        result="success",
+        result="failed" if enqueue_error else "success",
         trace_id=_trace_id(request),
         reason=reason,
     )
-    return {
+    response_payload = {
         "required_permission": "admin.material.retry",
         "material": _admin_material_payload(material, child, parent, job),
         "audit_event": _audit_event_payload(audit_event),
     }
+    if enqueue_error:
+        response_payload["detail"] = "Material retry enqueue failed"
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=response_payload)
+    return response_payload
 
 
 @router.post("/providers/policies")

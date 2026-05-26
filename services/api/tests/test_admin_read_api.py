@@ -132,6 +132,34 @@ def test_admin_dashboard_allows_local_admin_cors_preflight(api_client) -> None:
     assert impersonation_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
     assert "POST" in impersonation_response.headers["access-control-allow-methods"]
 
+    delete_material_response = api_client.options(
+        "/v1/materials/material_test",
+        headers={
+            "Origin": "http://127.0.0.1:5174",
+            "Access-Control-Request-Method": "DELETE",
+            "Access-Control-Request-Headers": "Authorization",
+        },
+    )
+
+    assert delete_material_response.status_code == 200
+    assert delete_material_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+    assert "DELETE" in delete_material_response.headers["access-control-allow-methods"]
+    assert "Authorization" in delete_material_response.headers["access-control-allow-headers"]
+
+    primary_accent_response = api_client.options(
+        "/v1/materials/material_test/learning-assets/asset_test/primary-accent",
+        headers={
+            "Origin": "http://127.0.0.1:5174",
+            "Access-Control-Request-Method": "PATCH",
+            "Access-Control-Request-Headers": "Authorization,Content-Type",
+        },
+    )
+
+    assert primary_accent_response.status_code == 200
+    assert primary_accent_response.headers["access-control-allow-origin"] == "http://127.0.0.1:5174"
+    assert "PATCH" in primary_accent_response.headers["access-control-allow-methods"]
+    assert "Authorization" in primary_accent_response.headers["access-control-allow-headers"]
+
 
 def test_admin_archive_material_requires_reason(api_client) -> None:
     material_id, _, _ = seed_parent_material(
@@ -270,6 +298,64 @@ def test_admin_retry_material_job_resets_state_and_records_audit_event(api_clien
         assert job.confidence_summary == "任务已重新排队。"
         assert job.finished_at is None
         assert material.status == "processing"
+
+
+def test_admin_retry_material_job_records_failed_audit_when_enqueue_fails(api_client, monkeypatch) -> None:
+    def fail_enqueue(job_id: str) -> None:
+        raise RuntimeError("redis unavailable")
+
+    monkeypatch.setattr("app.api.routes.admin.enqueue_material_job", fail_enqueue)
+    material_id, job_id, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-retry-enqueue-failure",
+        phone_number="13800138132",
+        child_name="Olivia Retry",
+        material_title="Retry Enqueue Failure Worksheet",
+    )
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        material = db.get(CourseMaterialModel, material_id)
+        assert job is not None
+        assert material is not None
+        job.status = "failed"
+        job.warnings = ["OCR timeout"]
+        job.confidence_summary = "识别失败：OCR timeout"
+        material.status = "failed"
+        db.add_all([job, material])
+        db.commit()
+
+    response = api_client.post(
+        f"/v1/admin/material-jobs/{job_id}/retry?tenant_scope=all",
+        json={"reason": "Queue recovered but broker is still unavailable."},
+        headers={**ADMIN_HEADERS, "X-Request-ID": "req_admin_retry_enqueue_failure"},
+    )
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["required_permission"] == "admin.material.retry"
+    assert payload["detail"] == "Material retry enqueue failed"
+    assert payload["material"]["id"] == material_id
+    assert payload["material"]["material_status"] == "failed"
+    assert payload["material"]["job_status"] == "failed"
+    assert "redis unavailable" in payload["material"]["warnings"][0]
+    audit_event = payload["audit_event"]
+    assert audit_event["action"] == "admin.material_job.retry"
+    assert audit_event["resource_id"] == job_id
+    assert audit_event["result"] == "failed"
+    assert audit_event["reason"] == "Queue recovered but broker is still unavailable."
+    assert audit_event["trace_id"] == "req_admin_retry_enqueue_failure"
+
+    access = api_client.get("/v1/admin/access?tenant_scope=all", headers=ADMIN_HEADERS)
+    assert access.status_code == 200
+    assert audit_event["id"] in {event["id"] for event in access.json()["audit_events"]}
+
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, job_id)
+        material = db.get(CourseMaterialModel, material_id)
+        assert job is not None
+        assert material is not None
+        assert job.status == "failed"
+        assert material.status == "failed"
 
 
 def test_admin_provider_policy_override_requires_reason(api_client) -> None:

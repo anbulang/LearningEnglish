@@ -42,8 +42,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.admin_cors_origins),
     allow_origin_regex=settings.admin_cors_origin_regex or None,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["X-Admin-Token", "Content-Type"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Token", "X-Request-ID"],
 )
 if settings.storage_backend == "s3":
     @app.get("/uploads/{object_key:path}", include_in_schema=False)

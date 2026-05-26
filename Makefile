@@ -23,7 +23,7 @@ api-migrate:
 	cd services/api && DATABASE_URL=$(API_DATABASE_URL) .venv/bin/alembic upgrade head
 
 api-dev:
-	cd services/api && .venv/bin/uvicorn app.main:app --reload
+	cd services/api && ADMIN_API_TOKEN=$(ADMIN_API_TOKEN) .venv/bin/uvicorn app.main:app --reload
 
 api-test:
 	cd services/api && .venv/bin/pytest

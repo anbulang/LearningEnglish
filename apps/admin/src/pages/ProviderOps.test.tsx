@@ -58,4 +58,50 @@ describe("ProviderOps", () => {
     });
     expect(await screen.findByText("Provider policy override recorded.")).toBeInTheDocument();
   });
+
+  it("resets the override form to the scoped tenant policy when tenant scope changes", async () => {
+    const { rerender } = render(
+      <ProviderOps
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        policies={mockProviderPolicies}
+        dataMode="live"
+        onOverrideProviderPolicy={vi.fn()}
+      />
+    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Tenant"), "tenant_bright_future");
+    expect(screen.getByLabelText("AI provider")).toHaveValue("doubao");
+    expect(screen.getByLabelText("Media provider")).toHaveValue("real");
+    expect(screen.getByLabelText("Fallback mode")).toHaveValue("per_tenant");
+    expect(screen.getByLabelText("Monthly guardrail")).toHaveValue(1000);
+
+    await userEvent.selectOptions(screen.getByLabelText("AI provider"), "stub");
+    await userEvent.selectOptions(screen.getByLabelText("Media provider"), "real");
+    await userEvent.selectOptions(screen.getByLabelText("Fallback mode"), "per_tenant");
+    await userEvent.clear(screen.getByLabelText("Monthly guardrail"));
+    await userEvent.type(screen.getByLabelText("Monthly guardrail"), "750");
+    await userEvent.type(screen.getByLabelText("Audit reason"), "Draft change that should not leak.");
+
+    rerender(
+      <ProviderOps
+        language="en"
+        tenantScope="tenant_maple_pilot"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        policies={mockProviderPolicies}
+        dataMode="live"
+        onOverrideProviderPolicy={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText("Tenant")).toHaveValue("tenant_maple_pilot");
+    expect(screen.getByLabelText("AI provider")).toHaveValue("doubao");
+    expect(screen.getByLabelText("Media provider")).toHaveValue("mock");
+    expect(screen.getByLabelText("Fallback mode")).toHaveValue("auto_to_mock");
+    expect(screen.getByLabelText("Monthly guardrail")).toHaveValue(500);
+    expect(screen.getByLabelText("Audit reason")).toHaveValue("");
+  });
 });

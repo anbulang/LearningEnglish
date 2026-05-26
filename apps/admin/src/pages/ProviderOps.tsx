@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StatusChip } from "../components/ui";
 import { getEffectiveProviderPolicy, getMaterialsForScope, isBlockedMaterial } from "../domain/selectors";
 import type { AdminMaterial, Language, ProviderPolicy, Tenant, TenantScope } from "../domain/types";
@@ -53,6 +53,32 @@ export function ProviderOps({
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    const nextTenant = scopedTenants.find((tenant) => tenant.id === selectedTenantId) ?? scopedTenants[0] ?? null;
+    if (!nextTenant) {
+      setSelectedTenantId("");
+      setAiProvider("stub");
+      setMediaProvider("mock");
+      setFallbackMode("global_stub");
+      setMonthlyGuardrail(0);
+      setReason("");
+      setMessage("");
+      return;
+    }
+
+    const tenantChanged = nextTenant.id !== selectedTenantId;
+    if (tenantChanged) {
+      setSelectedTenantId(nextTenant.id);
+      setReason("");
+      setMessage("");
+    }
+    const policy = getEffectiveProviderPolicy(policies, nextTenant.id, nextTenant.tier);
+    setAiProvider(policy.aiProvider);
+    setMediaProvider(policy.mediaProvider);
+    setFallbackMode(policy.fallbackMode);
+    setMonthlyGuardrail(policy.monthlyGuardrail);
+  }, [policies, scopedTenants, selectedTenantId]);
+
   const policyRows = scopedTenants.map((tenant) => ({
     tenant,
     policy: getEffectiveProviderPolicy(policies, tenant.id, tenant.tier),
@@ -64,12 +90,7 @@ export function ProviderOps({
     if (!tenant) {
       return;
     }
-    const policy = getEffectiveProviderPolicy(policies, tenant.id, tenant.tier);
     setSelectedTenantId(tenant.id);
-    setAiProvider(policy.aiProvider);
-    setMediaProvider(policy.mediaProvider);
-    setFallbackMode(policy.fallbackMode);
-    setMonthlyGuardrail(policy.monthlyGuardrail);
     setReason("");
     setMessage("");
   }

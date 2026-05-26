@@ -59,8 +59,9 @@ def get_settings() -> Settings:
     service_root = app_file.parents[2]
     project_root = app_file.parents[4] if len(app_file.parents) > 4 else service_root
     default_storage = project_root / "tmp" / "uploads"
+    app_env = os.getenv("APP_ENV", "development")
     return Settings(
-        app_env=os.getenv("APP_ENV", "development"),
+        app_env=app_env,
         database_url=os.getenv("DATABASE_URL", f"sqlite:///{service_root / 'tmp' / 'learning_english.db'}"),
         jwt_secret=os.getenv("JWT_SECRET", "learning-english-dev-secret"),
         access_token_minutes=int(os.getenv("ACCESS_TOKEN_MINUTES", "30")),
@@ -99,7 +100,7 @@ def get_settings() -> Settings:
         openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", ""),
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
-        admin_api_token=os.getenv("ADMIN_API_TOKEN", "local-admin-token"),
+        admin_api_token=os.getenv("ADMIN_API_TOKEN", "").strip(),
         admin_cors_origins=_csv_tuple(os.getenv("ADMIN_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173")),
         admin_cors_origin_regex=os.getenv("ADMIN_CORS_ORIGIN_REGEX", r"^http://(127\.0\.0\.1|localhost):[0-9]+$"),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
