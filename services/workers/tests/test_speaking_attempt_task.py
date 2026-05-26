@@ -64,7 +64,24 @@ def test_score_speaking_attempt_updates_attempt_and_report() -> None:
         assert "a" in report.weak_items or "hop" in report.weak_items
 
 
-def _seed_speaking_attempt() -> None:
+def test_score_speaking_attempt_skips_duplicate_transcribing_delivery() -> None:
+    _configure_storage_env()
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    _seed_speaking_attempt(status=SpeakingAttemptStatus.transcribing.value)
+
+    result = score_speaking_attempt("attempt_test")
+
+    assert result == {"attempt_id": "attempt_test", "status": "transcribing"}
+    with SessionLocal() as db:
+        attempt = db.get(SpeakingAttemptModel, "attempt_test")
+        assert attempt is not None
+        assert attempt.status == SpeakingAttemptStatus.transcribing.value
+        report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == "child_test"))
+        assert report is None
+
+
+def _seed_speaking_attempt(*, status: str = SpeakingAttemptStatus.recording_uploaded.value) -> None:
     _configure_storage_env()
     uploads_root = os.environ["LOCAL_STORAGE_PATH"]
     object_key = "speaking_attempt/attempt_test/input.m4a"
@@ -120,7 +137,7 @@ def _seed_speaking_attempt() -> None:
             audio_object_key=object_key,
             audio_content_type="audio/mp4",
             audio_size_bytes=10,
-            status=SpeakingAttemptStatus.recording_uploaded.value,
+            status=status,
         )
         audio_asset = StoredAssetModel(
             id="stored_speaking_audio_test",

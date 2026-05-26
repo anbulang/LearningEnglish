@@ -539,5 +539,100 @@ void main() {
       expect(attempt.audioObjectKey, 'speaking_attempt/attempt_test/input.m4a');
       expect(attempt.audioDurationMs, 3100);
     });
+
+    test('rebuilds speaking multipart body before authorization retry',
+        () async {
+      final tempDir = await Directory.systemTemp.createTemp('speaking-audio-');
+      final audioFile = File('${tempDir.path}/rabbit.m4a');
+      await audioFile.writeAsBytes(<int>[1, 2, 3, 4]);
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      var currentToken = 'expired-token';
+      var refreshCalls = 0;
+      final forms = <FormData>[];
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: 'http://127.0.0.1:8000/v1',
+        ),
+      )..httpClientAdapter = SequenceDioAdapter([
+          (request) {
+            expect(request.path, '/speaking-attempts');
+            forms.add(request.data as FormData);
+            return ResponseBody.fromString(
+              jsonEncode(<String, dynamic>{'detail': 'Invalid access token'}),
+              401,
+              headers: <String, List<String>>{
+                Headers.contentTypeHeader: <String>['application/json'],
+              },
+            );
+          },
+          (request) {
+            expect(request.path, '/speaking-attempts');
+            forms.add(request.data as FormData);
+            return ResponseBody.fromString(
+              jsonEncode(<String, dynamic>{
+                'id': 'attempt_test',
+                'child_id': 'child_test',
+                'material_id': 'material_test',
+                'review_task_id': '',
+                'learning_asset_id': 'asset_rabbit',
+                'prompt_text': '跟读：A rabbit can hop fast.',
+                'target_text': 'A rabbit can hop fast.',
+                'audio_url':
+                    'http://testserver/uploads/speaking_attempt/attempt_test/input.m4a',
+                'audio_object_key': 'speaking_attempt/attempt_test/input.m4a',
+                'audio_content_type': 'audio/mp4',
+                'audio_size_bytes': 10,
+                'audio_duration_ms': 3100,
+                'transcript': '',
+                'pronunciation_score': null,
+                'overall_score': null,
+                'accuracy_score': null,
+                'fluency_score': null,
+                'completeness_score': null,
+                'feedback': '',
+                'word_feedback': <Map<String, dynamic>>[],
+                'suggestions': <String>[],
+                'provider': '',
+                'raw_result': <String, dynamic>{},
+                'failure_reason': '',
+                'status': 'recording_uploaded',
+              }),
+              201,
+              headers: <String, List<String>>{
+                Headers.contentTypeHeader: <String>['application/json'],
+              },
+            );
+          },
+        ]);
+
+      final repository = AppRepository(
+        dio,
+        accessToken: () => currentToken,
+        refreshSession: () async {
+          refreshCalls += 1;
+          currentToken = 'fresh-token';
+          return true;
+        },
+      );
+
+      final attempt = await repository.uploadSpeakingAttempt(
+        childId: 'child_test',
+        materialId: 'material_test',
+        learningAssetId: 'asset_rabbit',
+        promptText: '跟读：A rabbit can hop fast.',
+        targetText: 'A rabbit can hop fast.',
+        audioPath: audioFile.path,
+        audioDurationMs: 3100,
+      );
+
+      expect(attempt.status, SpeakingAttemptStatus.recordingUploaded);
+      expect(refreshCalls, 1);
+      expect(forms, hasLength(2));
+      expect(identical(forms[0], forms[1]), isFalse);
+    });
   });
 }

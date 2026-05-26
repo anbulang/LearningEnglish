@@ -128,7 +128,6 @@ def score_speaking_attempt(attempt_id: str) -> dict[str, str]:
         if attempt.status not in {
             SpeakingAttemptStatus.queued.value,
             SpeakingAttemptStatus.recording_uploaded.value,
-            SpeakingAttemptStatus.transcribing.value,
         }:
             return {"attempt_id": attempt.id, "status": attempt.status}
 

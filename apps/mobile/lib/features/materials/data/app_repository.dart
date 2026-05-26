@@ -427,26 +427,31 @@ class AppRepository implements MaterialsRepository {
     String learningAssetId = '',
     int audioDurationMs = 0,
   }) async {
-    final form = FormData.fromMap(<String, dynamic>{
-      'child_id': childId,
-      'material_id': materialId,
-      'prompt_text': promptText,
-      'target_text': targetText,
-      'review_task_id': reviewTaskId,
-      'learning_asset_id': learningAssetId,
-      'audio_duration_ms': audioDurationMs,
-      'audio': await MultipartFile.fromFile(
-        audioPath,
-        filename: 'speaking-attempt.m4a',
-        contentType: DioMediaType('audio', 'mp4'),
-      ),
-    });
+    Future<FormData> buildForm() async {
+      return FormData.fromMap(<String, dynamic>{
+        'child_id': childId,
+        'material_id': materialId,
+        'prompt_text': promptText,
+        'target_text': targetText,
+        'review_task_id': reviewTaskId,
+        'learning_asset_id': learningAssetId,
+        'audio_duration_ms': audioDurationMs,
+        'audio': await MultipartFile.fromFile(
+          audioPath,
+          filename: 'speaking-attempt.m4a',
+          contentType: DioMediaType('audio', 'mp4'),
+        ),
+      });
+    }
+
     final response = await _authorizedRequest<Map<String, dynamic>>(
-      (options) => _dio.post<Map<String, dynamic>>(
-        '/speaking-attempts',
-        data: form,
-        options: options,
-      ),
+      (options) async {
+        return _dio.post<Map<String, dynamic>>(
+          '/speaking-attempts',
+          data: await buildForm(),
+          options: options,
+        );
+      },
     );
     return SpeakingAttempt.fromJson(response.data ?? const <String, dynamic>{});
   }

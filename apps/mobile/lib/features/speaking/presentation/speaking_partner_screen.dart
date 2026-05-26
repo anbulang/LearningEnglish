@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_english_contracts/contracts.dart';
@@ -31,6 +32,7 @@ class SpeakingPartnerScreen extends ConsumerStatefulWidget {
 
 class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
   Timer? _pollTimer;
+  String? _pollingStoppedAttemptId;
   bool _isSubmitting = false;
   String? _errorMessage;
 
@@ -183,9 +185,15 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
   }
 
   Future<void> _clearRecording() async {
+    final recorder = ref.read(speakingRecorderControllerProvider).valueOrNull;
+    if (recorder?.isRecording == true) {
+      setState(() => _errorMessage = '请先停止录音，再清除录音。');
+      return;
+    }
     await ref.read(speakingRecorderControllerProvider.notifier).clear();
     ref.read(lastSpeakingAttemptProvider.notifier).state = null;
     _pollTimer?.cancel();
+    _pollingStoppedAttemptId = null;
     setState(() => _errorMessage = null);
   }
 
@@ -198,9 +206,14 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
       setState(() => _errorMessage = '请先录一段跟读音频。');
       return;
     }
+    if (recorder.isRecording) {
+      setState(() => _errorMessage = '请先停止录音，再提交评分。');
+      return;
+    }
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _pollingStoppedAttemptId = null;
     });
     try {
       final created =
@@ -234,7 +247,10 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
   }
 
   Future<void> _retryAttempt(String attemptId) async {
-    setState(() => _errorMessage = null);
+    setState(() {
+      _errorMessage = null;
+      _pollingStoppedAttemptId = null;
+    });
     try {
       final retried =
           await ref.read(appRepositoryProvider).retrySpeakingAttempt(attemptId);
@@ -254,6 +270,12 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
 
   void _syncPolling(SpeakingAttempt? attempt) {
     if (!_isAttemptProcessing(attempt)) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      _pollingStoppedAttemptId = null;
+      return;
+    }
+    if (_pollingStoppedAttemptId == attempt?.id) {
       _pollTimer?.cancel();
       _pollTimer = null;
       return;
@@ -278,8 +300,22 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
           _pollTimer = null;
           ref.invalidate(weeklyReportProvider);
         }
-      } catch (_) {
-        // 页面保持处理中状态，下一轮继续轮询。
+      } catch (error) {
+        if (!_isPermanentAttemptFetchError(error)) {
+          return;
+        }
+        if (!mounted) {
+          return;
+        }
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        setState(() {
+          _pollingStoppedAttemptId = current?.id;
+          _errorMessage = describeApiError(
+            error,
+            fallback: '录音结果暂时无法读取，请返回课程后重新进入。',
+          );
+        });
       }
     });
   }
@@ -304,6 +340,8 @@ class _RecordingActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canUseCapturedAudio =
+        !isBusy && !recorder.isRecording && recorder.audioPath.isNotEmpty;
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
@@ -321,12 +359,12 @@ class _RecordingActions extends StatelessWidget {
             label: Text(recorder.audioPath.isEmpty ? '开始录音' : '重新录音'),
           ),
         FilledButton.icon(
-          onPressed: isBusy || recorder.audioPath.isEmpty ? null : onSubmit,
+          onPressed: canUseCapturedAudio ? onSubmit : null,
           icon: const Icon(Icons.cloud_upload_rounded),
           label: Text(isBusy ? '评分中' : '提交评分'),
         ),
         OutlinedButton.icon(
-          onPressed: recorder.audioPath.isEmpty || isBusy ? null : onClear,
+          onPressed: canUseCapturedAudio ? onClear : null,
           icon: const Icon(Icons.refresh_rounded),
           label: const Text('清除录音'),
         ),
@@ -427,6 +465,20 @@ bool _isAttemptProcessing(SpeakingAttempt? attempt) {
   return attempt?.status == SpeakingAttemptStatus.recordingUploaded ||
       attempt?.status == SpeakingAttemptStatus.transcribing ||
       attempt?.status == SpeakingAttemptStatus.queued;
+}
+
+bool _isPermanentAttemptFetchError(Object error) {
+  if (error is! DioException) {
+    return false;
+  }
+  final statusCode = error.response?.statusCode;
+  if (statusCode == null) {
+    return false;
+  }
+  return statusCode >= 400 &&
+      statusCode < 500 &&
+      statusCode != 408 &&
+      statusCode != 429;
 }
 
 String _targetText(CourseMaterial? material) {

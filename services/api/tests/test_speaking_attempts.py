@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
+from app.core.settings import get_settings
 from app.core.db import SessionLocal
 from app.db.models import CourseMaterialModel, SpeakingAttemptModel, StoredAssetModel
 from app.models.contracts import MaterialStatus
@@ -221,3 +223,81 @@ def test_retry_speaking_attempt_requeues_failed_attempt(api_client, monkeypatch)
     assert payload["status"] == "recording_uploaded"
     assert payload["failure_reason"] == ""
     assert enqueued == [attempt_id]
+
+
+def test_retry_speaking_attempt_rejects_scored_attempt(api_client, monkeypatch) -> None:
+    headers, _ = auth_headers(api_client, auth_code="speaking-retry-scored-parent")
+    child_id, material_id = _create_child_and_material(api_client, headers)
+    attempt = SpeakingAttemptModel(
+        child_id=child_id,
+        material_id=material_id,
+        prompt_text="跟读：A rabbit can hop fast.",
+        target_text="A rabbit can hop fast.",
+        audio_url="http://testserver/uploads/speaking_attempt/attempt_scored/rabbit.m4a",
+        audio_object_key="speaking_attempt/attempt_scored/rabbit.m4a",
+        audio_content_type="audio/mp4",
+        audio_size_bytes=10,
+        status=SpeakingAttemptStatus.scored.value,
+        overall_score=88,
+    )
+    with SessionLocal() as db:
+        db.add(attempt)
+        db.commit()
+        db.refresh(attempt)
+        attempt_id = attempt.id
+    enqueued: list[str] = []
+    monkeypatch.setattr("app.api.routes.speaking_attempts.enqueue_speaking_attempt_job", enqueued.append)
+
+    response = api_client.post(f"/v1/speaking-attempts/{attempt_id}/retry", headers=headers)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Only failed speaking attempts can be retried"
+    assert enqueued == []
+    with SessionLocal() as db:
+        stored = db.get(SpeakingAttemptModel, attempt_id)
+        assert stored is not None
+        assert stored.status == SpeakingAttemptStatus.scored.value
+        assert stored.overall_score == 88
+
+
+def test_speaking_queue_uses_api_side_celery_client(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    class FakeCelery:
+        def __init__(self, name: str, *, broker: str, backend: str) -> None:
+            captured["name"] = name
+            captured["broker"] = broker
+            captured["backend"] = backend
+
+        @property
+        def conf(self) -> "FakeCelery":
+            return self
+
+        def update(self, **kwargs: Any) -> None:
+            captured["queue"] = kwargs["task_default_queue"]
+
+        def send_task(self, name: str, *, args: list[str], queue: str) -> None:
+            captured["task_name"] = name
+            captured["args"] = args
+            captured["send_queue"] = queue
+
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("REDIS_URL", "redis://redis:6379/0")
+    monkeypatch.delenv("CELERY_BROKER_URL", raising=False)
+    monkeypatch.delenv("CELERY_RESULT_BACKEND", raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "celery", type("CeleryModule", (), {"Celery": FakeCelery}))
+    get_settings.cache_clear()
+    try:
+        from app.services.speaking_queue import enqueue_speaking_attempt_job
+
+        enqueue_speaking_attempt_job("attempt_test")
+    finally:
+        get_settings.cache_clear()
+
+    assert captured["name"] == "learning_english_api"
+    assert captured["broker"] == "redis://redis:6379/0"
+    assert captured["backend"] == "redis://redis:6379/1"
+    assert captured["queue"] == "learning_english"
+    assert captured["task_name"] == "speaking.score_attempt"
+    assert captured["args"] == ["attempt_test"]
+    assert captured["send_queue"] == "learning_english"

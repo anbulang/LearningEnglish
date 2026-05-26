@@ -116,6 +116,11 @@ def retry_speaking_attempt(
     db: Session = Depends(get_db),
 ) -> SpeakingAttempt:
     attempt = _get_owned_attempt(db, current_parent.id, attempt_id)
+    if attempt.status != SpeakingAttemptStatus.failed.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only failed speaking attempts can be retried",
+        )
     attempt.status = SpeakingAttemptStatus.recording_uploaded.value
     attempt.failure_reason = ""
     attempt.updated_at = datetime.now(timezone.utc)
