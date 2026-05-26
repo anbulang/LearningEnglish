@@ -21,6 +21,8 @@ dependencies:
     path: ../../packages/contracts
   learning_english_design_tokens:
     path: ../../packages/design_tokens
+  path_provider: ^2.1.5
+  record: ^6.2.1
 
 dev_dependencies:
   flutter_test:

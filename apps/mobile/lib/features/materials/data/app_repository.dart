@@ -417,21 +417,59 @@ class AppRepository implements MaterialsRepository {
     return PracticeSession.fromJson(response.data ?? const <String, dynamic>{});
   }
 
-  Future<SpeakingAttempt> createSpeakingAttempt({
+  Future<SpeakingAttempt> uploadSpeakingAttempt({
     required String childId,
     required String materialId,
     required String promptText,
-    required String transcript,
+    required String targetText,
+    required String audioPath,
+    String reviewTaskId = '',
+    String learningAssetId = '',
+    int audioDurationMs = 0,
   }) async {
+    Future<FormData> buildForm() async {
+      return FormData.fromMap(<String, dynamic>{
+        'child_id': childId,
+        'material_id': materialId,
+        'prompt_text': promptText,
+        'target_text': targetText,
+        'review_task_id': reviewTaskId,
+        'learning_asset_id': learningAssetId,
+        'audio_duration_ms': audioDurationMs,
+        'audio': await MultipartFile.fromFile(
+          audioPath,
+          filename: 'speaking-attempt.m4a',
+          contentType: DioMediaType('audio', 'mp4'),
+        ),
+      });
+    }
+
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) async {
+        return _dio.post<Map<String, dynamic>>(
+          '/speaking-attempts',
+          data: await buildForm(),
+          options: options,
+        );
+      },
+    );
+    return SpeakingAttempt.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  Future<SpeakingAttempt> getSpeakingAttempt(String attemptId) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.get<Map<String, dynamic>>(
+        '/speaking-attempts/$attemptId',
+        options: options,
+      ),
+    );
+    return SpeakingAttempt.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  Future<SpeakingAttempt> retrySpeakingAttempt(String attemptId) async {
     final response = await _authorizedRequest<Map<String, dynamic>>(
       (options) => _dio.post<Map<String, dynamic>>(
-        '/speaking-attempts',
-        data: <String, dynamic>{
-          'child_id': childId,
-          'material_id': materialId,
-          'prompt_text': promptText,
-          'transcript': transcript,
-        },
+        '/speaking-attempts/$attemptId/retry',
         options: options,
       ),
     );

@@ -217,12 +217,13 @@ def test_archived_material_rejects_speaking_attempt(api_client) -> None:
 
     response = api_client.post(
         "/v1/speaking-attempts",
-        json={
+        data={
             "child_id": child_id,
             "material_id": material_id,
             "prompt_text": "Read rabbit aloud.",
-            "transcript": "rabbit",
+            "target_text": "rabbit",
         },
+        files={"audio": ("rabbit.m4a", b"fake-audio", "audio/mp4")},
         headers=headers,
     )
 
@@ -241,12 +242,13 @@ def test_speaking_attempts_route_filters_archived_material_even_if_attempt_row_e
     material_id, _ = _create_material(api_client, headers, child_id)
     create_response = api_client.post(
         "/v1/speaking-attempts",
-        json={
+        data={
             "child_id": child_id,
             "material_id": material_id,
             "prompt_text": "Read rabbit aloud.",
-            "transcript": "rabbit",
+            "target_text": "rabbit",
         },
+        files={"audio": ("rabbit.m4a", b"fake-audio", "audio/mp4")},
         headers=headers,
     )
     assert create_response.status_code == 201

@@ -26,6 +26,7 @@ LearningEnglish 是一个面向早期英语学习家庭的内测 MVP。家长拍
 | 讲义导入 | 支持移动端拍照/相册上传，后端保存原始图片和解析任务 |
 | AI 校对 | 默认 stub provider；可切换 Doubao / Volcengine Ark 做真实识别 |
 | 复习闭环 | `KnowledgePack`、`ReviewTask`、`PracticeSession`、`WeeklyReport` 已串联 |
+| 口语评分 | 移动端录音上传、音频存储、worker stub 评分、逐词反馈和结果页已接通；真实语音评分 provider 仍待实现 |
 | 移动端 | Flutter 自适应手机/平板页面结构，含登录、资料库、校对、课程、复习、报告 |
 | 工程验收 | `make` 入口和 Harness evidence 目录已固定，便于反复回归 |
 
@@ -206,7 +207,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 文档 |
 | --- | --- |
-| 项目进度与 ToDo | [`docs/project/2026-05-24-status-and-todo.md`](docs/project/2026-05-24-status-and-todo.md) |
+| 项目进度与 ToDo | [`docs/project/2026-05-25-status-and-todo.md`](docs/project/2026-05-25-status-and-todo.md) |
 | 系统总览 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |

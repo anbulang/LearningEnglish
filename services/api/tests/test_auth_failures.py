@@ -98,3 +98,31 @@ def test_logout_accepts_valid_refresh_token(api_client) -> None:
     _, refresh_token = auth_headers(api_client, auth_code="logout-parent")
     response = api_client.post("/v1/auth/logout", json={"refresh_token": refresh_token})
     assert response.status_code == 204
+
+
+def test_authenticated_wechat_login_returns_existing_children(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="returning-parent")
+    child_response = api_client.post(
+        "/v1/children",
+        json={
+            "name": "Mia",
+            "age": 6,
+            "level": "starter",
+            "learning_goal": "课后复习更稳定",
+            "preferred_review_duration_minutes": 10,
+            "parent_notes": "",
+        },
+        headers=headers,
+    )
+    assert child_response.status_code == 201
+    child_id = child_response.json()["id"]
+
+    login_response = api_client.post(
+        "/v1/auth/wechat/login",
+        json={"auth_code": "returning-parent"},
+    )
+
+    assert login_response.status_code == 200
+    payload = login_response.json()
+    assert payload["status"] == "authenticated"
+    assert [item["id"] for item in payload["children"]] == [child_id]

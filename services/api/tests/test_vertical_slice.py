@@ -153,16 +153,17 @@ def test_vertical_slice_flow(api_client, monkeypatch) -> None:
 
     speaking_response = api_client.post(
         "/v1/speaking-attempts",
-        json={
+        data={
             "child_id": child_id,
             "material_id": material_id,
-            "prompt_text": "What is this?",
-            "transcript": "It is a cat.",
+            "prompt_text": "跟读：A queen can sing.",
+            "target_text": "A queen can sing.",
         },
+        files={"audio": ("queen.m4a", b"fake-audio", "audio/mp4")},
         headers=headers,
     )
     assert speaking_response.status_code == 201
-    assert speaking_response.json()["status"] == "scored"
+    assert speaking_response.json()["status"] == "recording_uploaded"
 
     session_response = api_client.post(
         "/v1/practice-sessions",
@@ -182,7 +183,6 @@ def test_vertical_slice_flow(api_client, monkeypatch) -> None:
     assert report_response.status_code == 200
     report = report_response.json()["report"]
     assert report["completed_sessions"] >= 1
-    assert report["speaking_attempts"] >= 1
     assert "bird" in report["weak_items"]
 
     refresh_response = api_client.post("/v1/auth/refresh", json={"refresh_token": refresh_token})

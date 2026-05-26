@@ -284,16 +284,41 @@ class PracticeSessionCreate(BaseModel):
     weak_points: list[str] = Field(default_factory=list)
 
 
+class SpeakingWordFeedback(BaseModel):
+    word: str
+    score: Optional[float] = None
+    status: str = ""
+    tip: str = ""
+
+
 class SpeakingAttempt(BaseModel):
     id: str
     child_id: str
     material_id: str
+    review_task_id: str = ""
+    learning_asset_id: str = ""
     prompt_text: str
+    target_text: str = ""
     audio_url: str = ""
+    audio_object_key: str = ""
+    audio_content_type: str = ""
+    audio_size_bytes: int = 0
+    audio_duration_ms: int = 0
     transcript: str = ""
     pronunciation_score: Optional[float] = None
+    overall_score: Optional[float] = None
+    accuracy_score: Optional[float] = None
+    fluency_score: Optional[float] = None
+    completeness_score: Optional[float] = None
     feedback: str = ""
+    word_feedback: list[SpeakingWordFeedback] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
+    provider: str = ""
+    raw_result: dict[str, Any] = Field(default_factory=dict)
+    failure_reason: str = ""
     status: SpeakingAttemptStatus
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class SpeakingAttemptCreate(BaseModel):

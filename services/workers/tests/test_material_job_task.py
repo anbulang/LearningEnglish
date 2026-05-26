@@ -143,6 +143,7 @@ def _seed_media_material(material_id: str, asset_id: str, text: str) -> None:
 def test_material_job_task_is_registered() -> None:
     assert "materials.process_material_job" in celery_app.tasks
     assert "materials.process_learning_asset_media" in celery_app.tasks
+    assert "speaking.score_attempt" in celery_app.tasks
 
 
 def test_process_material_job_updates_db_state() -> None:

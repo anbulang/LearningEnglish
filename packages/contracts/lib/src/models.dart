@@ -663,6 +663,47 @@ class PracticeSession {
 }
 
 @immutable
+class SpeakingWordFeedback {
+  const SpeakingWordFeedback({
+    required this.word,
+    this.score,
+    this.status = '',
+    this.tip = '',
+  });
+
+  final double? score;
+  final String status;
+  final String tip;
+  final String word;
+
+  factory SpeakingWordFeedback.fromJson(JsonMap json) {
+    return SpeakingWordFeedback(
+      word: json['word'] as String? ?? '',
+      score: doubleFromJson(json['score']),
+      status: json['status'] as String? ?? '',
+      tip: json['tip'] as String? ?? '',
+    );
+  }
+
+  JsonMap toJson() => {
+        'word': word,
+        'score': score,
+        'status': status,
+        'tip': tip,
+      };
+}
+
+List<SpeakingWordFeedback> speakingWordFeedbackFromJson(dynamic value) {
+  if (value is! List) {
+    return const <SpeakingWordFeedback>[];
+  }
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map((item) => SpeakingWordFeedback.fromJson(item))
+      .toList();
+}
+
+@immutable
 class SpeakingAttempt {
   const SpeakingAttempt({
     required this.id,
@@ -674,29 +715,83 @@ class SpeakingAttempt {
     required this.pronunciationScore,
     required this.feedback,
     required this.status,
+    this.reviewTaskId = '',
+    this.learningAssetId = '',
+    this.targetText = '',
+    this.audioObjectKey = '',
+    this.audioContentType = '',
+    this.audioSizeBytes = 0,
+    this.audioDurationMs = 0,
+    this.overallScore,
+    this.accuracyScore,
+    this.fluencyScore,
+    this.completenessScore,
+    this.wordFeedback = const <SpeakingWordFeedback>[],
+    this.suggestions = const <String>[],
+    this.provider = '',
+    this.rawResult = const <String, dynamic>{},
+    this.failureReason = '',
+    this.createdAt,
+    this.updatedAt,
   });
 
+  final double? accuracyScore;
+  final String audioContentType;
+  final int audioDurationMs;
+  final String audioObjectKey;
+  final int audioSizeBytes;
   final String audioUrl;
   final String childId;
+  final double? completenessScore;
+  final DateTime? createdAt;
+  final String failureReason;
   final String feedback;
+  final double? fluencyScore;
   final String id;
+  final String learningAssetId;
   final String materialId;
+  final double? overallScore;
   final String promptText;
   final double? pronunciationScore;
+  final String provider;
+  final JsonMap rawResult;
+  final String reviewTaskId;
   final SpeakingAttemptStatus status;
+  final List<String> suggestions;
+  final String targetText;
   final String transcript;
+  final DateTime? updatedAt;
+  final List<SpeakingWordFeedback> wordFeedback;
 
   factory SpeakingAttempt.fromJson(JsonMap json) {
     return SpeakingAttempt(
       id: json['id'] as String,
       childId: json['child_id'] as String,
       materialId: json['material_id'] as String,
+      reviewTaskId: json['review_task_id'] as String? ?? '',
+      learningAssetId: json['learning_asset_id'] as String? ?? '',
       promptText: json['prompt_text'] as String,
+      targetText: json['target_text'] as String? ?? '',
       audioUrl: json['audio_url'] as String? ?? '',
+      audioObjectKey: json['audio_object_key'] as String? ?? '',
+      audioContentType: json['audio_content_type'] as String? ?? '',
+      audioSizeBytes: json['audio_size_bytes'] as int? ?? 0,
+      audioDurationMs: json['audio_duration_ms'] as int? ?? 0,
       transcript: json['transcript'] as String? ?? '',
       pronunciationScore: doubleFromJson(json['pronunciation_score']),
+      overallScore: doubleFromJson(json['overall_score']),
+      accuracyScore: doubleFromJson(json['accuracy_score']),
+      fluencyScore: doubleFromJson(json['fluency_score']),
+      completenessScore: doubleFromJson(json['completeness_score']),
       feedback: json['feedback'] as String? ?? '',
+      wordFeedback: speakingWordFeedbackFromJson(json['word_feedback']),
+      suggestions: stringListFromJson(json['suggestions']),
+      provider: json['provider'] as String? ?? '',
+      rawResult: (json['raw_result'] as JsonMap?) ?? const <String, dynamic>{},
+      failureReason: json['failure_reason'] as String? ?? '',
       status: SpeakingAttemptStatus.fromJson(json['status'] as String),
+      createdAt: dateTimeFromJson(json['created_at']),
+      updatedAt: dateTimeFromJson(json['updated_at']),
     );
   }
 
@@ -704,12 +799,30 @@ class SpeakingAttempt {
         'id': id,
         'child_id': childId,
         'material_id': materialId,
+        'review_task_id': reviewTaskId,
+        'learning_asset_id': learningAssetId,
         'prompt_text': promptText,
+        'target_text': targetText,
         'audio_url': audioUrl,
+        'audio_object_key': audioObjectKey,
+        'audio_content_type': audioContentType,
+        'audio_size_bytes': audioSizeBytes,
+        'audio_duration_ms': audioDurationMs,
         'transcript': transcript,
         'pronunciation_score': pronunciationScore,
+        'overall_score': overallScore,
+        'accuracy_score': accuracyScore,
+        'fluency_score': fluencyScore,
+        'completeness_score': completenessScore,
         'feedback': feedback,
+        'word_feedback': wordFeedback.map((item) => item.toJson()).toList(),
+        'suggestions': suggestions,
+        'provider': provider,
+        'raw_result': rawResult,
+        'failure_reason': failureReason,
         'status': status.value,
+        'created_at': createdAt?.toIso8601String(),
+        'updated_at': updatedAt?.toIso8601String(),
       };
 }
 

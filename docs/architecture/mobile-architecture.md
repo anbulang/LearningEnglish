@@ -88,7 +88,7 @@
 - 没有本地 `Drift` 缓存层。
 - 没有 PIN child mode。
 - 报告页仍是复用实现，不是独立复杂模块。
-- speaking 流程已有入口，但真实录音上传和 AI 评分尚未完成。
+- speaking 流程已完成录音、上传、轮询和 stub 评分结果展示；真实语音评分 provider 与真机 readiness 证据仍待补齐。
 
 ## 可靠性关注点
 

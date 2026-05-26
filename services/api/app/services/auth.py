@@ -17,9 +17,9 @@ from app.core.security import (
     now_utc,
 )
 from app.core.settings import get_settings
-from app.db.models import AuthSessionModel, ParentAccountModel, PhoneBindingModel
+from app.db.models import AuthSessionModel, ChildProfileModel, ParentAccountModel, PhoneBindingModel
 from app.models.contracts import AuthLoginResponse, AuthStatus, AuthTokens, ParentAccount
-from app.services.mappers import parent_account_from_model
+from app.services.mappers import child_profile_from_model, parent_account_from_model
 
 
 @dataclass(frozen=True)
@@ -94,11 +94,15 @@ class AuthService:
             )
 
         tokens = self._create_session(db, parent.id, user_agent=user_agent)
-        children = []
+        children = db.scalars(
+            select(ChildProfileModel)
+            .where(ChildProfileModel.parent_account_id == parent.id)
+            .order_by(ChildProfileModel.created_at)
+        ).all()
         return AuthLoginResponse(
             status=AuthStatus.authenticated,
             parent_account=parent_account_from_model(parent),
-            children=children,
+            children=[child_profile_from_model(item) for item in children],
             tokens=tokens,
         )
 
