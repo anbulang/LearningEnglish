@@ -24,9 +24,9 @@ LearningEnglish 是一个面向早期英语学习家庭的内测 MVP。家长拍
 | 能力 | 当前状态 |
 | --- | --- |
 | 讲义导入 | 支持移动端拍照/相册上传，后端保存原始图片和解析任务 |
-| AI 校对 | 默认 stub provider；可切换 Doubao / Volcengine Ark 做真实识别 |
+| AI 校对 | 默认使用阿里云百炼 / DashScope Qwen；测试环境显式切到 stub |
 | 复习闭环 | `KnowledgePack`、`ReviewTask`、`PracticeSession`、`WeeklyReport` 已串联 |
-| 口语评分 | 移动端录音上传、音频存储、worker stub 评分、逐词反馈和结果页已接通；真实语音评分 provider 仍待实现 |
+| 口语评分 | 移动端录音上传、音频存储、DashScope ASR + Qwen 评分、逐词反馈和结果页已接通；真机验收需提供公网可拉取的录音 URL |
 | 移动端 | Flutter 自适应手机/平板页面结构，含登录、资料库、校对、课程、复习、报告 |
 | 工程验收 | `make` 入口和 Harness evidence 目录已固定，便于反复回归 |
 
@@ -145,7 +145,7 @@ make harness-capture-ios-screen SCREEN=login-screen
 
 ## AI Provider
 
-默认配置使用 `AI_PROVIDER=stub`，不需要真实微信、短信、OCR 或 LLM 凭证即可跑通 MVP 主链。
+本地示例和 Docker Compose 默认使用阿里云百炼 / DashScope：`AI_PROVIDER=qwen`、`MEDIA_PROVIDER=real`、`SPEECH_PROVIDER=dashscope`。自动化测试会显式设置 `stub` / `mock`，用于不依赖外网的回归。
 
 <details>
 <summary>启用 Doubao / Volcengine Ark 真实识别</summary>
@@ -180,6 +180,36 @@ AI_HTTP_TRUST_ENV=true
 
 </details>
 
+<details>
+<summary>启用阿里云百炼 / DashScope Qwen 真实识别</summary>
+
+在 `infra/.env` 以及 API/worker 进程环境中配置同一组变量：
+
+```bash
+AI_PROVIDER=qwen
+DASHSCOPE_API_KEY=<your-dashscope-api-key>
+DASHSCOPE_COMPATIBLE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+QWEN_VISION_MODEL=qwen-vl-max-latest
+QWEN_MODEL=qwen-plus
+AI_REQUEST_TIMEOUT_SECONDS=180
+AI_MAX_IMAGE_COUNT=5
+AI_HTTP_TRUST_ENV=false
+```
+
+`qwen` provider 会使用 Qwen-VL 做讲义图片 OCR 和结构化抽取，再使用 Qwen 文本模型生成知识包草稿。`DASHSCOPE_API_KEY` 也可以继续复用给媒体补齐链路中的 DashScope 图片和 TTS provider。
+
+口语评分默认也走 DashScope ASR + Qwen 评分。真机调试时，App 可以继续访问局域网 API，但 DashScope ASR 必须从公网拉取录音文件；因此需要给 worker 配置一个暴露 `/uploads/{object_key}` 的公网根地址：
+
+```bash
+SPEECH_PROVIDER=dashscope
+SPEECH_ASSESSMENT_PROVIDER=dashscope
+SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL=https://your-public-host.example.com
+```
+
+留空时 worker 会沿用 `PUBLIC_BASE_URL` 生成的录音 URL；如果它是 `localhost`、`127.0.0.1`、`192.168.*` 或 `testserver`，DashScope provider 会提前失败并返回中文失败说明。
+
+</details>
+
 ## 打包与设备
 
 ```bash
@@ -207,7 +237,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 文档 |
 | --- | --- |
-| 项目进度与 ToDo | [`docs/project/2026-05-25-status-and-todo.md`](docs/project/2026-05-25-status-and-todo.md) |
+| 项目进度与 ToDo | [`docs/project/2026-05-27-status-and-todo.md`](docs/project/2026-05-27-status-and-todo.md) |
 | 系统总览 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |

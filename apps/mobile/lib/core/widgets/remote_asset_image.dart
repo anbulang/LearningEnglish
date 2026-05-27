@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
@@ -6,6 +9,11 @@ import 'package:learning_english_design_tokens/design_tokens.dart';
 bool isSvgAssetUrl(String value) {
   return Uri.tryParse(value)?.path.toLowerCase().endsWith('.svg') ??
       value.toLowerCase().endsWith('.svg');
+}
+
+@visibleForTesting
+bool isDataImageUrl(String value) {
+  return value.toLowerCase().startsWith('data:image/');
 }
 
 class RemoteAssetImage extends StatelessWidget {
@@ -30,6 +38,19 @@ class RemoteAssetImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (url.trim().isEmpty) {
       return _fallback(errorIcon);
+    }
+    if (isDataImageUrl(url)) {
+      final payload = _dataImageBytes(url);
+      if (payload == null) {
+        return _fallback(errorIcon);
+      }
+      return Image.memory(
+        payload,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _fallback(errorIcon),
+      );
     }
     if (isSvgAssetUrl(url)) {
       return SvgPicture.network(
@@ -59,5 +80,17 @@ class RemoteAssetImage extends StatelessWidget {
       alignment: Alignment.center,
       child: Icon(icon),
     );
+  }
+}
+
+Uint8List? _dataImageBytes(String value) {
+  final commaIndex = value.indexOf(',');
+  if (commaIndex == -1 || !value.substring(0, commaIndex).contains('base64')) {
+    return null;
+  }
+  try {
+    return base64Decode(value.substring(commaIndex + 1));
+  } on FormatException {
+    return null;
   }
 }

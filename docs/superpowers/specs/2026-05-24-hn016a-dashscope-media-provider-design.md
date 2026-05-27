@@ -2,7 +2,7 @@
 
 ## 背景
 
-HN-016 已经把学习资产媒体生成抽象为可配置 provider：本地默认 `mock`，正式模式可通过 `MEDIA_PROVIDER=real` 使用 OpenAI image / TTS provider。下一步需要增加国内模型支持，降低国内网络、计费、合规和可用性风险。
+HN-016 已经把学习资产媒体生成抽象为可配置 provider。HN-016A 完成后，本地示例和 Docker Compose 默认使用 `MEDIA_PROVIDER=real`、`MEDIA_IMAGE_PROVIDER=dashscope`、`MEDIA_TTS_PROVIDER=dashscope`；`mock` 只用于显式自动化回归。增加国内模型支持后，可以降低国内网络、计费、合规和可用性风险。
 
 HN-016A 只扩展媒体 provider，不改变 `CourseMaterial -> MaterialParseJob -> KnowledgePack -> ReviewTask` 主链，也不改变移动端直接消费 URL 和状态的方式。
 

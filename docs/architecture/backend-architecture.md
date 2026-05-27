@@ -106,10 +106,14 @@
 - 结构化解析：
   - `StubLanguageParsingProvider`
   - `DoubaoLanguageParsingProvider`
+  - `QwenLanguageParsingProvider`
 - 学习资产媒体：
   - Learning Asset Media Provider（mock / OpenAI image+TTS / DashScope image+TTS）
+- 口语评分：
+  - `StubSpeechAssessmentProvider`
+  - DashScope ASR + Qwen JSON 评分 provider
 
-目前真实外部依赖主要集中在 Doubao 和可配置媒体 provider。HN-016 / HN-016A 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用，并按图片/TTS 分别选择 OpenAI 或 DashScope；本地测试默认仍使用 mock provider。
+当前本地示例和 Docker Compose 默认使用阿里云百炼 / DashScope：`AI_PROVIDER=qwen`、`MEDIA_PROVIDER=real`、`MEDIA_IMAGE_PROVIDER=dashscope`、`MEDIA_TTS_PROVIDER=dashscope`、`SPEECH_PROVIDER=dashscope`。自动化测试仍会显式设置 stub/mock，以便不依赖外网。
 
 ## 存储约定
 
@@ -120,6 +124,6 @@
 
 ## 当前限制
 
-- 真正的 OCR 和语音评分还没有全部生产化；speech assessment 当前只有 stub 可稳定运行，真实媒体 provider 已有代码路径，但 readiness 证据仍待补齐。
+- 真实 OCR、真实媒体和真实语音评分都已有默认可运行路径，但 readiness 仍依赖本机网络、provider 密钥和物理设备证据，不是“开箱即生产”。
 - 周报聚合仍是轻量逻辑，不是完整学习分析系统。
 - 任务队列默认面向本地环境验证，尚未形成生产级重试、监控和告警规范。

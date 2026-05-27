@@ -7,12 +7,17 @@ from pathlib import Path
 import httpx
 import pytest
 
+from app.core.settings import get_settings
 from app.models.contracts import CourseMaterial, JobStatus, MaterialImageRecord, MaterialParseJob
 from app.services.pipeline import (
+    DashScopeProviderError,
     DoubaoLanguageParsingProvider,
     DoubaoProviderError,
     DoubaoVisionOCRProvider,
+    QwenLanguageParsingProvider,
+    QwenVisionOCRProvider,
     _fallback_learning_assets,
+    build_pipeline_service,
 )
 
 
@@ -55,6 +60,22 @@ def _completion_response(content: str) -> httpx.Response:
     )
 
 
+def _dashscope_chat_response(content: str) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": content,
+                    }
+                }
+            ]
+        },
+    )
+
+
 def _client_for_response(
     response: httpx.Response,
     *,
@@ -70,6 +91,22 @@ def _client_for_response(
             assert [item["type"] for item in content] == expected_content_types
         if inspect_content is not None:
             inspect_content(payload["input"][0]["content"])
+        return response
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def _dashscope_client_for_response(
+    response: httpx.Response,
+    *,
+    inspect_payload=None,
+) -> httpx.Client:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/compatible-mode/v1/chat/completions"
+        payload = json.loads(request.content)
+        assert payload["model"]
+        if inspect_payload is not None:
+            inspect_payload(payload)
         return response
 
     return httpx.Client(transport=httpx.MockTransport(handler))
@@ -150,6 +187,181 @@ def test_doubao_vision_provider_extracts_json_from_wrapped_response(tmp_path: Pa
 
     assert draft.title == "Quick!"
     assert draft.vocabulary == ["queen"]
+
+
+def test_qwen_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) -> None:
+    worksheet = tmp_path / "worksheet.jpg"
+    worksheet.write_bytes(b"fake-image")
+    payload = {
+        "ocr_text": "A rabbit can hop fast.",
+        "title": "Run, Hop, Go!",
+        "topic": "Rr phonics",
+        "vocabulary": ["rabbit", "hop"],
+        "sentences": ["A rabbit can hop fast."],
+        "image_records": [
+            {
+                "page_index": 1,
+                "image_title": "Rabbit page",
+                "ocr_text": "A rabbit can hop fast.",
+                "vocabulary": ["rabbit", "hop"],
+                "sentences": ["A rabbit can hop fast."],
+                "details": ["图片中有一只跳跃的兔子。"],
+            }
+        ],
+        "learning_assets": [
+            {
+                "text": "A rabbit can hop fast.",
+                "kind": "sentence",
+                "translation": "兔子可以跳得很快。",
+                "source_page_index": 1,
+                "source_visual_description": "兔子向前跳跃。",
+                "pronunciation_text": "A rabbit can hop fast.",
+                "image_prompt": "A colorful rabbit hopping fast.",
+                "difficulty": "easy",
+                "teaching_note": "注意 rabbit 和 hop 的发音。",
+            }
+        ],
+        "warnings": [],
+        "confidence_summary": "百炼识别到 1 个核心句子。",
+    }
+
+    def inspect_payload(request_payload: dict) -> None:
+        assert request_payload["model"] == "qwen-vl-test"
+        content = request_payload["messages"][1]["content"]
+        assert [item["type"] for item in content] == ["text", "text", "image_url"]
+        assert "image_records 数量必须等于输入图片数量" in content[0]["text"]
+        assert content[2]["image_url"]["url"].startswith("data:image")
+
+    provider = QwenVisionOCRProvider(
+        api_key="dashscope-key",
+        base_url="https://dashscope.test/compatible-mode/v1",
+        model="qwen-vl-test",
+        client=_dashscope_client_for_response(
+            _dashscope_chat_response(json.dumps(payload, ensure_ascii=False)),
+            inspect_payload=inspect_payload,
+        ),
+    )
+
+    draft = provider.extract(_material(), [worksheet])
+
+    assert draft.title == "Run, Hop, Go!"
+    assert draft.topic == "Rr phonics"
+    assert draft.vocabulary == ["rabbit", "hop"]
+    assert draft.sentences == ["A rabbit can hop fast."]
+    assert draft.image_records[0].image_title == "Rabbit page"
+    assert draft.learning_assets[0].text == "A rabbit can hop fast."
+    assert draft.confidence_summary == "百炼识别到 1 个核心句子。"
+
+
+def test_qwen_vision_provider_keeps_record_for_each_uploaded_image(tmp_path: Path) -> None:
+    first_page = tmp_path / "page-1.jpg"
+    second_page = tmp_path / "page-2.jpg"
+    first_page.write_bytes(b"fake-page-1")
+    second_page.write_bytes(b"fake-page-2")
+    payload = {
+        "ocr_text": "A horse can run fast. Find the queen. Quick!",
+        "title": "Storybook",
+        "topic": "phonics",
+        "vocabulary": ["horse", "queen"],
+        "sentences": ["A horse can run fast.", "Find the queen."],
+        "image_records": [
+            {
+                "page_index": 1,
+                "image_title": "Run, Hop, Go!",
+                "ocr_text": "A horse can run fast.",
+                "vocabulary": ["horse"],
+                "sentences": ["A horse can run fast."],
+                "details": ["第一页识别成功。"],
+            }
+        ],
+        "learning_assets": [],
+        "warnings": ["第二页识别结果缺失，已使用整体内容补齐。"],
+    }
+    provider = QwenVisionOCRProvider(
+        api_key="dashscope-key",
+        base_url="https://dashscope.test/compatible-mode/v1",
+        model="qwen-vl-test",
+        client=_dashscope_client_for_response(_dashscope_chat_response(json.dumps(payload, ensure_ascii=False))),
+    )
+
+    draft = provider.extract(_material(), [first_page, second_page])
+
+    assert [record.page_index for record in draft.image_records] == [1, 2]
+    assert draft.image_records[0].image_title == "Run, Hop, Go!"
+    assert draft.image_records[1].image_title == "Storybook 第 2 页"
+    assert draft.image_records[1].vocabulary == ["horse", "queen"]
+    assert draft.image_records[1].sentences == ["A horse can run fast.", "Find the queen."]
+
+
+def test_qwen_vision_provider_rejects_invalid_json(tmp_path: Path) -> None:
+    worksheet = tmp_path / "worksheet.jpg"
+    worksheet.write_bytes(b"fake-image")
+    provider = QwenVisionOCRProvider(
+        api_key="dashscope-key",
+        base_url="https://dashscope.test/compatible-mode/v1",
+        model="qwen-vl-test",
+        client=_dashscope_client_for_response(_dashscope_chat_response("not json")),
+    )
+
+    with pytest.raises(DashScopeProviderError, match="valid JSON"):
+        provider.extract(_material(), [worksheet])
+
+
+def test_qwen_language_provider_parses_knowledge_pack() -> None:
+    payload = {
+        "topic": "Rr phonics",
+        "lesson_summary": "练习 rabbit 和 hop。",
+        "review_recommendation": "先跟读句子，再做口语练习。",
+        "vocabulary_items": [{"word": "rabbit", "meaning_cn": "兔子"}],
+        "sentence_patterns": [
+            {
+                "sentence": "A rabbit can hop fast.",
+                "meaning_cn": "兔子可以跳得很快。",
+                "usage_type": "sentence",
+            }
+        ],
+    }
+    provider = QwenLanguageParsingProvider(
+        api_key="dashscope-key",
+        base_url="https://dashscope.test/compatible-mode/v1",
+        model="qwen-plus-test",
+        client=_dashscope_client_for_response(_dashscope_chat_response(json.dumps(payload, ensure_ascii=False))),
+    )
+
+    pack = provider.generate_knowledge_pack(_material(), _job())
+
+    assert pack.topic == "Rr phonics"
+    assert [item.word for item in pack.vocabulary_items] == ["rabbit"]
+    assert [item.sentence for item in pack.sentence_patterns] == ["A rabbit can hop fast."]
+
+
+def test_build_pipeline_service_uses_qwen_vision_and_language_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AI_PROVIDER", "qwen")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "dashscope-key")
+    monkeypatch.setenv("DASHSCOPE_COMPATIBLE_BASE_URL", "https://dashscope.test/compatible-mode/v1")
+    monkeypatch.setenv("QWEN_VISION_MODEL", "qwen-vl-test")
+    monkeypatch.setenv("QWEN_MODEL", "qwen-plus-test")
+    get_settings.cache_clear()
+
+    service = build_pipeline_service()
+
+    assert isinstance(service.ocr_provider, QwenVisionOCRProvider)
+    assert isinstance(service.parsing_provider, QwenLanguageParsingProvider)
+    assert service.ocr_provider.base_url == "https://dashscope.test/compatible-mode/v1"
+    assert service.ocr_provider.model == "qwen-vl-test"
+    assert service.parsing_provider.model == "qwen-plus-test"
+    get_settings.cache_clear()
+
+
+def test_build_pipeline_service_rejects_qwen_without_dashscope_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AI_PROVIDER", "qwen")
+    monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+    get_settings.cache_clear()
+
+    with pytest.raises(RuntimeError, match="DASHSCOPE_API_KEY"):
+        build_pipeline_service()
+
+    get_settings.cache_clear()
 
 
 def test_doubao_vision_provider_normalizes_list_title_and_topic(tmp_path: Path) -> None:

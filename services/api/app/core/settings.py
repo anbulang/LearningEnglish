@@ -51,15 +51,22 @@ class Settings:
     speech_assessment_base_url: str
     speech_assessment_app_key: str
     speech_assessment_secret_key: str
+    speech_assessment_asr_model: str
+    speech_assessment_scoring_model: str
+    speech_assessment_poll_interval_seconds: int
+    speech_assessment_max_poll_seconds: int
     speech_assessment_timeout_seconds: int
     speech_assessment_http_trust_env: bool
     speech_assessment_default_accent: str
+    speech_assessment_audio_public_base_url: str
     speaking_audio_max_bytes: int
     openai_api_key: str
     openai_base_url: str
     dashscope_api_key: str
     dashscope_base_url: str
+    dashscope_compatible_base_url: str
     qwen_model: str
+    qwen_vision_model: str
     sentry_dsn: str
 
 
@@ -88,7 +95,7 @@ def get_settings() -> Settings:
         use_path_style_s3=os.getenv("OBJECT_STORAGE_USE_PATH_STYLE", "true").lower() == "true",
         wechat_app_id=os.getenv("WECHAT_APP_ID", ""),
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", ""),
-        ai_provider=os.getenv("AI_PROVIDER", os.getenv("PROVIDER_MODE", "stub")),
+        ai_provider=os.getenv("AI_PROVIDER", os.getenv("PROVIDER_MODE", "qwen")),
         ark_api_key=os.getenv("ARK_API_KEY", ""),
         ark_base_url=os.getenv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
         doubao_vision_model_or_endpoint=os.getenv("DOUBAO_VISION_MODEL_OR_ENDPOINT", ""),
@@ -96,32 +103,45 @@ def get_settings() -> Settings:
         ai_request_timeout_seconds=int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "180")),
         ai_max_image_count=int(os.getenv("AI_MAX_IMAGE_COUNT", "5")),
         ai_http_trust_env=os.getenv("AI_HTTP_TRUST_ENV", "false").lower() == "true",
-        media_provider=os.getenv("MEDIA_PROVIDER", "mock"),
-        media_image_provider=os.getenv("MEDIA_IMAGE_PROVIDER", "openai"),
-        media_tts_provider=os.getenv("MEDIA_TTS_PROVIDER", "openai"),
-        media_image_model=os.getenv("MEDIA_IMAGE_MODEL", "gpt-image-2"),
+        media_provider=os.getenv("MEDIA_PROVIDER", "real"),
+        media_image_provider=os.getenv("MEDIA_IMAGE_PROVIDER", "dashscope"),
+        media_tts_provider=os.getenv("MEDIA_TTS_PROVIDER", "dashscope"),
+        media_image_model=os.getenv("MEDIA_IMAGE_MODEL", "wan2.6-image"),
         media_image_edit_model=os.getenv("MEDIA_IMAGE_EDIT_MODEL", "wanx2.1-imageedit"),
-        media_tts_model=os.getenv("MEDIA_TTS_MODEL", "gpt-4o-mini-tts"),
-        media_tts_us_voice=os.getenv("MEDIA_TTS_US_VOICE", "coral"),
-        media_tts_uk_voice=os.getenv("MEDIA_TTS_UK_VOICE", "cedar"),
+        media_tts_model=os.getenv("MEDIA_TTS_MODEL", "cosyvoice-v3-flash"),
+        media_tts_us_voice=os.getenv("MEDIA_TTS_US_VOICE", "longanyang"),
+        media_tts_uk_voice=os.getenv("MEDIA_TTS_UK_VOICE", "longanhuan"),
         media_request_timeout_seconds=int(os.getenv("MEDIA_REQUEST_TIMEOUT_SECONDS", "180")),
         media_http_trust_env=os.getenv("MEDIA_HTTP_TRUST_ENV", "false").lower() == "true",
         media_provider_poll_interval_seconds=int(os.getenv("MEDIA_PROVIDER_POLL_INTERVAL_SECONDS", "10")),
         media_provider_max_poll_seconds=int(os.getenv("MEDIA_PROVIDER_MAX_POLL_SECONDS", "180")),
-        speech_provider=os.getenv("SPEECH_PROVIDER", "stub"),
-        speech_assessment_provider=os.getenv("SPEECH_ASSESSMENT_PROVIDER", os.getenv("SPEECH_PROVIDER", "stub")),
-        speech_assessment_base_url=os.getenv("SPEECH_ASSESSMENT_BASE_URL", ""),
+        speech_provider=os.getenv("SPEECH_PROVIDER", "dashscope"),
+        speech_assessment_provider=os.getenv("SPEECH_ASSESSMENT_PROVIDER", os.getenv("SPEECH_PROVIDER", "dashscope")),
+        speech_assessment_base_url=os.getenv(
+            "SPEECH_ASSESSMENT_BASE_URL",
+            os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
+        ),
         speech_assessment_app_key=os.getenv("SPEECH_ASSESSMENT_APP_KEY", ""),
         speech_assessment_secret_key=os.getenv("SPEECH_ASSESSMENT_SECRET_KEY", ""),
+        speech_assessment_asr_model=os.getenv("SPEECH_ASSESSMENT_ASR_MODEL", "paraformer-v2"),
+        speech_assessment_scoring_model=os.getenv("SPEECH_ASSESSMENT_SCORING_MODEL", os.getenv("QWEN_MODEL", "qwen-plus")),
+        speech_assessment_poll_interval_seconds=int(os.getenv("SPEECH_ASSESSMENT_POLL_INTERVAL_SECONDS", "1")),
+        speech_assessment_max_poll_seconds=int(os.getenv("SPEECH_ASSESSMENT_MAX_POLL_SECONDS", "120")),
         speech_assessment_timeout_seconds=int(os.getenv("SPEECH_ASSESSMENT_TIMEOUT_SECONDS", "120")),
         speech_assessment_http_trust_env=os.getenv("SPEECH_ASSESSMENT_HTTP_TRUST_ENV", "false").lower() == "true",
         speech_assessment_default_accent=os.getenv("SPEECH_ASSESSMENT_DEFAULT_ACCENT", "am"),
+        speech_assessment_audio_public_base_url=os.getenv("SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL", ""),
         speaking_audio_max_bytes=int(os.getenv("SPEAKING_AUDIO_MAX_BYTES", str(10 * 1024 * 1024))),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         dashscope_api_key=os.getenv("DASHSCOPE_API_KEY", ""),
         dashscope_base_url=os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/api/v1"),
+        dashscope_compatible_base_url=os.getenv(
+            "DASHSCOPE_COMPATIBLE_BASE_URL",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        ),
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
+        qwen_vision_model=os.getenv("QWEN_VISION_MODEL", "qwen-vl-max-latest"),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
     )
 

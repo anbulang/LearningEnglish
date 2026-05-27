@@ -68,6 +68,10 @@ class DoubaoProviderError(RuntimeError):
     pass
 
 
+class DashScopeProviderError(RuntimeError):
+    pass
+
+
 class StubOCRProvider:
     def extract(self, material: CourseMaterial, local_paths: list[Path]) -> OCRDraft:
         topic = material.topic or "课堂主题"
@@ -192,6 +196,8 @@ class DoubaoVisionOCRProvider:
                     "vocabulary 只放英文单词或短语，sentences 只放英文句型或课堂对话句子。"
                     "image_records 必须按图片页返回数组，每项包含 page_index, image_title, "
                     "ocr_text, vocabulary, sentences, details。"
+                    "必须为每一张输入图片返回一个 image_records 对象，image_records 数量必须等于输入图片数量。"
+                    "如果某页识别困难，也要返回该页对象并在 details 或 warnings 中说明。"
                     "learning_assets 常规目标 8 到 15 个，绝对总量 1 到 20 个，每项包含 "
                     "text, kind, translation, source_page_index, source_bbox, "
                     "source_visual_description, pronunciation_text, image_prompt, difficulty, teaching_note。"
@@ -416,9 +422,21 @@ class StubLanguageParsingProvider:
 
 
 class QwenLanguageParsingProvider:
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        timeout_seconds: int = 60,
+        client: Optional[httpx.Client] = None,
+        trust_env: bool = False,
+    ) -> None:
         self.api_key = api_key
         self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.timeout_seconds = timeout_seconds
+        self._client = client
+        self.trust_env = trust_env
 
     def generate_knowledge_pack(self, material: CourseMaterial, job: MaterialParseJob) -> KnowledgePack:
         prompt = {
@@ -427,71 +445,137 @@ class QwenLanguageParsingProvider:
             "vocabulary": job.draft_vocabulary,
             "sentences": job.draft_sentences,
         }
-        response = httpx.post(
-            "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": self.model,
-                "temperature": 0.2,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You convert early-childhood English worksheet content into a JSON object "
-                            "with keys: topic, lesson_summary, review_recommendation, vocabulary_items, sentence_patterns. "
-                            "Keep Chinese explanations short and child-friendly."
-                        ),
-                    },
-                    {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
-                ],
-                "response_format": {"type": "json_object"},
-            },
-            timeout=30.0,
+        payload = _post_dashscope_chat_json(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You convert early-childhood English worksheet content into a JSON object "
+                        "with keys: topic, lesson_summary, review_recommendation, vocabulary_items, sentence_patterns. "
+                        "Keep Chinese explanations short and child-friendly."
+                    ),
+                },
+                {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
+            ],
+            timeout_seconds=self.timeout_seconds,
+            client=self._client,
+            trust_env=self.trust_env,
         )
-        response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
-        payload = json.loads(content)
-        knowledge_pack_id = f"knowledge_{uuid4().hex[:8]}"
-        vocabulary_items = [
-            VocabularyItem(
-                id=f"word_{uuid4().hex[:8]}",
-                knowledge_pack_id=knowledge_pack_id,
-                word=item["word"],
-                phonics=item.get("phonics", ""),
-                meaning_cn=item.get("meaning_cn", ""),
-                image_url=item.get("image_url", ""),
-                audio_url=item.get("audio_url", ""),
-                example_sentence=item.get("example_sentence", ""),
-            )
-            for item in payload.get("vocabulary_items", [])
-        ]
-        sentence_patterns = [
-            SentencePattern(
-                id=f"sentence_{uuid4().hex[:8]}",
-                knowledge_pack_id=knowledge_pack_id,
-                sentence=item["sentence"],
-                meaning_cn=item.get("meaning_cn", ""),
-                usage_type=item.get("usage_type", ""),
-                audio_url=item.get("audio_url", ""),
-            )
-            for item in payload.get("sentence_patterns", [])
-        ]
-        return KnowledgePack(
-            id=knowledge_pack_id,
-            material_id=material.id,
-            topic=payload.get("topic") or job.draft_topic or material.topic,
-            difficulty_band=DifficultyBand.repeat,
-            lesson_summary=payload.get("lesson_summary") or "本课围绕课堂主题展开。",
-            review_recommendation=payload.get("review_recommendation") or "先词卡，再做理解练习。",
-            vocabulary_items=vocabulary_items or StubLanguageParsingProvider().generate_knowledge_pack(material, job).vocabulary_items,
-            sentence_patterns=sentence_patterns or StubLanguageParsingProvider().generate_knowledge_pack(material, job).sentence_patterns,
-        )
+        return _knowledge_pack_from_payload(material, job, payload)
 
     def generate_review_tasks(self, material: CourseMaterial, knowledge_pack: KnowledgePack) -> list[ReviewTask]:
         return StubLanguageParsingProvider().generate_review_tasks(material, knowledge_pack)
+
+
+class QwenVisionOCRProvider:
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        timeout_seconds: int = 60,
+        max_image_count: int = 5,
+        client: Optional[httpx.Client] = None,
+        trust_env: bool = False,
+    ) -> None:
+        self.api_key = api_key
+        self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.timeout_seconds = timeout_seconds
+        self.max_image_count = max_image_count
+        self._client = client
+        self.trust_env = trust_env
+
+    def extract(self, material: CourseMaterial, local_paths: list[Path]) -> OCRDraft:
+        image_paths = local_paths[: self.max_image_count]
+        if not image_paths:
+            raise DashScopeProviderError("DashScope Qwen OCR requires at least one worksheet image")
+
+        content: list[dict[str, Any]] = [
+            {
+                "type": "text",
+                "text": (
+                    "请识别这些低龄儿童英语课堂讲义图片，并只返回 json。"
+                    "json 字段必须包含：ocr_text, title, topic, vocabulary, sentences, "
+                    "warnings, confidence_summary, image_records, learning_assets。"
+                    "vocabulary 只放英文单词或短语，sentences 只放英文句型或课堂对话句子。"
+                    "image_records 必须按图片页返回数组，每项包含 page_index, image_title, "
+                    "ocr_text, vocabulary, sentences, details。"
+                    "必须为每一张输入图片返回一个 image_records 对象，image_records 数量必须等于输入图片数量。"
+                    "如果某页识别困难，也要返回该页对象并在 details 或 warnings 中说明。"
+                    "learning_assets 常规目标 8 到 15 个，绝对总量 1 到 20 个，每项包含 "
+                    "text, kind, translation, source_page_index, source_bbox, "
+                    "source_visual_description, pronunciation_text, image_prompt, difficulty, teaching_note。"
+                    "source_bbox 使用 0 到 1 的相对坐标；无法定位时可为空。"
+                    "不要把教师说明、页码、版权或出版社信息放入 learning_assets。"
+                    "如果不确定，请在 warnings 用中文说明。"
+                ),
+            }
+        ]
+        for index, path in enumerate(image_paths, start=1):
+            content.append(
+                {
+                    "type": "text",
+                    "text": (
+                        f"第 {index} 页图片如下。请只把这张图片的 OCR、标题、词汇、句子和细节写入 "
+                        f"image_records 中 page_index={index} 的对象；不要混入其他页内容。"
+                    ),
+                }
+            )
+            content.append({"type": "image_url", "image_url": {"url": _image_data_url(path)}})
+
+        payload = _post_dashscope_chat_json(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "你是儿童英语讲义 OCR 和结构化抽取助手。只输出可解析 json，不要输出 Markdown。",
+                },
+                {"role": "user", "content": content},
+            ],
+            timeout_seconds=self.timeout_seconds,
+            client=self._client,
+            trust_env=self.trust_env,
+        )
+        ocr_text = str(payload.get("ocr_text") or "").strip()
+        vocabulary = _clean_string_list(payload.get("vocabulary"))
+        sentences = _clean_string_list(payload.get("sentences"))
+        draft_vocabulary = vocabulary or _extract_candidate_vocabulary(ocr_text)[:8]
+        draft_sentences = sentences or _extract_candidate_sentences([ocr_text])[:6]
+        draft_ocr_text = ocr_text or " ".join(draft_vocabulary + draft_sentences)
+        page_count = max(1, len(image_paths))
+        image_records = _image_records_from_payload(
+            material,
+            payload.get("image_records"),
+            title=_clean_text_value(payload.get("title")) or material.title,
+            ocr_text=draft_ocr_text,
+            vocabulary=draft_vocabulary,
+            sentences=draft_sentences,
+            page_count=page_count,
+        )
+        return OCRDraft(
+            ocr_text=draft_ocr_text,
+            title=_clean_text_value(payload.get("title")) or material.title,
+            topic=_clean_text_value(payload.get("topic")) or material.topic or _infer_topic(ocr_text),
+            vocabulary=draft_vocabulary,
+            sentences=draft_sentences,
+            image_records=image_records,
+            learning_assets=_learning_assets_from_payload(
+                material,
+                payload.get("learning_assets"),
+                vocabulary=draft_vocabulary,
+                sentences=draft_sentences,
+                page_count=page_count,
+            ),
+            warnings=_clean_string_list(payload.get("warnings")),
+            confidence_summary=_clean_text_value(payload.get("confidence_summary"))
+            or "百炼 Qwen-VL 已完成识别，请家长确认重点词句。",
+        )
 
 
 class ProviderBackedPipelineService:
@@ -590,13 +674,38 @@ def build_pipeline_service() -> ProviderBackedPipelineService:
             ),
         )
 
+    if provider_name in {"qwen", "dashscope", "bailian", "aliyun"}:
+        missing = [
+            name
+            for name, value in {
+                "DASHSCOPE_API_KEY": settings.dashscope_api_key,
+                "QWEN_VISION_MODEL": settings.qwen_vision_model,
+                "QWEN_MODEL": settings.qwen_model,
+            }.items()
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(f"DashScope Qwen provider is enabled but missing config: {', '.join(missing)}")
+        return ProviderBackedPipelineService(
+            ocr_provider=QwenVisionOCRProvider(
+                api_key=settings.dashscope_api_key,
+                base_url=settings.dashscope_compatible_base_url,
+                model=settings.qwen_vision_model,
+                timeout_seconds=settings.ai_request_timeout_seconds,
+                max_image_count=settings.ai_max_image_count,
+                trust_env=settings.ai_http_trust_env,
+            ),
+            parsing_provider=QwenLanguageParsingProvider(
+                api_key=settings.dashscope_api_key,
+                base_url=settings.dashscope_compatible_base_url,
+                model=settings.qwen_model,
+                timeout_seconds=settings.ai_request_timeout_seconds,
+                trust_env=settings.ai_http_trust_env,
+            ),
+        )
+
     ocr_provider: OCRProvider = StubOCRProvider()
     parsing_provider: LanguageParsingProvider = StubLanguageParsingProvider()
-    if provider_name == "qwen" and settings.dashscope_api_key:
-        parsing_provider = QwenLanguageParsingProvider(
-            api_key=settings.dashscope_api_key,
-            model=settings.qwen_model,
-        )
     return ProviderBackedPipelineService(ocr_provider=ocr_provider, parsing_provider=parsing_provider)
 
 
@@ -732,6 +841,89 @@ def _post_chat_json(
     if not isinstance(payload, dict):
         raise DoubaoProviderError("Doubao response JSON must be an object")
     return payload
+
+
+def _post_dashscope_chat_json(
+    *,
+    api_key: str,
+    base_url: str,
+    model: str,
+    messages: list[dict[str, Any]],
+    timeout_seconds: int,
+    client: Optional[httpx.Client],
+    trust_env: bool = False,
+) -> dict[str, Any]:
+    if not api_key:
+        raise DashScopeProviderError("DashScope Qwen provider requires DASHSCOPE_API_KEY")
+    if not model:
+        raise DashScopeProviderError("DashScope Qwen provider requires model config")
+    owns_client = client is None
+    _log_proxy_diagnostics(trust_env=trust_env)
+    active_client = client or httpx.Client(timeout=timeout_seconds, trust_env=trust_env)
+    try:
+        response = active_client.post(
+            f"{base_url.rstrip('/')}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "temperature": 0.2,
+                "max_tokens": 4096,
+                "messages": messages,
+            },
+            timeout=timeout_seconds,
+        )
+    except httpx.TimeoutException as exc:
+        raise DashScopeProviderError(f"DashScope Qwen request timeout after {timeout_seconds}s") from exc
+    except httpx.HTTPError as exc:
+        raise DashScopeProviderError(f"DashScope Qwen request failed: {exc}") from exc
+    finally:
+        if owns_client:
+            active_client.close()
+
+    if response.status_code >= 400:
+        detail = _response_error_detail(response)
+        raise DashScopeProviderError(f"DashScope Qwen API returned HTTP {response.status_code}: {detail}")
+
+    content = _dashscope_response_output_text(response)
+    if not content.strip():
+        raise DashScopeProviderError("DashScope Qwen response contained empty content")
+    try:
+        payload = json.loads(_extract_json_object_text(content))
+    except json.JSONDecodeError as exc:
+        raise DashScopeProviderError("DashScope Qwen response content must be valid JSON") from exc
+    if not isinstance(payload, dict):
+        raise DashScopeProviderError("DashScope Qwen response JSON must be an object")
+    return payload
+
+
+def _dashscope_response_output_text(response: httpx.Response) -> str:
+    try:
+        root = response.json()
+    except json.JSONDecodeError as exc:
+        raise DashScopeProviderError("DashScope Qwen response did not contain valid JSON") from exc
+
+    choices = root.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise DashScopeProviderError("DashScope Qwen response did not contain choices")
+    first = choices[0]
+    if not isinstance(first, dict):
+        raise DashScopeProviderError("DashScope Qwen response choice must be an object")
+    message = first.get("message")
+    if not isinstance(message, dict):
+        raise DashScopeProviderError("DashScope Qwen response missing message")
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        return "".join(parts).strip()
+    raise DashScopeProviderError("DashScope Qwen response message content must be text")
 
 
 def _log_proxy_diagnostics(*, trust_env: bool) -> None:
@@ -965,6 +1157,19 @@ def _image_records_from_payload(
 
     effective_page_count = max(page_count or 0, len(fallback), len(material.source_images), len(material.source_image_keys), 1)
     by_page = {record.page_index: record for record in fallback}
+    for index in range(1, effective_page_count + 1):
+        if index not in by_page:
+            by_page[index] = MaterialImageRecord(
+                id=f"image_{uuid4().hex[:12]}",
+                page_index=index,
+                url=material.source_images[index - 1] if index <= len(material.source_images) else "",
+                object_key=material.source_image_keys[index - 1] if index <= len(material.source_image_keys) else "",
+                image_title=f"{title or material.title or '讲义'} 第 {index} 页",
+                ocr_text=ocr_text,
+                vocabulary=vocabulary,
+                sentences=sentences,
+                details=["AI 未返回该页独立明细，已使用整份讲义识别结果补齐，请家长确认。"],
+            )
     for index, raw in enumerate(raw_records, start=1):
         if not isinstance(raw, dict):
             continue

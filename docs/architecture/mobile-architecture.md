@@ -31,7 +31,7 @@
 /profile
 ```
 
-其中 `/reports` 当前复用 `ReviewTasksScreen(reportMode: true)`，还没有单独的 `reports` feature 目录。
+其中 `/reports` 使用独立 `ReportsScreen`，展示周报摘要、讲义汇总和每个学习资产的掌握度。
 
 ## 当前模块划分
 
@@ -46,7 +46,9 @@
 - `lessons`
   - 课程详情、学习资产媒体状态
 - `review`
-  - 复习任务列表、复习执行页、报告模式
+  - 复习任务列表、复习执行页
+- `reports`
+  - 独立报告页、学习资产掌握度、讲义汇总
 - `speaking`
   - 口语陪练入口
 - `coaching`
@@ -87,8 +89,8 @@
 
 - 没有本地 `Drift` 缓存层。
 - 没有 PIN child mode。
-- 报告页仍是复用实现，不是独立复杂模块。
-- speaking 流程已完成录音、上传、轮询和 stub 评分结果展示；真实语音评分 provider 与真机 readiness 证据仍待补齐。
+- `/reports` 已拆成独立 `ReportsScreen`，但多周趋势和更强的报告解释层还比较轻。
+- speaking 流程已完成录音、上传、轮询、DashScope ASR + Qwen 真实评分结果展示；readiness 缺口主要是物理手机录音提交与结果页截图证据。
 
 ## 可靠性关注点
 

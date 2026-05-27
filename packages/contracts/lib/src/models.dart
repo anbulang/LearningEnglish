@@ -899,6 +899,160 @@ class ParentCoachingScript {
 }
 
 @immutable
+class LearningAssetMastery {
+  const LearningAssetMastery({
+    required this.assetId,
+    required this.materialId,
+    required this.materialTitle,
+    required this.text,
+    required this.kind,
+    required this.masteryScore,
+    required this.masteryStatus,
+    required this.reviewAttempts,
+    required this.completedReviewTasks,
+    required this.pendingReviewTasks,
+    required this.speakingAttempts,
+    required this.weakPoints,
+    required this.recommendedAction,
+    this.translation = '',
+    this.imageUrl = '',
+    this.audioUrl = '',
+    this.bestSpeakingScore,
+    this.lastSpeakingScore,
+  });
+
+  final String assetId;
+  final String audioUrl;
+  final double? bestSpeakingScore;
+  final int completedReviewTasks;
+  final String imageUrl;
+  final String kind;
+  final double? lastSpeakingScore;
+  final String masteryStatus;
+  final double masteryScore;
+  final String materialId;
+  final String materialTitle;
+  final int pendingReviewTasks;
+  final String recommendedAction;
+  final int reviewAttempts;
+  final int speakingAttempts;
+  final String text;
+  final String translation;
+  final List<String> weakPoints;
+
+  factory LearningAssetMastery.fromJson(JsonMap json) {
+    return LearningAssetMastery(
+      assetId: json['asset_id'] as String? ?? '',
+      materialId: json['material_id'] as String? ?? '',
+      materialTitle: json['material_title'] as String? ?? '',
+      text: json['text'] as String? ?? '',
+      kind: json['kind'] as String? ?? 'word',
+      translation: json['translation'] as String? ?? '',
+      imageUrl: json['image_url'] as String? ?? '',
+      audioUrl: json['audio_url'] as String? ?? '',
+      masteryScore: doubleFromJson(json['mastery_score']) ?? 0,
+      masteryStatus: json['mastery_status'] as String? ?? 'needs_practice',
+      reviewAttempts: json['review_attempts'] as int? ?? 0,
+      completedReviewTasks: json['completed_review_tasks'] as int? ?? 0,
+      pendingReviewTasks: json['pending_review_tasks'] as int? ?? 0,
+      speakingAttempts: json['speaking_attempts'] as int? ?? 0,
+      bestSpeakingScore: doubleFromJson(json['best_speaking_score']),
+      lastSpeakingScore: doubleFromJson(json['last_speaking_score']),
+      weakPoints: stringListFromJson(json['weak_points']),
+      recommendedAction: json['recommended_action'] as String? ?? '',
+    );
+  }
+
+  JsonMap toJson() => {
+        'asset_id': assetId,
+        'material_id': materialId,
+        'material_title': materialTitle,
+        'text': text,
+        'kind': kind,
+        'translation': translation,
+        'image_url': imageUrl,
+        'audio_url': audioUrl,
+        'mastery_score': masteryScore,
+        'mastery_status': masteryStatus,
+        'review_attempts': reviewAttempts,
+        'completed_review_tasks': completedReviewTasks,
+        'pending_review_tasks': pendingReviewTasks,
+        'speaking_attempts': speakingAttempts,
+        'best_speaking_score': bestSpeakingScore,
+        'last_speaking_score': lastSpeakingScore,
+        'weak_points': weakPoints,
+        'recommended_action': recommendedAction,
+      };
+}
+
+List<LearningAssetMastery> learningAssetMasteryFromJson(dynamic value) {
+  if (value is! List) {
+    return const <LearningAssetMastery>[];
+  }
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map((item) => LearningAssetMastery.fromJson(item))
+      .toList();
+}
+
+@immutable
+class MaterialReportSummary {
+  const MaterialReportSummary({
+    required this.materialId,
+    required this.title,
+    required this.assetCount,
+    required this.completedReviewTasks,
+    required this.pendingReviewTasks,
+    required this.speakingAttempts,
+    this.topic = '',
+    this.averageSpeakingScore,
+  });
+
+  final double? averageSpeakingScore;
+  final int assetCount;
+  final int completedReviewTasks;
+  final String materialId;
+  final int pendingReviewTasks;
+  final int speakingAttempts;
+  final String title;
+  final String topic;
+
+  factory MaterialReportSummary.fromJson(JsonMap json) {
+    return MaterialReportSummary(
+      materialId: json['material_id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      topic: json['topic'] as String? ?? '',
+      assetCount: json['asset_count'] as int? ?? 0,
+      completedReviewTasks: json['completed_review_tasks'] as int? ?? 0,
+      pendingReviewTasks: json['pending_review_tasks'] as int? ?? 0,
+      speakingAttempts: json['speaking_attempts'] as int? ?? 0,
+      averageSpeakingScore: doubleFromJson(json['average_speaking_score']),
+    );
+  }
+
+  JsonMap toJson() => {
+        'material_id': materialId,
+        'title': title,
+        'topic': topic,
+        'asset_count': assetCount,
+        'completed_review_tasks': completedReviewTasks,
+        'pending_review_tasks': pendingReviewTasks,
+        'speaking_attempts': speakingAttempts,
+        'average_speaking_score': averageSpeakingScore,
+      };
+}
+
+List<MaterialReportSummary> materialReportSummariesFromJson(dynamic value) {
+  if (value is! List) {
+    return const <MaterialReportSummary>[];
+  }
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map((item) => MaterialReportSummary.fromJson(item))
+      .toList();
+}
+
+@immutable
 class WeeklyReport {
   const WeeklyReport({
     required this.id,
@@ -910,12 +1064,18 @@ class WeeklyReport {
     required this.speakingAttempts,
     required this.weakItems,
     required this.recommendedActions,
+    this.reportSummary = '',
+    this.assetMastery = const <LearningAssetMastery>[],
+    this.materialSummaries = const <MaterialReportSummary>[],
   });
 
+  final List<LearningAssetMastery> assetMastery;
   final String childId;
   final int completedSessions;
   final String id;
+  final List<MaterialReportSummary> materialSummaries;
   final List<String> recommendedActions;
+  final String reportSummary;
   final int reviewedWords;
   final int speakingAttempts;
   final List<String> weakItems;
@@ -933,6 +1093,10 @@ class WeeklyReport {
       speakingAttempts: json['speaking_attempts'] as int? ?? 0,
       weakItems: stringListFromJson(json['weak_items']),
       recommendedActions: stringListFromJson(json['recommended_actions']),
+      reportSummary: json['report_summary'] as String? ?? '',
+      assetMastery: learningAssetMasteryFromJson(json['asset_mastery']),
+      materialSummaries:
+          materialReportSummariesFromJson(json['material_summaries']),
     );
   }
 
@@ -946,5 +1110,9 @@ class WeeklyReport {
         'speaking_attempts': speakingAttempts,
         'weak_items': weakItems,
         'recommended_actions': recommendedActions,
+        'report_summary': reportSummary,
+        'asset_mastery': assetMastery.map((item) => item.toJson()).toList(),
+        'material_summaries':
+            materialSummaries.map((item) => item.toJson()).toList(),
       };
 }

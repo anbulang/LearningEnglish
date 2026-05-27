@@ -38,7 +38,11 @@ from app.models.contracts import (
 from app.services.learning_asset_media import MediaProviderConfigurationError, build_media_provider_bundle
 from app.services.mappers import course_material_from_model, material_job_from_model
 from app.services.pipeline import build_pipeline_service
-from app.services.speaking_assessment import SpeechAssessmentError, build_speech_assessment_provider
+from app.services.speaking_assessment import (
+    SpeechAssessmentError,
+    build_speech_assessment_audio_url,
+    build_speech_assessment_provider,
+)
 from app.services.storage import get_storage_service
 
 
@@ -146,13 +150,20 @@ def score_speaking_attempt(attempt_id: str) -> dict[str, str]:
         if audio_asset is None:
             raise SpeechAssessmentError("录音文件不存在。")
         audio_path = storage.resolve_local_path(audio_asset)
+        settings = get_settings()
+        assessment_audio_url = build_speech_assessment_audio_url(
+            stored_audio_url=attempt.audio_url,
+            object_key=attempt.audio_object_key,
+            public_base_url=settings.speech_assessment_audio_public_base_url,
+        )
         provider = build_speech_assessment_provider()
         result = provider.assess(
             audio_path=audio_path,
+            audio_url=assessment_audio_url,
             target_text=attempt.target_text or attempt.prompt_text,
             prompt_text=attempt.prompt_text,
             attempt_id=attempt.id,
-            accent=get_settings().speech_assessment_default_accent,
+            accent=settings.speech_assessment_default_accent,
         )
 
         db.refresh(material)

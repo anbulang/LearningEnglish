@@ -36,11 +36,12 @@ def test_learning_asset_includes_media_error_fields() -> None:
     assert LearningAsset(**payload).tts_uk_url.endswith("/tts-uk.mp3")
 
 
-def test_media_provider_settings_default_to_mock_safe_values(monkeypatch) -> None:
+def test_media_provider_settings_default_to_dashscope_real_values(monkeypatch) -> None:
     monkeypatch.delenv("MEDIA_PROVIDER", raising=False)
     monkeypatch.delenv("MEDIA_IMAGE_PROVIDER", raising=False)
     monkeypatch.delenv("MEDIA_TTS_PROVIDER", raising=False)
     monkeypatch.delenv("MEDIA_IMAGE_MODEL", raising=False)
+    monkeypatch.delenv("MEDIA_IMAGE_EDIT_MODEL", raising=False)
     monkeypatch.delenv("MEDIA_TTS_MODEL", raising=False)
     monkeypatch.delenv("MEDIA_TTS_US_VOICE", raising=False)
     monkeypatch.delenv("MEDIA_TTS_UK_VOICE", raising=False)
@@ -51,13 +52,14 @@ def test_media_provider_settings_default_to_mock_safe_values(monkeypatch) -> Non
 
     settings = get_settings()
 
-    assert settings.media_provider == "mock"
-    assert settings.media_image_provider == "openai"
-    assert settings.media_tts_provider == "openai"
-    assert settings.media_image_model == "gpt-image-2"
-    assert settings.media_tts_model == "gpt-4o-mini-tts"
-    assert settings.media_tts_us_voice == "coral"
-    assert settings.media_tts_uk_voice == "cedar"
+    assert settings.media_provider == "real"
+    assert settings.media_image_provider == "dashscope"
+    assert settings.media_tts_provider == "dashscope"
+    assert settings.media_image_model == "wan2.6-image"
+    assert settings.media_image_edit_model == "wanx2.1-imageedit"
+    assert settings.media_tts_model == "cosyvoice-v3-flash"
+    assert settings.media_tts_us_voice == "longanyang"
+    assert settings.media_tts_uk_voice == "longanhuan"
     assert settings.media_request_timeout_seconds == 180
     assert settings.media_http_trust_env is False
     assert settings.openai_base_url == "https://api.openai.com/v1"
