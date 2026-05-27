@@ -26,6 +26,7 @@ def configure_test_environment(prefix: str) -> None:
     os.environ["MEDIA_PROVIDER"] = "mock"
     os.environ["SPEECH_PROVIDER"] = "stub"
     os.environ["SPEECH_ASSESSMENT_PROVIDER"] = "stub"
+    os.environ["ADMIN_API_TOKEN"] = "local-admin-token"
 
 
 configure_test_environment("learning-english-api-suite-")

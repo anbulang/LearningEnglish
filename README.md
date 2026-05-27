@@ -100,6 +100,11 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | 重置本地 infra | `make infra-reset` |
 | API 测试 | `make api-test` |
 | Worker 测试 | `make worker-test` |
+| Admin 原型安装 | `make admin-install` |
+| Admin 原型开发 | `make admin-dev` |
+| Admin 连接本地 API | `make admin-dev-live` |
+| Admin 原型测试 | `make admin-test` |
+| Admin 原型构建 | `make admin-build` |
 | Flutter 测试 | `make mobile-test` |
 | Flutter 静态检查 | `make mobile-analyze` |
 | Android debug APK | `make mobile-apk` |
@@ -113,6 +118,7 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | 路径 | 内容 |
 | --- | --- |
 | [`apps/mobile`](apps/mobile) | Flutter 移动端，覆盖 phone / tablet 自适应体验 |
+| [`apps/admin`](apps/admin) | React/Vite 多租户后台原型，Phase 1 使用 mock 数据验证后台信息架构 |
 | [`packages/contracts`](packages/contracts) | Dart 侧共享领域契约，和 API Pydantic models 对齐 |
 | [`packages/design_tokens`](packages/design_tokens) | Flutter 设计 token |
 | [`services/api`](services/api) | FastAPI API、SQLAlchemy models、Alembic migrations |
