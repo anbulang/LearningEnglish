@@ -1886,7 +1886,7 @@ Learning Asset Media Provider（mock / OpenAI image / OpenAI TTS）
 Add a limitation note:
 
 ```markdown
-- HN-016 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用；本地测试默认仍使用 mock provider。
+- HN-016A 后，本地示例和 Docker Compose 默认使用 `MEDIA_PROVIDER=real`、`MEDIA_IMAGE_PROVIDER=dashscope`、`MEDIA_TTS_PROVIDER=dashscope`；自动化测试显式设置 mock provider。
 ```
 
 - [ ] **Step 5: Run doc diff check**

@@ -67,7 +67,10 @@ class IllustratedHeroCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -80,10 +83,7 @@ class IllustratedHeroCard extends StatelessWidget {
                       ),
                       child: Text(eyebrow, style: AppTextStyles.eyebrow),
                     ),
-                    if (badge != null) ...<Widget>[
-                      const SizedBox(width: AppSpacing.sm),
-                      badge!,
-                    ],
+                    if (badge != null) badge!,
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),

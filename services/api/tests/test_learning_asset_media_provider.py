@@ -790,6 +790,7 @@ def test_dashscope_tts_synthesize_uses_cosyvoice_and_downloads_audio() -> None:
                     "voice": "uk-voice",
                     "format": "mp3",
                     "language_hints": ["en"],
+                    "instruction": "请使用清晰、标准的英式英语发音，适合儿童跟读。",
                 },
             }
             return httpx.Response(

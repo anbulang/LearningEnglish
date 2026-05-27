@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+from datetime import date, datetime, timezone
+
 from app.core.db import SessionLocal
-from app.db.models import CourseMaterialModel, MaterialParseJobModel
-from app.models.contracts import JobStatus, MaterialStatus
+from app.db.models import (
+    CourseMaterialModel,
+    MaterialParseJobModel,
+    PracticeSessionModel,
+    ReviewTaskModel,
+    SpeakingAttemptModel,
+)
+from app.models.contracts import JobStatus, MaterialStatus, ReviewTaskStatus, SpeakingAttemptStatus, TaskType
 from conftest import auth_headers, configure_test_environment
 
 
@@ -124,6 +132,116 @@ def test_weekly_report_rejects_unknown_child(api_client) -> None:
     response = api_client.get("/v1/reports/weekly", params={"child_id": "child_missing"}, headers=headers)
     assert response.status_code == 404
     assert response.json()["detail"] == "Child not found"
+
+
+def test_weekly_report_includes_learning_asset_mastery(api_client) -> None:
+    headers, _ = auth_headers(api_client, auth_code="asset-mastery-report-parent")
+    child_id = _create_child(api_client, headers)
+    with SessionLocal() as db:
+        material = CourseMaterialModel(
+            id="material_report_assets",
+            child_id=child_id,
+            teacher_name="Emma",
+            lesson_date=date(2026, 5, 25),
+            title="Run, Hop, Go!",
+            topic="Phonics Rr",
+            status=MaterialStatus.ready.value,
+            uploaded_at=datetime.now(timezone.utc),
+            learning_assets=[
+                {
+                    "id": "asset_rabbit",
+                    "text": "rabbit",
+                    "kind": "word",
+                    "translation": "兔子",
+                    "generated_image_url": "https://cdn.test/rabbit.png",
+                    "tts_us_url": "https://cdn.test/rabbit-us.mp3",
+                    "primary_accent": "us",
+                },
+                {
+                    "id": "asset_sentence",
+                    "text": "A rabbit can hop fast.",
+                    "kind": "sentence",
+                    "translation": "兔子能跳得很快。",
+                    "generated_image_url": "https://cdn.test/rabbit-hop.png",
+                    "primary_accent": "us",
+                },
+            ],
+        )
+        completed_task = ReviewTaskModel(
+            id="task_report_rabbit",
+            child_id=child_id,
+            material_id=material.id,
+            task_type=TaskType.flashcard.value,
+            difficulty="easy",
+            content_json={"asset_id": "asset_rabbit", "text": "rabbit", "prompt": "看图跟读：rabbit"},
+            due_date=datetime.now(timezone.utc),
+            status=ReviewTaskStatus.completed.value,
+        )
+        pending_task = ReviewTaskModel(
+            id="task_report_sentence",
+            child_id=child_id,
+            material_id=material.id,
+            task_type=TaskType.speaking_prompt.value,
+            difficulty="repeat",
+            content_json={
+                "asset_id": "asset_sentence",
+                "text": "A rabbit can hop fast.",
+                "prompt": "跟读句子：A rabbit can hop fast.",
+            },
+            due_date=datetime.now(timezone.utc),
+            status=ReviewTaskStatus.pending.value,
+        )
+        session = PracticeSessionModel(
+            child_id=child_id,
+            review_task_ids=[completed_task.id],
+            score=86,
+            weak_points=["A rabbit can hop fast."],
+        )
+        attempt = SpeakingAttemptModel(
+            id="attempt_report_rabbit",
+            child_id=child_id,
+            material_id=material.id,
+            learning_asset_id="asset_rabbit",
+            prompt_text="Read rabbit aloud.",
+            target_text="rabbit",
+            audio_url="https://cdn.test/attempt.m4a",
+            audio_object_key="speaking/attempt.m4a",
+            transcript="rabbit",
+            pronunciation_score=0.91,
+            overall_score=92,
+            accuracy_score=93,
+            fluency_score=90,
+            completeness_score=95,
+            feedback="rabbit 读得清楚。",
+            status=SpeakingAttemptStatus.scored.value,
+        )
+        db.add_all([material, completed_task, pending_task, session, attempt])
+        db.commit()
+
+    response = api_client.get("/v1/reports/weekly", params={"child_id": child_id}, headers=headers)
+
+    assert response.status_code == 200
+    report = response.json()["report"]
+    assert "2 个学习资产" in report["report_summary"]
+    assert report["material_summaries"] == [
+        {
+            "material_id": "material_report_assets",
+            "title": "Run, Hop, Go!",
+            "topic": "Phonics Rr",
+            "asset_count": 2,
+            "completed_review_tasks": 1,
+            "pending_review_tasks": 1,
+            "speaking_attempts": 1,
+            "average_speaking_score": 92.0,
+        }
+    ]
+    by_asset = {item["asset_id"]: item for item in report["asset_mastery"]}
+    assert by_asset["asset_rabbit"]["mastery_status"] == "mastered"
+    assert by_asset["asset_rabbit"]["completed_review_tasks"] == 1
+    assert by_asset["asset_rabbit"]["speaking_attempts"] == 1
+    assert by_asset["asset_rabbit"]["best_speaking_score"] == 92.0
+    assert by_asset["asset_sentence"]["mastery_status"] == "needs_practice"
+    assert by_asset["asset_sentence"]["weak_points"] == ["A rabbit can hop fast."]
 
 
 def test_review_tasks_filter_returns_created_tasks(api_client) -> None:

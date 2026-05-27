@@ -156,7 +156,10 @@ class AppRepository implements MaterialsRepository {
       ),
     );
     final payload = response.data ?? const <String, dynamic>{};
-    return WeeklyReport.fromJson(payload['report'] as Map<String, dynamic>);
+    return WeeklyReport.fromJson(
+      _normalizeWeeklyReportRuntimeUrls(
+          payload['report'] as Map<String, dynamic>),
+    );
   }
 
   Future<ChildProfile> createChild({
@@ -276,6 +279,26 @@ class AppRepository implements MaterialsRepository {
     }
     normalized['draft_learning_assets'] =
         _normalizeLearningAssetUrls(normalized['draft_learning_assets']);
+    return normalized;
+  }
+
+  Map<String, dynamic> _normalizeWeeklyReportRuntimeUrls(
+      Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    final mastery = normalized['asset_mastery'];
+    if (mastery is List) {
+      normalized['asset_mastery'] = mastery.map((item) {
+        if (item is! Map<String, dynamic>) {
+          return item;
+        }
+        final normalizedItem = Map<String, dynamic>.from(item);
+        normalizedItem['image_url'] =
+            _publicRuntimeUrl(normalizedItem['image_url'] as String? ?? '');
+        normalizedItem['audio_url'] =
+            _publicRuntimeUrl(normalizedItem['audio_url'] as String? ?? '');
+        return normalizedItem;
+      }).toList();
+    }
     return normalized;
   }
 

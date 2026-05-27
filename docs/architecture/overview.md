@@ -13,9 +13,10 @@ flowchart LR
     API --> Redis["Redis / Celery broker"]
     API --> Storage["Local storage / MinIO-compatible storage"]
     API --> Workers["Celery Workers"]
-    Workers --> OCR["Stub / PaddleOCR / Doubao Vision"]
-    Workers --> LLM["Stub / Doubao Text"]
+    Workers --> OCR["Stub / PaddleOCR / Qwen Vision / Doubao Vision"]
+    Workers --> LLM["Stub / Qwen / Doubao Text"]
     Workers --> Media["Learning Asset Media Provider<br/>mock / OpenAI / DashScope"]
+    Workers --> Speech["Speech Assessment<br/>stub / DashScope ASR + Qwen"]
 ```
 
 ## 当前主链
@@ -45,6 +46,7 @@ flowchart TD
 ## 当前不是的东西
 
 - 还不是生产级多环境系统：目前以本地 `Docker Compose` + 本地/局域网验证为主。
-- 已具备录音上传 + 异步 stub 评分闭环：`speaking_attempts` 已有 multipart 上传、worker 评分、结果页和周报回填；真实语音评分 provider 仍未接通。
-- HN-016 / HN-016A 后，真实媒体 provider 可通过 `MEDIA_PROVIDER=real` 启用，并按 `MEDIA_IMAGE_PROVIDER` / `MEDIA_TTS_PROVIDER` 选择 OpenAI 或 DashScope；本地测试默认仍使用 mock provider。
+- 已具备录音上传 + 异步真实评分闭环：`speaking_attempts` 已有 multipart 上传、worker 评分、DashScope ASR + Qwen 评分、结果页和周报回填；物理手机录音提交截图仍是 readiness 证据缺口。
+- HN-016 / HN-016A 后，本地示例和 Docker Compose 默认使用 DashScope 媒体 provider：`MEDIA_PROVIDER=real`、`MEDIA_IMAGE_PROVIDER=dashscope`、`MEDIA_TTS_PROVIDER=dashscope`；自动化测试才显式使用 mock provider。
+- worksheet OCR / parsing 默认也不再是 stub：本地示例和 Docker Compose 默认使用 `AI_PROVIDER=qwen`，由 DashScope Qwen-VL + Qwen 文本模型完成识别与结构化抽取；Doubao 保留为可切换真实 provider。
 - 还没有完整 Android 可交付链路：iOS 内测链路已跑通，Android 仍受本机 SDK 环境阻塞。

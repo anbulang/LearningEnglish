@@ -354,6 +354,11 @@ class DashScopeTTSProvider:
         voice = self.uk_voice if accent_key == "uk" else self.us_voice
         if not voice.strip():
             raise MediaProviderError("DashScope TTS voice is not configured")
+        instruction = (
+            "请使用清晰、标准的英式英语发音，适合儿童跟读。"
+            if accent_key == "uk"
+            else "请使用清晰、标准的美式英语发音，适合儿童跟读。"
+        )
 
         try:
             response = self._client.post(
@@ -369,6 +374,7 @@ class DashScopeTTSProvider:
                         "voice": voice,
                         "format": "mp3",
                         "language_hints": ["en"],
+                        "instruction": instruction,
                     },
                 },
             )

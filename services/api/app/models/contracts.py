@@ -344,6 +344,38 @@ class ParentCoachingScript(BaseModel):
     steps: list[ParentCoachingStep] = Field(default_factory=list)
 
 
+class LearningAssetMastery(BaseModel):
+    asset_id: str
+    material_id: str
+    material_title: str
+    text: str
+    kind: str
+    translation: str = ""
+    image_url: str = ""
+    audio_url: str = ""
+    mastery_score: float = 0
+    mastery_status: str = "needs_practice"
+    review_attempts: int = 0
+    completed_review_tasks: int = 0
+    pending_review_tasks: int = 0
+    speaking_attempts: int = 0
+    best_speaking_score: Optional[float] = None
+    last_speaking_score: Optional[float] = None
+    weak_points: list[str] = Field(default_factory=list)
+    recommended_action: str = ""
+
+
+class MaterialReportSummary(BaseModel):
+    material_id: str
+    title: str
+    topic: str = ""
+    asset_count: int = 0
+    completed_review_tasks: int = 0
+    pending_review_tasks: int = 0
+    speaking_attempts: int = 0
+    average_speaking_score: Optional[float] = None
+
+
 class WeeklyReport(BaseModel):
     id: str
     child_id: str
@@ -354,6 +386,9 @@ class WeeklyReport(BaseModel):
     speaking_attempts: int = 0
     weak_items: list[str] = Field(default_factory=list)
     recommended_actions: list[str] = Field(default_factory=list)
+    report_summary: str = ""
+    asset_mastery: list[LearningAssetMastery] = Field(default_factory=list)
+    material_summaries: list[MaterialReportSummary] = Field(default_factory=list)
 
 
 class WechatLoginRequest(BaseModel):
