@@ -1130,7 +1130,9 @@ git commit -m "feat(admin): manage impersonation session lifecycle"
 - Modify: `infra/env/local.example.env`
 - Modify: `docs/harness/mvp-readiness-checklist.md`
 
-- [ ] **Step 1: Document admin credentials in API README**
+Status: completed on 2026-05-29 in `codex/backend-next-phase`; `make api-test` returned `191 passed`, `git diff --check` had no output, and owned docs/config secret scan found no raw test/provider tokens.
+
+- [x] **Step 1: Document admin credentials in API README**
 
 Add to `services/api/README.md` under local admin API configuration:
 
@@ -1151,7 +1153,7 @@ export ADMIN_API_CREDENTIALS_JSON='[{"id":"admin_ops","display_name":"Ops Admin"
 `ADMIN_API_TOKEN=local-admin-token` 只用于本地开发或测试环境。API 响应和 audit log 不返回 token 明文。
 ```
 
-- [ ] **Step 2: Add env example**
+- [x] **Step 2: Add env example**
 
 Append to `infra/env/local.example.env` near admin config:
 
@@ -1160,7 +1162,7 @@ Append to `infra/env/local.example.env` near admin config:
 # ADMIN_API_CREDENTIALS_JSON=[{"id":"admin_ops","display_name":"Ops Admin","email":"ops@example.com","role":"Operations","status":"active","permissions":["admin.dashboard.read","admin.audit.read","admin.operations.read"],"token_sha256":"0000000000000000000000000000000000000000000000000000000000000000"}]
 ```
 
-- [ ] **Step 3: Add harness checklist note**
+- [x] **Step 3: Add harness checklist note**
 
 Add to `docs/harness/mvp-readiness-checklist.md` near admin/backend verification notes:
 
@@ -1170,7 +1172,7 @@ Admin Phase 2 后端生产化验证：
 - 本地可以继续使用 `ADMIN_API_TOKEN=local-admin-token`；生产化演练应使用 `ADMIN_API_CREDENTIALS_JSON` 的 SHA-256 token hash。
 ```
 
-- [ ] **Step 4: Run full API verification**
+- [x] **Step 4: Run full API verification**
 
 ```bash
 make api-test
@@ -1178,7 +1180,7 @@ make api-test
 
 Expected: all API tests pass.
 
-- [ ] **Step 5: Run documentation diff check**
+- [x] **Step 5: Run documentation diff check**
 
 ```bash
 git diff --check
@@ -1186,7 +1188,7 @@ git diff --check
 
 Expected: no output.
 
-- [ ] **Step 6: Commit docs**
+- [x] **Step 6: Commit docs**
 
 ```bash
 git add services/api/README.md infra/env/local.example.env docs/harness/mvp-readiness-checklist.md
@@ -1197,22 +1199,22 @@ git commit -m "docs: document admin backend phase two"
 
 ## Final Verification
 
-- [ ] Run:
+- [x] Run:
 
 ```bash
 make api-test
 git diff --check
 ```
 
-- [ ] Expected:
+- [x] Expected:
 
 ```text
-160+ passed
+191 passed
 ```
 
 `git diff --check` prints no whitespace errors.
 
-- [ ] Confirm no raw admin tokens appear in docs except the existing local development placeholder:
+- [x] Confirm no raw admin tokens appear in docs except the existing local development placeholder:
 
 ```bash
 rg -n "readonly-token|ops-token|disabled-token|replace-with-admin-token|sk-" services/api/README.md infra/env/local.example.env docs/harness/mvp-readiness-checklist.md services/api/app/api/routes/admin.py
