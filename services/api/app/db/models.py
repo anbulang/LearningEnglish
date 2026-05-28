@@ -57,12 +57,6 @@ class AdminUserModel(Base):
 
 class AdminAuditEventModel(Base):
     __tablename__ = "admin_audit_events"
-    __table_args__ = (
-        Index("ix_admin_audit_events_tenant_scope_created_id", "tenant_scope", "created_at", "id"),
-        Index("ix_admin_audit_events_actor_id_created_id", "actor_id", "created_at", "id"),
-        Index("ix_admin_audit_events_action_created_id", "action", "created_at", "id"),
-        Index("ix_admin_audit_events_result_created_id", "result", "created_at", "id"),
-    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"audit_{uuid4().hex[:12]}")
     actor_id: Mapped[str] = mapped_column(String(64), index=True)
@@ -77,6 +71,14 @@ class AdminAuditEventModel(Base):
     trace_id: Mapped[str] = mapped_column(String(64), index=True)
     content_json: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (
+        Index("ix_admin_audit_events_tenant_scope_created_id", tenant_scope, created_at.desc(), id.desc()),
+        Index("ix_admin_audit_events_actor_id_created_id", actor_id, created_at.desc(), id.desc()),
+        Index("ix_admin_audit_events_action_created_id", action, created_at.desc(), id.desc()),
+        Index("ix_admin_audit_events_result_created_id", result, created_at.desc(), id.desc()),
+        Index("ix_admin_audit_events_resource_type_created_id", resource_type, created_at.desc(), id.desc()),
+        Index("ix_admin_audit_events_risk_level_created_id", risk_level, created_at.desc(), id.desc()),
+    )
 
 
 class AdminImpersonationSessionModel(Base):

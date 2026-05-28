@@ -1,6 +1,6 @@
 """extend speaking attempts for uploaded audio assessment
 
-Revision ID: 20260525_0004
+Revision ID: 20260525_0004_speaking
 Revises: 20260512_0003
 Create Date: 2026-05-25
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "20260525_0004"
+revision = "20260525_0004_speaking"
 down_revision = "20260512_0003"
 branch_labels = None
 depends_on = None
