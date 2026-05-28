@@ -1072,22 +1072,31 @@ def end_admin_impersonation_session(
     session = db.get(AdminImpersonationSessionModel, session_id)
     if session is None or (tenant_scope != "all" and session.tenant_id != tenant_scope):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Impersonation session not found")
-    if session.status != "active":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Impersonation session is not active")
-    session.status = "ended"
-    session.ended_at = datetime.now(timezone.utc)
-    db.add(session)
-    db.commit()
-    db.refresh(session)
+    already_ended = session.status == "ended"
+    if already_ended:
+        audit_action = "admin.impersonation.end.already_ended"
+        audit_risk_level = "medium"
+        audit_result = "noop"
+    else:
+        now = datetime.now(timezone.utc)
+        session.status = "ended"
+        session.ended_at = now
+        session.updated_at = now
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        audit_action = "admin.impersonation.end"
+        audit_risk_level = "high"
+        audit_result = "success"
     audit_event = _record_audit_event(
         db,
         actor=actor,
         tenant_scope=session.tenant_id,
-        action="admin.impersonation.end",
+        action=audit_action,
         resource_type="admin_impersonation_session",
         resource_id=session.id,
-        risk_level="high",
-        result="success",
+        risk_level=audit_risk_level,
+        result=audit_result,
         trace_id=_trace_id(request),
         reason=reason,
     )

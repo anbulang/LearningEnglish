@@ -239,8 +239,9 @@ Rules:
 
 - List requires `admin.impersonation.read`.
 - End requires `admin.impersonation.end`.
-- End only works for active sessions.
-- End sets `status=ended`, `ended_at=now`, writes high-risk `admin.impersonation.end` audit event.
+- End requires a current request `reason`.
+- End is idempotent: active sessions are set to `status=ended` with `ended_at=now`; already ended sessions keep the original `ended_at`.
+- Active end writes high-risk `admin.impersonation.end` audit event; repeated end writes medium-risk noop `admin.impersonation.end.already_ended` audit event with the current request reason.
 - Existing start endpoint remains unchanged except permissions should continue to be checked from actor credentials.
 
 ## Module boundaries
@@ -297,7 +298,7 @@ If the file becomes difficult to scan, split new Phase 2 tests into `test_admin_
 - Missing permission: `403 Missing <permission>`
 - Tenant outside selected scope: `404 Tenant not found`
 - Audit cursor not found: return empty `items` with `next_cursor=""`, not a 500.
-- End non-active impersonation session: `409 Impersonation session is not active`
+- End already-ended impersonation session: preserve original `ended_at`, return current session payload, and write `admin.impersonation.end.already_ended` noop audit event.
 
 ## Testing strategy
 
