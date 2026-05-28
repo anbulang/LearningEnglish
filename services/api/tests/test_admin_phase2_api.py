@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 import hashlib
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import event
@@ -333,6 +333,7 @@ def _seed_operations_snapshot_fixture(*, prefix: str, failed_count: int = 3, run
         phone_number="13800139102",
     )
     now = datetime(2026, 5, 28, 17, 0, tzinfo=timezone.utc)
+    stale_at = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=90)
     with SessionLocal() as db:
         db.add(
             TenantProviderPolicyModel(
@@ -398,12 +399,17 @@ def _seed_operations_snapshot_fixture(*, prefix: str, failed_count: int = 3, run
                     status=status,
                     confidence_summary=f"Task 4 job {status}",
                     warnings=["provider timeout"] if status == JobStatus.failed.value else [],
-                    started_at=now,
+                    started_at=now if status == JobStatus.failed.value else stale_at,
                     finished_at=now if status == JobStatus.failed.value else None,
                     draft_learning_assets=[],
                 )
             )
-            attempt_status = SpeakingAttemptStatus.failed.value if index < failed_count else SpeakingAttemptStatus.queued.value
+            if index < failed_count:
+                attempt_status = SpeakingAttemptStatus.failed.value
+            elif index == failed_count:
+                attempt_status = SpeakingAttemptStatus.transcribing.value
+            else:
+                attempt_status = SpeakingAttemptStatus.queued.value
             db.add(
                 SpeakingAttemptModel(
                     id=f"{prefix}_attempt_a_extra_{index}",
@@ -414,16 +420,62 @@ def _seed_operations_snapshot_fixture(*, prefix: str, failed_count: int = 3, run
                     status=attempt_status,
                     failure_reason="Audio provider timeout" if attempt_status == SpeakingAttemptStatus.failed.value else "",
                     provider="stub",
-                    created_at=now,
-                    updated_at=now,
+                    created_at=now if attempt_status == SpeakingAttemptStatus.failed.value else stale_at,
+                    updated_at=now if attempt_status == SpeakingAttemptStatus.failed.value else stale_at,
                 )
             )
         db.commit()
     return {"tenant_a": tenant_a, "tenant_b": tenant_b}
 
 
+def _seed_operations_provider_overrides(*, prefix: str, count: int = 7) -> None:
+    now = datetime(2026, 5, 28, 18, 0, tzinfo=timezone.utc)
+    with SessionLocal() as db:
+        for index in range(count):
+            tenant_id = f"{prefix}_tenant_override_{index}"
+            db.add(
+                ParentAccountModel(
+                    id=tenant_id,
+                    display_name=f"Provider Override {index}",
+                    avatar_url="",
+                    phone_number=f"138001392{index:02d}",
+                    phone_verified_at=now,
+                    wechat_union_id=f"wechat_union_{tenant_id}",
+                    wechat_open_id=f"wechat_open_{tenant_id}",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            db.add(
+                TenantProviderPolicyModel(
+                    tenant_id=tenant_id,
+                    ai_provider="doubao" if index % 2 == 0 else "stub",
+                    media_provider="real" if index % 2 == 0 else "mock",
+                    fallback_mode="per_tenant",
+                    monthly_guardrail=100 + index,
+                    source="tenant_override",
+                    reason=f"Task 4 provider override {index}",
+                    created_by="admin_provider_owner",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+        db.commit()
+
+
 def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_client, monkeypatch) -> None:
     fixture = _seed_operations_snapshot_fixture(prefix="task4_all")
+    monkeypatch.setenv("AI_PROVIDER", "doubao")
+    monkeypatch.setenv("MEDIA_PROVIDER", "real")
+    monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", "dashscope")
+    monkeypatch.setenv("MEDIA_TTS_PROVIDER", "openai")
+    monkeypatch.setenv("SPEECH_PROVIDER", "dashscope")
+    monkeypatch.setenv("SPEECH_ASSESSMENT_PROVIDER", "dashscope")
+    monkeypatch.setenv("ARK_API_KEY", "ark-task4-api-key-value")
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-task4-api-key-value")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "dashscope-task4-api-key-value")
+    monkeypatch.setenv("SPEECH_ASSESSMENT_APP_KEY", "speech-task4-app-key-value")
+    monkeypatch.setenv("SPEECH_ASSESSMENT_SECRET_KEY", "speech-task4-secret-key-value")
     _set_admin_credentials(
         monkeypatch,
         [
@@ -465,6 +517,9 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert payload["summary"]["media_failures"] >= 6
     assert payload["material_parse_jobs"]["by_status"]["failed"] >= 5
     assert payload["material_parse_jobs"]["by_status"]["processing"] >= 3
+    assert payload["material_parse_jobs"]["stale_threshold_minutes"] == 30
+    assert payload["material_parse_jobs"]["stale_processing"] >= 3
+    assert payload["material_parse_jobs"]["oldest_processing_minutes"] >= 80
     assert 1 <= len(payload["material_parse_jobs"]["latest_failed"]) <= 5
     assert 1 <= len(payload["material_parse_jobs"]["latest_running"]) <= 5
     assert all(item["tenant_id"] for item in payload["material_parse_jobs"]["latest_failed"])
@@ -473,11 +528,34 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert payload["media_generation"]["asset_status_fields_by_status"]["failed"] >= 6
     assert payload["media_generation"]["failure_signals"]["generated_image_status"] >= 5
     assert payload["speaking_attempts"]["by_status"]["failed"] >= 5
-    assert payload["speaking_attempts"]["by_status"]["queued"] >= 3
+    assert payload["speaking_attempts"]["by_status"]["queued"] >= 2
+    assert payload["speaking_attempts"]["by_status"]["transcribing"] >= 1
+    assert payload["speaking_attempts"]["stale_threshold_minutes"] == 30
+    assert payload["speaking_attempts"]["stale_pending"] >= 3
+    assert payload["speaking_attempts"]["stale_transcribing"] >= 1
+    assert payload["speaking_attempts"]["oldest_pending_minutes"] >= 80
     assert 1 <= len(payload["speaking_attempts"]["latest_failed"]) <= 5
     assert 1 <= len(payload["speaking_attempts"]["latest_pending"]) <= 5
     assert any(item["id"].startswith("task4_all_attempt_a_extra_") for item in payload["speaking_attempts"]["latest_failed"])
     assert payload["provider_configuration"]["global"]["tenant_id"] == "global"
+    assert payload["provider_configuration"]["runtime"]["ai_provider"] == "doubao"
+    assert payload["provider_configuration"]["runtime"]["media_provider"] == "real"
+    assert payload["provider_configuration"]["runtime"]["media_image_provider"] == "dashscope"
+    assert payload["provider_configuration"]["runtime"]["media_tts_provider"] == "openai"
+    assert payload["provider_configuration"]["runtime"]["speech_provider"] == "dashscope"
+    assert payload["provider_configuration"]["runtime"]["speech_assessment_provider"] == "dashscope"
+    assert payload["provider_configuration"]["runtime"]["secret_presence"] == {
+        "ark_api_key_configured": True,
+        "openai_api_key_configured": True,
+        "dashscope_api_key_configured": True,
+        "speech_assessment_app_key_configured": True,
+        "speech_assessment_secret_key_configured": True,
+    }
+    assert payload["provider_configuration"]["runtime"]["readiness"]["ai_provider_ready"] is True
+    assert payload["provider_configuration"]["runtime"]["readiness"]["media_image_provider_ready"] is True
+    assert payload["provider_configuration"]["runtime"]["readiness"]["media_tts_provider_ready"] is True
+    assert payload["provider_configuration"]["runtime"]["readiness"]["speech_provider_ready"] is True
+    assert payload["provider_configuration"]["runtime"]["readiness"]["speech_assessment_provider_ready"] is True
     tenant_overrides = payload["provider_configuration"]["tenant_overrides"]
     assert {
         "tenant_id": fixture["tenant_a"]["tenant_id"],
@@ -487,7 +565,11 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
         "monthly_guardrail": 300,
         "source": "tenant_override",
     } in tenant_overrides
-    assert "secret" not in str(payload).lower()
+    assert "ark-task4-api-key-value" not in str(payload)
+    assert "openai-task4-api-key-value" not in str(payload)
+    assert "dashscope-task4-api-key-value" not in str(payload)
+    assert "speech-task4-app-key-value" not in str(payload)
+    assert "speech-task4-secret-key-value" not in str(payload)
     assert payload["module_toggle_coverage"]["tenant_count"] >= 2
     assert payload["module_toggle_coverage"]["module_keys"] == [
         "worksheet_import",
@@ -594,6 +676,7 @@ def test_admin_operations_snapshot_requires_operations_or_dashboard_permission(a
 
 def test_admin_operations_snapshot_uses_aggregate_queries_and_bounded_latest_lists(api_client, monkeypatch) -> None:
     _seed_operations_snapshot_fixture(prefix="task4_query", failed_count=7, running_count=7)
+    _seed_operations_provider_overrides(prefix="task4_query", count=7)
     _set_admin_credentials(
         monkeypatch,
         [
@@ -628,14 +711,24 @@ def test_admin_operations_snapshot_uses_aggregate_queries_and_bounded_latest_lis
     assert len(payload["material_parse_jobs"]["latest_running"]) == 5
     assert len(payload["speaking_attempts"]["latest_failed"]) == 5
     assert len(payload["speaking_attempts"]["latest_pending"]) == 5
+    assert payload["provider_configuration"]["override_count"] >= 8
+    assert payload["provider_configuration"]["tenant_overrides_limit"] == 5
+    assert len(payload["provider_configuration"]["tenant_overrides"]) == 5
     job_selects = [statement for statement in statements if "from material_parse_jobs" in statement]
     material_selects = [statement for statement in statements if "from course_materials" in statement]
     speaking_selects = [statement for statement in statements if "from speaking_attempts" in statement]
+    tenant_selects = [statement for statement in statements if "from parent_accounts" in statement]
+    provider_selects = [statement for statement in statements if "from tenant_provider_policies" in statement]
     assert any("count(" in statement and "group by" in statement for statement in job_selects)
     assert any("count(" in statement and "group by" in statement for statement in material_selects)
     assert any("count(" in statement and "group by" in statement for statement in speaking_selects)
+    assert any("count(" in statement for statement in tenant_selects)
+    assert any("count(" in statement for statement in provider_selects)
+    assert any(" limit " in statement for statement in provider_selects)
     assert any(" limit " in statement for statement in job_selects)
     assert any(" limit " in statement for statement in speaking_selects)
+    assert not any("from parent_accounts order by" in statement for statement in statements)
+    assert not any("tenant_module_settings.tenant_id in" in statement for statement in statements)
 
 
 def test_admin_credentials_resolve_actor_and_exact_permissions(api_client, monkeypatch) -> None:

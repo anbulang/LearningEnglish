@@ -56,6 +56,8 @@ FALLBACK_MODES = {"global_stub", "auto_to_mock", "per_tenant"}
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")
 TENANT_DETAIL_LATEST_LIMIT = 5
 OPERATIONS_LATEST_LIMIT = 5
+OPERATIONS_STALE_THRESHOLD_MINUTES = 30
+PROVIDER_OVERRIDE_SAMPLE_LIMIT = 5
 
 
 @dataclass(frozen=True)
@@ -240,9 +242,8 @@ def get_admin_operations_snapshot(
     db: Session = Depends(get_db),
 ) -> dict:
     required_permission = _operations_read_permission(actor)
-    scoped_tenants = _scoped_admin_tenants(db, tenant_scope)
-    tenant_count = len(scoped_tenants)
-    tenant_ids = [tenant.id for tenant in scoped_tenants]
+    _ensure_admin_tenant_scope(db, tenant_scope)
+    tenant_count = _operations_tenant_count(db, tenant_scope)
 
     _ensure_admin_user(db, actor)
     material_status_counts = _operations_material_status_counts(db, tenant_scope)
@@ -250,7 +251,7 @@ def get_admin_operations_snapshot(
     media_generation = _operations_media_generation_payload(db, tenant_scope, material_status_counts)
     speaking_attempts = _operations_speaking_attempts_payload(db, tenant_scope)
     provider_configuration = _operations_provider_configuration_payload(db, tenant_scope)
-    module_toggle_coverage = _operations_module_toggle_coverage_payload(db, tenant_count, tenant_ids)
+    module_toggle_coverage = _operations_module_toggle_coverage_payload(db, tenant_scope, tenant_count)
     audit_event = _record_audit_event(
         db,
         actor=actor,
@@ -811,13 +812,19 @@ def _operations_read_permission(actor: AdminActor) -> str:
     )
 
 
-def _scoped_admin_tenants(db: Session, tenant_scope: str) -> list[ParentAccountModel]:
+def _ensure_admin_tenant_scope(db: Session, tenant_scope: str) -> None:
     if tenant_scope == "all":
-        return db.scalars(select(ParentAccountModel).order_by(ParentAccountModel.created_at.asc())).all()
-    tenant = db.get(ParentAccountModel, tenant_scope)
-    if tenant is None:
+        return
+    tenant_count = db.scalar(select(func.count(ParentAccountModel.id)).where(ParentAccountModel.id == tenant_scope))
+    if not tenant_count:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant scope not found")
-    return [tenant]
+
+
+def _operations_tenant_count(db: Session, tenant_scope: str) -> int:
+    if tenant_scope == "all":
+        value = db.scalar(select(func.count(ParentAccountModel.id)))
+        return int(value or 0)
+    return 1
 
 
 def _tenant_child_scope_filter(tenant_scope: str):
@@ -826,10 +833,16 @@ def _tenant_child_scope_filter(tenant_scope: str):
     return ChildProfileModel.parent_account_id == tenant_scope
 
 
-def _tenant_parent_scope_filter(tenant_scope: str):
+def _tenant_provider_policy_scope_filter(tenant_scope: str):
     if tenant_scope == "all":
-        return ParentAccountModel.id != ""
-    return ParentAccountModel.id == tenant_scope
+        return TenantProviderPolicyModel.tenant_id != ""
+    return TenantProviderPolicyModel.tenant_id == tenant_scope
+
+
+def _tenant_module_setting_scope_filter(tenant_scope: str):
+    if tenant_scope == "all":
+        return TenantModuleSettingModel.tenant_id != ""
+    return TenantModuleSettingModel.tenant_id == tenant_scope
 
 
 def _operations_material_parse_job_payload(db: Session, tenant_scope: str) -> dict:
@@ -846,13 +859,43 @@ def _operations_material_parse_job_payload(db: Session, tenant_scope: str) -> di
             by_status[status_value] = int(count)
 
     running_statuses = [JobStatus.queued.value, JobStatus.processing.value, JobStatus.needs_review.value]
+    processing_health = _operations_material_processing_health(db, tenant_scope)
     return {
         "total": sum(by_status.values()),
         "by_status": by_status,
         "failed": by_status.get(JobStatus.failed.value, 0),
         "running": sum(by_status.get(status_value, 0) for status_value in running_statuses),
+        **processing_health,
         "latest_failed": _latest_operations_material_jobs(db, tenant_scope, [JobStatus.failed.value]),
         "latest_running": _latest_operations_material_jobs(db, tenant_scope, running_statuses),
+    }
+
+
+def _operations_material_processing_health(db: Session, tenant_scope: str) -> dict:
+    stale_before = datetime.now(timezone.utc) - timedelta(minutes=OPERATIONS_STALE_THRESHOLD_MINUTES)
+    stale_processing = db.scalar(
+        select(func.count(MaterialParseJobModel.id))
+        .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(
+            _tenant_child_scope_filter(tenant_scope),
+            MaterialParseJobModel.status == JobStatus.processing.value,
+            MaterialParseJobModel.started_at < stale_before,
+        )
+    )
+    oldest_processing_started_at = db.scalar(
+        select(func.min(MaterialParseJobModel.started_at))
+        .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(
+            _tenant_child_scope_filter(tenant_scope),
+            MaterialParseJobModel.status == JobStatus.processing.value,
+        )
+    )
+    return {
+        "stale_threshold_minutes": OPERATIONS_STALE_THRESHOLD_MINUTES,
+        "stale_processing": int(stale_processing or 0),
+        "oldest_processing_minutes": _age_minutes(oldest_processing_started_at),
     }
 
 
@@ -1085,17 +1128,55 @@ def _operations_speaking_attempts_payload(db: Session, tenant_scope: str) -> dic
         SpeakingAttemptStatus.recording_uploaded.value,
         SpeakingAttemptStatus.transcribing.value,
     ]
+    pending_health = _operations_speaking_pending_health(db, tenant_scope, pending_statuses)
     return {
         "total": sum(by_status.values()),
         "by_status": by_status,
         "failed": by_status.get(SpeakingAttemptStatus.failed.value, 0),
         "pending": sum(by_status.get(status_value, 0) for status_value in pending_statuses),
+        **pending_health,
         "latest_failed": _latest_operations_speaking_attempts(
             db,
             tenant_scope,
             [SpeakingAttemptStatus.failed.value],
         ),
         "latest_pending": _latest_operations_speaking_attempts(db, tenant_scope, pending_statuses),
+    }
+
+
+def _operations_speaking_pending_health(db: Session, tenant_scope: str, pending_statuses: list[str]) -> dict:
+    stale_before = datetime.now(timezone.utc) - timedelta(minutes=OPERATIONS_STALE_THRESHOLD_MINUTES)
+    stale_pending = db.scalar(
+        select(func.count(SpeakingAttemptModel.id))
+        .join(ChildProfileModel, ChildProfileModel.id == SpeakingAttemptModel.child_id)
+        .where(
+            _tenant_child_scope_filter(tenant_scope),
+            SpeakingAttemptModel.status.in_(pending_statuses),
+            SpeakingAttemptModel.updated_at < stale_before,
+        )
+    )
+    stale_transcribing = db.scalar(
+        select(func.count(SpeakingAttemptModel.id))
+        .join(ChildProfileModel, ChildProfileModel.id == SpeakingAttemptModel.child_id)
+        .where(
+            _tenant_child_scope_filter(tenant_scope),
+            SpeakingAttemptModel.status == SpeakingAttemptStatus.transcribing.value,
+            SpeakingAttemptModel.updated_at < stale_before,
+        )
+    )
+    oldest_pending_updated_at = db.scalar(
+        select(func.min(SpeakingAttemptModel.updated_at))
+        .join(ChildProfileModel, ChildProfileModel.id == SpeakingAttemptModel.child_id)
+        .where(
+            _tenant_child_scope_filter(tenant_scope),
+            SpeakingAttemptModel.status.in_(pending_statuses),
+        )
+    )
+    return {
+        "stale_threshold_minutes": OPERATIONS_STALE_THRESHOLD_MINUTES,
+        "stale_pending": int(stale_pending or 0),
+        "stale_transcribing": int(stale_transcribing or 0),
+        "oldest_pending_minutes": _age_minutes(oldest_pending_updated_at),
     }
 
 
@@ -1131,23 +1212,114 @@ def _operations_speaking_attempt_item_payload(
 
 
 def _operations_provider_configuration_payload(db: Session, tenant_scope: str) -> dict:
+    override_count = db.scalar(
+        select(func.count(TenantProviderPolicyModel.id)).where(_tenant_provider_policy_scope_filter(tenant_scope))
+    )
     policies = db.scalars(
         select(TenantProviderPolicyModel)
-        .join(ParentAccountModel, ParentAccountModel.id == TenantProviderPolicyModel.tenant_id)
-        .where(_tenant_parent_scope_filter(tenant_scope))
+        .where(_tenant_provider_policy_scope_filter(tenant_scope))
         .order_by(TenantProviderPolicyModel.updated_at.desc(), TenantProviderPolicyModel.tenant_id.asc())
+        .limit(PROVIDER_OVERRIDE_SAMPLE_LIMIT)
     ).all()
     return {
         "global": _global_provider_policy(),
+        "runtime": _operations_provider_runtime_payload(),
         "tenant_overrides": [_tenant_provider_policy_payload(policy) for policy in policies],
-        "override_count": len(policies),
+        "tenant_overrides_limit": PROVIDER_OVERRIDE_SAMPLE_LIMIT,
+        "override_count": int(override_count or 0),
     }
+
+
+def _operations_provider_runtime_payload() -> dict:
+    settings = get_settings()
+    secret_presence = {
+        "ark_api_key_configured": bool(settings.ark_api_key),
+        "openai_api_key_configured": bool(settings.openai_api_key),
+        "dashscope_api_key_configured": bool(settings.dashscope_api_key),
+        "speech_assessment_app_key_configured": bool(settings.speech_assessment_app_key),
+        "speech_assessment_secret_key_configured": bool(settings.speech_assessment_secret_key),
+    }
+    return {
+        "ai_provider": settings.ai_provider,
+        "media_provider": settings.media_provider,
+        "media_image_provider": settings.media_image_provider,
+        "media_tts_provider": settings.media_tts_provider,
+        "speech_provider": settings.speech_provider,
+        "speech_assessment_provider": settings.speech_assessment_provider,
+        "models": {
+            "media_image_model": settings.media_image_model,
+            "media_image_edit_model": settings.media_image_edit_model,
+            "media_tts_model": settings.media_tts_model,
+            "speech_assessment_default_accent": settings.speech_assessment_default_accent,
+        },
+        "secret_presence": secret_presence,
+        "readiness": {
+            "ai_provider_ready": _ai_provider_ready(settings),
+            "media_image_provider_ready": _media_runtime_provider_ready(
+                settings.media_provider,
+                settings.media_image_provider,
+                settings,
+            ),
+            "media_tts_provider_ready": _media_runtime_provider_ready(
+                settings.media_provider,
+                settings.media_tts_provider,
+                settings,
+            ),
+            "speech_provider_ready": _speech_provider_ready(settings),
+            "speech_assessment_provider_ready": _speech_assessment_provider_ready(settings),
+        },
+    }
+
+
+def _ai_provider_ready(settings) -> bool:
+    provider = settings.ai_provider.lower()
+    if provider == "stub":
+        return True
+    if provider == "doubao":
+        return bool(settings.ark_api_key)
+    return _provider_api_key_configured(provider, settings)
+
+
+def _media_runtime_provider_ready(media_provider: str, runtime_provider: str, settings) -> bool:
+    if media_provider.lower() == "mock":
+        return True
+    return _provider_api_key_configured(runtime_provider.lower(), settings)
+
+
+def _speech_provider_ready(settings) -> bool:
+    provider = settings.speech_provider.lower()
+    if provider == "stub":
+        return True
+    if provider == settings.speech_assessment_provider.lower():
+        return _speech_assessment_provider_ready(settings)
+    return _provider_api_key_configured(provider, settings)
+
+
+def _speech_assessment_provider_ready(settings) -> bool:
+    provider = settings.speech_assessment_provider.lower()
+    if provider == "stub":
+        return True
+    if provider == "dashscope":
+        return bool(settings.speech_assessment_app_key and settings.speech_assessment_secret_key)
+    return _provider_api_key_configured(provider, settings)
+
+
+def _provider_api_key_configured(provider: str, settings) -> bool:
+    if provider in {"stub", "mock", ""}:
+        return True
+    if provider == "openai":
+        return bool(settings.openai_api_key)
+    if provider in {"dashscope", "qwen"}:
+        return bool(settings.dashscope_api_key)
+    if provider == "doubao":
+        return bool(settings.ark_api_key)
+    return False
 
 
 def _operations_module_toggle_coverage_payload(
     db: Session,
+    tenant_scope: str,
     tenant_count: int,
-    tenant_ids: list[str],
 ) -> dict:
     override_rows = db.execute(
         select(
@@ -1156,7 +1328,7 @@ def _operations_module_toggle_coverage_payload(
             func.count(TenantModuleSettingModel.id),
         )
         .where(
-            TenantModuleSettingModel.tenant_id.in_(tenant_ids or [""]),
+            _tenant_module_setting_scope_filter(tenant_scope),
             TenantModuleSettingModel.module_key.in_(MODULE_KEYS),
         )
         .group_by(TenantModuleSettingModel.module_key, TenantModuleSettingModel.enabled)
@@ -1886,6 +2058,15 @@ def _impersonation_session_payload(impersonation_session: AdminImpersonationSess
         "expires_at": _iso(impersonation_session.expires_at),
         "created_at": _iso(impersonation_session.created_at),
     }
+
+
+def _age_minutes(value: Optional[datetime]) -> int:
+    if value is None:
+        return 0
+    normalized = value
+    if isinstance(normalized, str):
+        normalized = datetime.fromisoformat(normalized)
+    return _elapsed_minutes(normalized)
 
 
 def _elapsed_minutes(value: datetime) -> int:
