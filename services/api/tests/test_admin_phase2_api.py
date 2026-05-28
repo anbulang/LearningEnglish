@@ -17,9 +17,11 @@ from app.db.models import (
     MaterialParseJobModel,
     ParentAccountModel,
     SpeakingAttemptModel,
+    TenantModuleSettingModel,
+    TenantProviderPolicyModel,
     WeeklyReportModel,
 )
-from app.models.contracts import SpeakingAttemptStatus
+from app.models.contracts import JobStatus, MaterialStatus, SpeakingAttemptStatus
 from conftest import configure_test_environment
 
 
@@ -317,6 +319,323 @@ def _seed_additional_tenant_activity(*, tenant_id: str, child_id: str, material_
                 )
             )
         db.commit()
+
+
+def _seed_operations_snapshot_fixture(*, prefix: str, failed_count: int = 3, running_count: int = 3) -> dict:
+    tenant_a = _seed_tenant_detail_fixture(
+        tenant_id=f"{prefix}_tenant_a",
+        display_name=f"{prefix} Tenant A",
+        phone_number="13800139101",
+    )
+    tenant_b = _seed_tenant_detail_fixture(
+        tenant_id=f"{prefix}_tenant_b",
+        display_name=f"{prefix} Tenant B",
+        phone_number="13800139102",
+    )
+    now = datetime(2026, 5, 28, 17, 0, tzinfo=timezone.utc)
+    with SessionLocal() as db:
+        db.add(
+            TenantProviderPolicyModel(
+                tenant_id=tenant_a["tenant_id"],
+                ai_provider="doubao",
+                media_provider="real",
+                fallback_mode="per_tenant",
+                monthly_guardrail=300,
+                source="tenant_override",
+                reason="Task 4 secret reason should stay server-side",
+                created_by="admin_secret_owner",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        db.add(
+            TenantModuleSettingModel(
+                tenant_id=tenant_a["tenant_id"],
+                module_key="media_pipeline",
+                enabled=False,
+                source="tenant_override",
+                reason="Task 4 module reason should stay server-side",
+                created_by="admin_secret_owner",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        for index in range(failed_count + running_count):
+            status = JobStatus.failed.value if index < failed_count else JobStatus.processing.value
+            material_status = MaterialStatus.failed.value if status == JobStatus.failed.value else MaterialStatus.processing.value
+            child_id = tenant_a["child_a_id"] if index % 2 == 0 else tenant_a["child_b_id"]
+            material_id = f"{prefix}_material_a_extra_{index}"
+            db.add(
+                CourseMaterialModel(
+                    id=material_id,
+                    child_id=child_id,
+                    teacher_name="Emma",
+                    lesson_date=date(2026, 5, 26),
+                    title=f"Task 4 Extra Material {index}",
+                    topic="operations",
+                    status=material_status,
+                    source_images=[],
+                    image_records=[],
+                    learning_assets=[
+                        {
+                            "id": f"{prefix}_asset_{index}",
+                            "text": "timeout",
+                            "kind": "word",
+                            "generated_image_status": "failed" if status == JobStatus.failed.value else "processing",
+                            "generated_image_error": "provider timeout" if status == JobStatus.failed.value else "",
+                            "tts_us_status": "ready",
+                            "tts_uk_status": "pending",
+                        }
+                    ],
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            db.add(
+                MaterialParseJobModel(
+                    id=f"{prefix}_job_a_extra_{index}",
+                    material_id=material_id,
+                    status=status,
+                    confidence_summary=f"Task 4 job {status}",
+                    warnings=["provider timeout"] if status == JobStatus.failed.value else [],
+                    started_at=now,
+                    finished_at=now if status == JobStatus.failed.value else None,
+                    draft_learning_assets=[],
+                )
+            )
+            attempt_status = SpeakingAttemptStatus.failed.value if index < failed_count else SpeakingAttemptStatus.queued.value
+            db.add(
+                SpeakingAttemptModel(
+                    id=f"{prefix}_attempt_a_extra_{index}",
+                    child_id=child_id,
+                    material_id=tenant_a["material_id"],
+                    prompt_text=f"Task 4 prompt {index}",
+                    target_text="timeout",
+                    status=attempt_status,
+                    failure_reason="Audio provider timeout" if attempt_status == SpeakingAttemptStatus.failed.value else "",
+                    provider="stub",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+        db.commit()
+    return {"tenant_a": tenant_a, "tenant_b": tenant_b}
+
+
+def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_client, monkeypatch) -> None:
+    fixture = _seed_operations_snapshot_fixture(prefix="task4_all")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_operations_reader",
+                "display_name": "Operations Reader",
+                "email": "operations-reader@example.com",
+                "role": "Operations",
+                "status": "active",
+                "permissions": ["admin.operations.read"],
+                "token_sha256": _token_hash("operations-reader-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/operations?tenant_scope=all",
+        headers={"X-Admin-Token": "operations-reader-token", "X-Request-ID": "req_task4_operations_all"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload.keys()) == {
+        "required_permission",
+        "tenant_scope",
+        "summary",
+        "material_parse_jobs",
+        "media_generation",
+        "speaking_attempts",
+        "provider_configuration",
+        "module_toggle_coverage",
+        "audit_event",
+        "access_context",
+    }
+    assert payload["required_permission"] == "admin.operations.read"
+    assert payload["tenant_scope"] == "all"
+    assert payload["summary"]["tenant_count"] >= 2
+    assert payload["summary"]["material_parse_jobs"] >= 8
+    assert payload["summary"]["media_failures"] >= 6
+    assert payload["material_parse_jobs"]["by_status"]["failed"] >= 5
+    assert payload["material_parse_jobs"]["by_status"]["processing"] >= 3
+    assert 1 <= len(payload["material_parse_jobs"]["latest_failed"]) <= 5
+    assert 1 <= len(payload["material_parse_jobs"]["latest_running"]) <= 5
+    assert all(item["tenant_id"] for item in payload["material_parse_jobs"]["latest_failed"])
+    assert any(item["id"].startswith("task4_all_job_a_extra_") for item in payload["material_parse_jobs"]["latest_failed"])
+    assert payload["media_generation"]["materials_by_status"]["failed"] >= 5
+    assert payload["media_generation"]["asset_status_fields_by_status"]["failed"] >= 6
+    assert payload["media_generation"]["failure_signals"]["generated_image_status"] >= 5
+    assert payload["speaking_attempts"]["by_status"]["failed"] >= 5
+    assert payload["speaking_attempts"]["by_status"]["queued"] >= 3
+    assert 1 <= len(payload["speaking_attempts"]["latest_failed"]) <= 5
+    assert 1 <= len(payload["speaking_attempts"]["latest_pending"]) <= 5
+    assert any(item["id"].startswith("task4_all_attempt_a_extra_") for item in payload["speaking_attempts"]["latest_failed"])
+    assert payload["provider_configuration"]["global"]["tenant_id"] == "global"
+    tenant_overrides = payload["provider_configuration"]["tenant_overrides"]
+    assert {
+        "tenant_id": fixture["tenant_a"]["tenant_id"],
+        "ai_provider": "doubao",
+        "media_provider": "real",
+        "fallback_mode": "per_tenant",
+        "monthly_guardrail": 300,
+        "source": "tenant_override",
+    } in tenant_overrides
+    assert "secret" not in str(payload).lower()
+    assert payload["module_toggle_coverage"]["tenant_count"] >= 2
+    assert payload["module_toggle_coverage"]["module_keys"] == [
+        "worksheet_import",
+        "ai_review",
+        "media_pipeline",
+        "speaking_score",
+        "weekly_reports",
+    ]
+    assert payload["module_toggle_coverage"]["disabled"] >= 1
+    assert payload["audit_event"]["action"] == "admin.operations.read"
+    assert payload["audit_event"]["tenant_scope"] == "all"
+    assert payload["audit_event"]["trace_id"] == "req_task4_operations_all"
+    assert payload["access_context"]["current_admin"]["id"] == "admin_operations_reader"
+    assert "operations-reader-token" not in str(payload)
+
+
+def test_admin_operations_snapshot_allows_dashboard_read_permission(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_dashboard_reader_for_ops",
+                "display_name": "Dashboard Reader",
+                "email": "dashboard-reader-for-ops@example.com",
+                "role": "Support Viewer",
+                "status": "active",
+                "permissions": ["admin.dashboard.read"],
+                "token_sha256": _token_hash("dashboard-reader-for-ops-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/operations?tenant_scope=all",
+        headers={"X-Admin-Token": "dashboard-reader-for-ops-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["required_permission"] == "admin.dashboard.read"
+
+
+def test_admin_operations_snapshot_honors_tenant_scope_without_disclosure(api_client, monkeypatch) -> None:
+    fixture = _seed_operations_snapshot_fixture(prefix="task4_scope")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_operations_scoped",
+                "display_name": "Operations Scoped",
+                "email": "operations-scoped@example.com",
+                "role": "Operations",
+                "status": "active",
+                "permissions": ["admin.operations.read"],
+                "token_sha256": _token_hash("operations-scoped-token"),
+            }
+        ],
+    )
+
+    scoped_response = api_client.get(
+        f"/v1/admin/operations?tenant_scope={fixture['tenant_a']['tenant_id']}",
+        headers={"X-Admin-Token": "operations-scoped-token"},
+    )
+    missing_response = api_client.get(
+        "/v1/admin/operations?tenant_scope=task4_scope_missing",
+        headers={"X-Admin-Token": "operations-scoped-token"},
+    )
+
+    assert scoped_response.status_code == 200
+    payload = scoped_response.json()
+    assert payload["tenant_scope"] == fixture["tenant_a"]["tenant_id"]
+    assert payload["summary"]["tenant_count"] == 1
+    assert {item["tenant_id"] for item in payload["material_parse_jobs"]["latest_failed"]} == {
+        fixture["tenant_a"]["tenant_id"]
+    }
+    assert fixture["tenant_b"]["tenant_id"] not in str(payload)
+    assert missing_response.status_code == 404
+    assert missing_response.json()["detail"] == "Tenant scope not found"
+
+
+def test_admin_operations_snapshot_requires_operations_or_dashboard_permission(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_audit_only_for_ops",
+                "display_name": "Audit Only",
+                "email": "audit-only-for-ops@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("audit-only-for-ops-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/operations?tenant_scope=all",
+        headers={"X-Admin-Token": "audit-only-for-ops-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing admin.operations.read or admin.dashboard.read permission"
+
+
+def test_admin_operations_snapshot_uses_aggregate_queries_and_bounded_latest_lists(api_client, monkeypatch) -> None:
+    _seed_operations_snapshot_fixture(prefix="task4_query", failed_count=7, running_count=7)
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_operations_query",
+                "display_name": "Operations Query",
+                "email": "operations-query@example.com",
+                "role": "Operations",
+                "status": "active",
+                "permissions": ["admin.operations.read"],
+                "token_sha256": _token_hash("operations-query-token"),
+            }
+        ],
+    )
+    statements: list[str] = []
+
+    def capture_sql(conn, cursor, statement, parameters, context, executemany) -> None:
+        statements.append(" ".join(statement.lower().split()))
+
+    event.listen(engine, "before_cursor_execute", capture_sql)
+    try:
+        response = api_client.get(
+            "/v1/admin/operations?tenant_scope=all",
+            headers={"X-Admin-Token": "operations-query-token"},
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", capture_sql)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["material_parse_jobs"]["latest_failed"]) == 5
+    assert len(payload["material_parse_jobs"]["latest_running"]) == 5
+    assert len(payload["speaking_attempts"]["latest_failed"]) == 5
+    assert len(payload["speaking_attempts"]["latest_pending"]) == 5
+    job_selects = [statement for statement in statements if "from material_parse_jobs" in statement]
+    material_selects = [statement for statement in statements if "from course_materials" in statement]
+    speaking_selects = [statement for statement in statements if "from speaking_attempts" in statement]
+    assert any("count(" in statement and "group by" in statement for statement in job_selects)
+    assert any("count(" in statement and "group by" in statement for statement in material_selects)
+    assert any("count(" in statement and "group by" in statement for statement in speaking_selects)
+    assert any(" limit " in statement for statement in job_selects)
+    assert any(" limit " in statement for statement in speaking_selects)
 
 
 def test_admin_credentials_resolve_actor_and_exact_permissions(api_client, monkeypatch) -> None:

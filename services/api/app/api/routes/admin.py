@@ -32,13 +32,14 @@ from app.db.models import (
     TenantProviderPolicyModel,
     WeeklyReportModel,
 )
-from app.models.contracts import JobStatus, MaterialStatus, SpeakingAttemptStatus
+from app.models.contracts import JobStatus, MaterialStatus, MediaGenerationStatus, SpeakingAttemptStatus
 from app.services.job_queue import enqueue_material_job
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 ADMIN_PERMISSIONS = [
     "admin.dashboard.read",
+    "admin.operations.read",
     "admin.tenant.read",
     "admin.material.read",
     "admin.material.archive",
@@ -54,6 +55,7 @@ MEDIA_PROVIDERS = {"mock", "real"}
 FALLBACK_MODES = {"global_stub", "auto_to_mock", "per_tenant"}
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")
 TENANT_DETAIL_LATEST_LIMIT = 5
+OPERATIONS_LATEST_LIMIT = 5
 
 
 @dataclass(frozen=True)
@@ -227,6 +229,57 @@ def get_admin_dashboard(
         "materials": materials,
         "provider_policies": [_global_provider_policy(), *[_tenant_provider_policy_payload(policy) for policy in policy_rows]],
         "module_settings": _module_settings_payload(scoped_tenants, module_rows),
+    }
+
+
+@router.get("/operations")
+def get_admin_operations_snapshot(
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    required_permission = _operations_read_permission(actor)
+    scoped_tenants = _scoped_admin_tenants(db, tenant_scope)
+    tenant_count = len(scoped_tenants)
+    tenant_ids = [tenant.id for tenant in scoped_tenants]
+
+    _ensure_admin_user(db, actor)
+    material_status_counts = _operations_material_status_counts(db, tenant_scope)
+    material_parse_jobs = _operations_material_parse_job_payload(db, tenant_scope)
+    media_generation = _operations_media_generation_payload(db, tenant_scope, material_status_counts)
+    speaking_attempts = _operations_speaking_attempts_payload(db, tenant_scope)
+    provider_configuration = _operations_provider_configuration_payload(db, tenant_scope)
+    module_toggle_coverage = _operations_module_toggle_coverage_payload(db, tenant_count, tenant_ids)
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant_scope,
+        action="admin.operations.read",
+        resource_type="admin_operations",
+        resource_id="operations",
+        risk_level="low",
+        result="success",
+        trace_id=_trace_id(request),
+    )
+
+    return {
+        "required_permission": required_permission,
+        "tenant_scope": tenant_scope,
+        "summary": {
+            "tenant_count": tenant_count,
+            "materials": sum(material_status_counts.values()),
+            "material_parse_jobs": material_parse_jobs["total"],
+            "media_failures": media_generation["failure_signals"]["total"],
+            "speaking_attempts": speaking_attempts["total"],
+        },
+        "material_parse_jobs": material_parse_jobs,
+        "media_generation": media_generation,
+        "speaking_attempts": speaking_attempts,
+        "provider_configuration": provider_configuration,
+        "module_toggle_coverage": module_toggle_coverage,
+        "audit_event": _audit_event_payload(audit_event),
+        "access_context": _access_context_payload(actor, []),
     }
 
 
@@ -745,6 +798,407 @@ def _audit_page_limit(raw_limit: str) -> int:
     except (TypeError, ValueError):
         page_size = 50
     return max(1, min(page_size, 100))
+
+
+def _operations_read_permission(actor: AdminActor) -> str:
+    if "admin.operations.read" in actor.permissions:
+        return "admin.operations.read"
+    if "admin.dashboard.read" in actor.permissions:
+        return "admin.dashboard.read"
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Missing admin.operations.read or admin.dashboard.read permission",
+    )
+
+
+def _scoped_admin_tenants(db: Session, tenant_scope: str) -> list[ParentAccountModel]:
+    if tenant_scope == "all":
+        return db.scalars(select(ParentAccountModel).order_by(ParentAccountModel.created_at.asc())).all()
+    tenant = db.get(ParentAccountModel, tenant_scope)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant scope not found")
+    return [tenant]
+
+
+def _tenant_child_scope_filter(tenant_scope: str):
+    if tenant_scope == "all":
+        return ChildProfileModel.parent_account_id != ""
+    return ChildProfileModel.parent_account_id == tenant_scope
+
+
+def _tenant_parent_scope_filter(tenant_scope: str):
+    if tenant_scope == "all":
+        return ParentAccountModel.id != ""
+    return ParentAccountModel.id == tenant_scope
+
+
+def _operations_material_parse_job_payload(db: Session, tenant_scope: str) -> dict:
+    by_status = {status_value.value: 0 for status_value in JobStatus}
+    rows = db.execute(
+        select(MaterialParseJobModel.status, func.count(MaterialParseJobModel.id))
+        .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(_tenant_child_scope_filter(tenant_scope))
+        .group_by(MaterialParseJobModel.status)
+    ).all()
+    for status_value, count in rows:
+        if status_value in by_status:
+            by_status[status_value] = int(count)
+
+    running_statuses = [JobStatus.queued.value, JobStatus.processing.value, JobStatus.needs_review.value]
+    return {
+        "total": sum(by_status.values()),
+        "by_status": by_status,
+        "failed": by_status.get(JobStatus.failed.value, 0),
+        "running": sum(by_status.get(status_value, 0) for status_value in running_statuses),
+        "latest_failed": _latest_operations_material_jobs(db, tenant_scope, [JobStatus.failed.value]),
+        "latest_running": _latest_operations_material_jobs(db, tenant_scope, running_statuses),
+    }
+
+
+def _latest_operations_material_jobs(db: Session, tenant_scope: str, status_values: list[str]) -> list[dict]:
+    rows = db.execute(
+        select(MaterialParseJobModel, CourseMaterialModel, ChildProfileModel, ParentAccountModel)
+        .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .join(ParentAccountModel, ParentAccountModel.id == ChildProfileModel.parent_account_id)
+        .where(_tenant_child_scope_filter(tenant_scope), MaterialParseJobModel.status.in_(status_values))
+        .order_by(MaterialParseJobModel.started_at.desc(), MaterialParseJobModel.id.desc())
+        .limit(OPERATIONS_LATEST_LIMIT)
+    ).all()
+    return [_operations_material_job_item_payload(job, material, child, parent) for job, material, child, parent in rows]
+
+
+def _operations_material_job_item_payload(
+    job: MaterialParseJobModel,
+    material: CourseMaterialModel,
+    child: ChildProfileModel,
+    parent: ParentAccountModel,
+) -> dict:
+    return {
+        "id": job.id,
+        "tenant_id": parent.id,
+        "material_id": material.id,
+        "material_title": material.title,
+        "material_status": material.status,
+        "child_id": child.id,
+        "child_name": child.name,
+        "status": job.status,
+        "confidence_summary": job.confidence_summary,
+        "warnings": list(job.warnings or []),
+        "started_at": _iso(job.started_at),
+        "finished_at": _iso(job.finished_at) if job.finished_at else "",
+    }
+
+
+def _operations_material_status_counts(db: Session, tenant_scope: str) -> dict[str, int]:
+    by_status = {status_value.value: 0 for status_value in MaterialStatus}
+    rows = db.execute(
+        select(CourseMaterialModel.status, func.count(CourseMaterialModel.id))
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(_tenant_child_scope_filter(tenant_scope))
+        .group_by(CourseMaterialModel.status)
+    ).all()
+    for status_value, count in rows:
+        if status_value in by_status:
+            by_status[status_value] = int(count)
+    return by_status
+
+
+def _operations_media_generation_payload(
+    db: Session,
+    tenant_scope: str,
+    material_status_counts: dict[str, int],
+) -> dict:
+    media_status_counts = {status_value.value: 0 for status_value in MediaGenerationStatus}
+    failure_signals = {
+        "generated_image_status": 0,
+        "tts_us_status": 0,
+        "tts_uk_status": 0,
+        "total": 0,
+    }
+    for field_name, media_status, count in _operations_media_field_status_counts(db, tenant_scope):
+        if media_status in media_status_counts:
+            media_status_counts[media_status] += count
+        if media_status == MediaGenerationStatus.failed.value and field_name in failure_signals:
+            failure_signals[field_name] += count
+            failure_signals["total"] += count
+    return {
+        "materials_by_status": material_status_counts,
+        "asset_status_fields_by_status": media_status_counts,
+        "failure_signals": failure_signals,
+    }
+
+
+def _operations_media_field_status_counts(db: Session, tenant_scope: str) -> list[tuple[str, str, int]]:
+    dialect_name = db.get_bind().dialect.name
+    if dialect_name == "sqlite":
+        return _operations_media_field_status_counts_sqlite(db, tenant_scope)
+    if dialect_name == "postgresql":
+        return _operations_media_field_status_counts_postgresql(db, tenant_scope)
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Operations media summary is unsupported for database dialect",
+    )
+
+
+def _operations_media_field_status_counts_sqlite(db: Session, tenant_scope: str) -> list[tuple[str, str, int]]:
+    rows = db.execute(
+        text(
+            """
+            SELECT field_name, status, COUNT(*) AS count
+            FROM (
+                SELECT 'generated_image_status' AS field_name, json_extract(asset.value, '$.generated_image_status') AS status
+                FROM course_materials AS material
+                JOIN child_profiles AS child ON child.id = material.child_id
+                JOIN json_each(COALESCE(material.learning_assets, '[]')) AS asset
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                UNION ALL
+                SELECT 'tts_us_status' AS field_name, json_extract(asset.value, '$.tts_us_status') AS status
+                FROM course_materials AS material
+                JOIN child_profiles AS child ON child.id = material.child_id
+                JOIN json_each(COALESCE(material.learning_assets, '[]')) AS asset
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                UNION ALL
+                SELECT 'tts_uk_status' AS field_name, json_extract(asset.value, '$.tts_uk_status') AS status
+                FROM course_materials AS material
+                JOIN child_profiles AS child ON child.id = material.child_id
+                JOIN json_each(COALESCE(material.learning_assets, '[]')) AS asset
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                UNION ALL
+                SELECT 'generated_image_status' AS field_name, json_extract(asset.value, '$.generated_image_status') AS status
+                FROM material_parse_jobs AS job
+                JOIN course_materials AS material ON material.id = job.material_id
+                JOIN child_profiles AS child ON child.id = material.child_id
+                JOIN json_each(COALESCE(job.draft_learning_assets, '[]')) AS asset
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                  AND json_array_length(COALESCE(material.learning_assets, '[]')) = 0
+                UNION ALL
+                SELECT 'tts_us_status' AS field_name, json_extract(asset.value, '$.tts_us_status') AS status
+                FROM material_parse_jobs AS job
+                JOIN course_materials AS material ON material.id = job.material_id
+                JOIN child_profiles AS child ON child.id = material.child_id
+                JOIN json_each(COALESCE(job.draft_learning_assets, '[]')) AS asset
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                  AND json_array_length(COALESCE(material.learning_assets, '[]')) = 0
+                UNION ALL
+                SELECT 'tts_uk_status' AS field_name, json_extract(asset.value, '$.tts_uk_status') AS status
+                FROM material_parse_jobs AS job
+                JOIN course_materials AS material ON material.id = job.material_id
+                JOIN child_profiles AS child ON child.id = material.child_id
+                JOIN json_each(COALESCE(job.draft_learning_assets, '[]')) AS asset
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                  AND json_array_length(COALESCE(material.learning_assets, '[]')) = 0
+            ) AS media_fields
+            WHERE status IS NOT NULL AND status != ''
+            GROUP BY field_name, status
+            """
+        ),
+        {"tenant_scope": tenant_scope},
+    ).all()
+    return [(field_name, media_status, int(count)) for field_name, media_status, count in rows]
+
+
+def _operations_media_field_status_counts_postgresql(db: Session, tenant_scope: str) -> list[tuple[str, str, int]]:
+    rows = db.execute(
+        text(
+            """
+            SELECT field_name, status, COUNT(*) AS count
+            FROM (
+                SELECT 'generated_image_status' AS field_name, asset.value ->> 'generated_image_status' AS status
+                FROM course_materials AS material
+                JOIN child_profiles AS child ON child.id = material.child_id
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    COALESCE(CAST(material.learning_assets AS jsonb), CAST('[]' AS jsonb))
+                ) AS asset(value)
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                UNION ALL
+                SELECT 'tts_us_status' AS field_name, asset.value ->> 'tts_us_status' AS status
+                FROM course_materials AS material
+                JOIN child_profiles AS child ON child.id = material.child_id
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    COALESCE(CAST(material.learning_assets AS jsonb), CAST('[]' AS jsonb))
+                ) AS asset(value)
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                UNION ALL
+                SELECT 'tts_uk_status' AS field_name, asset.value ->> 'tts_uk_status' AS status
+                FROM course_materials AS material
+                JOIN child_profiles AS child ON child.id = material.child_id
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    COALESCE(CAST(material.learning_assets AS jsonb), CAST('[]' AS jsonb))
+                ) AS asset(value)
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                UNION ALL
+                SELECT 'generated_image_status' AS field_name, asset.value ->> 'generated_image_status' AS status
+                FROM material_parse_jobs AS job
+                JOIN course_materials AS material ON material.id = job.material_id
+                JOIN child_profiles AS child ON child.id = material.child_id
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    COALESCE(CAST(job.draft_learning_assets AS jsonb), CAST('[]' AS jsonb))
+                ) AS asset(value)
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                  AND jsonb_array_length(COALESCE(CAST(material.learning_assets AS jsonb), CAST('[]' AS jsonb))) = 0
+                UNION ALL
+                SELECT 'tts_us_status' AS field_name, asset.value ->> 'tts_us_status' AS status
+                FROM material_parse_jobs AS job
+                JOIN course_materials AS material ON material.id = job.material_id
+                JOIN child_profiles AS child ON child.id = material.child_id
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    COALESCE(CAST(job.draft_learning_assets AS jsonb), CAST('[]' AS jsonb))
+                ) AS asset(value)
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                  AND jsonb_array_length(COALESCE(CAST(material.learning_assets AS jsonb), CAST('[]' AS jsonb))) = 0
+                UNION ALL
+                SELECT 'tts_uk_status' AS field_name, asset.value ->> 'tts_uk_status' AS status
+                FROM material_parse_jobs AS job
+                JOIN course_materials AS material ON material.id = job.material_id
+                JOIN child_profiles AS child ON child.id = material.child_id
+                CROSS JOIN LATERAL jsonb_array_elements(
+                    COALESCE(CAST(job.draft_learning_assets AS jsonb), CAST('[]' AS jsonb))
+                ) AS asset(value)
+                WHERE (:tenant_scope = 'all' OR child.parent_account_id = :tenant_scope)
+                  AND jsonb_array_length(COALESCE(CAST(material.learning_assets AS jsonb), CAST('[]' AS jsonb))) = 0
+            ) AS media_fields
+            WHERE status IS NOT NULL AND status != ''
+            GROUP BY field_name, status
+            """
+        ),
+        {"tenant_scope": tenant_scope},
+    ).all()
+    return [(field_name, media_status, int(count)) for field_name, media_status, count in rows]
+
+
+def _operations_speaking_attempts_payload(db: Session, tenant_scope: str) -> dict:
+    by_status = {status_value.value: 0 for status_value in SpeakingAttemptStatus}
+    rows = db.execute(
+        select(SpeakingAttemptModel.status, func.count(SpeakingAttemptModel.id))
+        .join(ChildProfileModel, ChildProfileModel.id == SpeakingAttemptModel.child_id)
+        .where(_tenant_child_scope_filter(tenant_scope))
+        .group_by(SpeakingAttemptModel.status)
+    ).all()
+    for status_value, count in rows:
+        if status_value in by_status:
+            by_status[status_value] = int(count)
+
+    pending_statuses = [
+        SpeakingAttemptStatus.queued.value,
+        SpeakingAttemptStatus.recording_uploaded.value,
+        SpeakingAttemptStatus.transcribing.value,
+    ]
+    return {
+        "total": sum(by_status.values()),
+        "by_status": by_status,
+        "failed": by_status.get(SpeakingAttemptStatus.failed.value, 0),
+        "pending": sum(by_status.get(status_value, 0) for status_value in pending_statuses),
+        "latest_failed": _latest_operations_speaking_attempts(
+            db,
+            tenant_scope,
+            [SpeakingAttemptStatus.failed.value],
+        ),
+        "latest_pending": _latest_operations_speaking_attempts(db, tenant_scope, pending_statuses),
+    }
+
+
+def _latest_operations_speaking_attempts(db: Session, tenant_scope: str, status_values: list[str]) -> list[dict]:
+    rows = db.execute(
+        select(SpeakingAttemptModel, ChildProfileModel, ParentAccountModel)
+        .join(ChildProfileModel, ChildProfileModel.id == SpeakingAttemptModel.child_id)
+        .join(ParentAccountModel, ParentAccountModel.id == ChildProfileModel.parent_account_id)
+        .where(_tenant_child_scope_filter(tenant_scope), SpeakingAttemptModel.status.in_(status_values))
+        .order_by(SpeakingAttemptModel.updated_at.desc(), SpeakingAttemptModel.id.desc())
+        .limit(OPERATIONS_LATEST_LIMIT)
+    ).all()
+    return [_operations_speaking_attempt_item_payload(attempt, child, parent) for attempt, child, parent in rows]
+
+
+def _operations_speaking_attempt_item_payload(
+    attempt: SpeakingAttemptModel,
+    child: ChildProfileModel,
+    parent: ParentAccountModel,
+) -> dict:
+    return {
+        "id": attempt.id,
+        "tenant_id": parent.id,
+        "child_id": child.id,
+        "child_name": child.name,
+        "material_id": attempt.material_id,
+        "status": attempt.status,
+        "provider": attempt.provider,
+        "failure_reason": attempt.failure_reason,
+        "created_at": _iso(attempt.created_at),
+        "updated_at": _iso(attempt.updated_at),
+    }
+
+
+def _operations_provider_configuration_payload(db: Session, tenant_scope: str) -> dict:
+    policies = db.scalars(
+        select(TenantProviderPolicyModel)
+        .join(ParentAccountModel, ParentAccountModel.id == TenantProviderPolicyModel.tenant_id)
+        .where(_tenant_parent_scope_filter(tenant_scope))
+        .order_by(TenantProviderPolicyModel.updated_at.desc(), TenantProviderPolicyModel.tenant_id.asc())
+    ).all()
+    return {
+        "global": _global_provider_policy(),
+        "tenant_overrides": [_tenant_provider_policy_payload(policy) for policy in policies],
+        "override_count": len(policies),
+    }
+
+
+def _operations_module_toggle_coverage_payload(
+    db: Session,
+    tenant_count: int,
+    tenant_ids: list[str],
+) -> dict:
+    override_rows = db.execute(
+        select(
+            TenantModuleSettingModel.module_key,
+            TenantModuleSettingModel.enabled,
+            func.count(TenantModuleSettingModel.id),
+        )
+        .where(
+            TenantModuleSettingModel.tenant_id.in_(tenant_ids or [""]),
+            TenantModuleSettingModel.module_key.in_(MODULE_KEYS),
+        )
+        .group_by(TenantModuleSettingModel.module_key, TenantModuleSettingModel.enabled)
+    ).all()
+    override_counts = {
+        (module_key, bool(enabled)): int(count)
+        for module_key, enabled, count in override_rows
+    }
+    by_module: list[dict] = []
+    total_enabled = 0
+    total_disabled = 0
+    total_overrides = 0
+    for module_key in MODULE_KEYS:
+        override_enabled = override_counts.get((module_key, True), 0)
+        override_disabled = override_counts.get((module_key, False), 0)
+        overrides = override_enabled + override_disabled
+        global_defaults = max(0, tenant_count - overrides)
+        enabled = global_defaults + override_enabled
+        disabled = override_disabled
+        total_enabled += enabled
+        total_disabled += disabled
+        total_overrides += overrides
+        by_module.append(
+            {
+                "module_key": module_key,
+                "total": tenant_count,
+                "enabled": enabled,
+                "disabled": disabled,
+                "overrides": overrides,
+                "global_defaults": global_defaults,
+            }
+        )
+    return {
+        "tenant_count": tenant_count,
+        "module_keys": list(MODULE_KEYS),
+        "total": tenant_count * len(MODULE_KEYS),
+        "enabled": total_enabled,
+        "disabled": total_disabled,
+        "overrides": total_overrides,
+        "global_defaults": tenant_count * len(MODULE_KEYS) - total_overrides,
+        "by_module": by_module,
+    }
 
 
 def _ensure_admin_user(db: Session, actor: AdminActor) -> None:
