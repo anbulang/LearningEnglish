@@ -11,8 +11,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy import delete
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -255,6 +254,55 @@ def get_admin_access(
         "permissions": actor.permissions,
         "audit_events": [_audit_event_payload(event) for event in events],
     }
+
+
+@router.get("/audit-events")
+def list_admin_audit_events(
+    tenant_scope: str = Query(..., min_length=1),
+    action: str = "",
+    resource_type: str = "",
+    risk_level: str = "",
+    result: str = "",
+    actor_id: str = "",
+    limit: int = Query(50, ge=1, le=100),
+    cursor: str = "",
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    if "admin.audit.read" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.audit.read permission")
+
+    stmt = select(AdminAuditEventModel).where(_audit_scope_filter(tenant_scope))
+    if action:
+        stmt = stmt.where(AdminAuditEventModel.action == action)
+    if resource_type:
+        stmt = stmt.where(AdminAuditEventModel.resource_type == resource_type)
+    if risk_level:
+        stmt = stmt.where(AdminAuditEventModel.risk_level == risk_level)
+    if result:
+        stmt = stmt.where(AdminAuditEventModel.result == result)
+    if actor_id:
+        stmt = stmt.where(AdminAuditEventModel.actor_id == actor_id)
+    if cursor:
+        cursor_event = db.get(AdminAuditEventModel, cursor)
+        if cursor_event is None:
+            return {"items": [], "next_cursor": ""}
+        stmt = stmt.where(
+            or_(
+                AdminAuditEventModel.created_at < cursor_event.created_at,
+                and_(
+                    AdminAuditEventModel.created_at == cursor_event.created_at,
+                    AdminAuditEventModel.id < cursor_event.id,
+                ),
+            )
+        )
+
+    events = db.scalars(
+        stmt.order_by(AdminAuditEventModel.created_at.desc(), AdminAuditEventModel.id.desc()).limit(limit + 1)
+    ).all()
+    page = events[:limit]
+    next_cursor = page[-1].id if len(events) > limit and page else ""
+    return {"items": [_audit_event_payload(event) for event in page], "next_cursor": next_cursor}
 
 
 @router.post("/materials/{material_id}/archive")

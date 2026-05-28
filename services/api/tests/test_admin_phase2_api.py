@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, timezone
 
+from app.core.db import SessionLocal
 from app.core.settings import get_settings
+from app.db.models import AdminAuditEventModel
 from conftest import configure_test_environment
 
 
@@ -18,6 +21,40 @@ def _set_admin_credentials(monkeypatch, credentials: list[dict]) -> None:
     monkeypatch.setenv("ADMIN_API_CREDENTIALS_JSON", json.dumps(credentials))
     monkeypatch.delenv("ADMIN_API_TOKEN", raising=False)
     get_settings.cache_clear()
+
+
+def _seed_audit_event(
+    *,
+    audit_id: str,
+    actor_id: str = "admin_ops",
+    actor_role: str = "Operations",
+    tenant_scope: str = "tenant_task2_a",
+    action: str = "admin.material.archive",
+    resource_type: str = "course_material",
+    resource_id: str = "material_task2",
+    risk_level: str = "high",
+    result: str = "success",
+    created_at: datetime,
+) -> None:
+    with SessionLocal() as db:
+        db.add(
+            AdminAuditEventModel(
+                id=audit_id,
+                actor_id=actor_id,
+                actor_role=actor_role,
+                tenant_scope=tenant_scope,
+                action=action,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                risk_level=risk_level,
+                result=result,
+                reason="Task 2 audit search fixture",
+                trace_id=f"req_{audit_id}",
+                content_json={},
+                created_at=created_at,
+            )
+        )
+        db.commit()
 
 
 def test_admin_credentials_resolve_actor_and_exact_permissions(api_client, monkeypatch) -> None:
@@ -224,3 +261,129 @@ def test_invalid_admin_credentials_json_returns_service_unavailable(api_client, 
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Admin credentials are invalid"
+
+
+def test_admin_audit_events_filter_by_scope_fields_and_paginate_after_cursor(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_ops",
+                "display_name": "Ops Admin",
+                "email": "ops@example.com",
+                "role": "Operations",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("ops-token"),
+            }
+        ],
+    )
+    created_at = datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc)
+    for audit_id, tenant_scope in (
+        ("audit_task2_001", "tenant_task2_a"),
+        ("audit_task2_002", "tenant_task2_a"),
+        ("audit_task2_003", "all"),
+    ):
+        _seed_audit_event(audit_id=audit_id, tenant_scope=tenant_scope, created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_004", action="admin.dashboard.read", created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_005", result="failed", created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_006", actor_id="admin_other", created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_007", tenant_scope="tenant_task2_b", created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_008", resource_type="tenant_provider_policy", created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_009", risk_level="low", created_at=created_at)
+
+    first_page = api_client.get(
+        "/v1/admin/audit-events",
+        params={
+            "tenant_scope": "tenant_task2_a",
+            "action": "admin.material.archive",
+            "resource_type": "course_material",
+            "risk_level": "high",
+            "result": "success",
+            "actor_id": "admin_ops",
+            "limit": "2",
+        },
+        headers={"X-Admin-Token": "ops-token"},
+    )
+
+    assert first_page.status_code == 200
+    first_payload = first_page.json()
+    assert [item["id"] for item in first_payload["items"]] == ["audit_task2_003", "audit_task2_002"]
+    assert first_payload["next_cursor"] == "audit_task2_002"
+    assert {item["tenant_scope"] for item in first_payload["items"]} == {"all", "tenant_task2_a"}
+
+    second_page = api_client.get(
+        "/v1/admin/audit-events",
+        params={
+            "tenant_scope": "tenant_task2_a",
+            "action": "admin.material.archive",
+            "resource_type": "course_material",
+            "risk_level": "high",
+            "result": "success",
+            "actor_id": "admin_ops",
+            "limit": "2",
+            "cursor": first_payload["next_cursor"],
+        },
+        headers={"X-Admin-Token": "ops-token"},
+    )
+
+    assert second_page.status_code == 200
+    second_payload = second_page.json()
+    assert [item["id"] for item in second_payload["items"]] == ["audit_task2_001"]
+    assert second_payload["next_cursor"] == ""
+
+
+def test_admin_audit_events_return_empty_page_for_missing_cursor(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_ops",
+                "display_name": "Ops Admin",
+                "email": "ops@example.com",
+                "role": "Operations",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("ops-token"),
+            }
+        ],
+    )
+    _seed_audit_event(
+        audit_id="audit_task2_cursor_existing",
+        tenant_scope="tenant_task2_a",
+        created_at=datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc),
+    )
+
+    response = api_client.get(
+        "/v1/admin/audit-events",
+        params={"tenant_scope": "all", "cursor": "audit_task2_missing"},
+        headers={"X-Admin-Token": "ops-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "next_cursor": ""}
+
+
+def test_admin_audit_events_require_audit_read_permission(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_viewer",
+                "display_name": "Viewer",
+                "email": "viewer@example.com",
+                "role": "Viewer",
+                "status": "active",
+                "permissions": ["admin.dashboard.read"],
+                "token_sha256": _token_hash("viewer-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/audit-events?tenant_scope=all",
+        headers={"X-Admin-Token": "viewer-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing admin.audit.read permission"
