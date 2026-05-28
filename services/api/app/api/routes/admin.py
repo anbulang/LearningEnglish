@@ -264,7 +264,7 @@ def list_admin_audit_events(
     risk_level: str = "",
     result: str = "",
     actor_id: str = "",
-    limit: int = Query(50, ge=1, le=100),
+    limit: str = Query("50"),
     cursor: str = "",
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
@@ -272,6 +272,7 @@ def list_admin_audit_events(
     if "admin.audit.read" not in actor.permissions:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.audit.read permission")
 
+    page_size = _audit_page_limit(limit)
     stmt = select(AdminAuditEventModel).where(_audit_scope_filter(tenant_scope))
     if action:
         stmt = stmt.where(AdminAuditEventModel.action == action)
@@ -298,10 +299,10 @@ def list_admin_audit_events(
         )
 
     events = db.scalars(
-        stmt.order_by(AdminAuditEventModel.created_at.desc(), AdminAuditEventModel.id.desc()).limit(limit + 1)
+        stmt.order_by(AdminAuditEventModel.created_at.desc(), AdminAuditEventModel.id.desc()).limit(page_size + 1)
     ).all()
-    page = events[:limit]
-    next_cursor = page[-1].id if len(events) > limit and page else ""
+    page = events[:page_size]
+    next_cursor = page[-1].id if len(events) > page_size and page else ""
     return {"items": [_audit_event_payload(event) for event in page], "next_cursor": next_cursor}
 
 
@@ -628,6 +629,14 @@ def _audit_scope_filter(tenant_scope: str):
     if tenant_scope == "all":
         return AdminAuditEventModel.tenant_scope != ""
     return AdminAuditEventModel.tenant_scope.in_(["all", tenant_scope])
+
+
+def _audit_page_limit(raw_limit: str) -> int:
+    try:
+        page_size = int(raw_limit)
+    except (TypeError, ValueError):
+        page_size = 50
+    return max(1, min(page_size, 100))
 
 
 def _ensure_admin_user(db: Session, actor: AdminActor) -> None:

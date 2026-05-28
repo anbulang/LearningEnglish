@@ -364,6 +364,94 @@ def test_admin_audit_events_return_empty_page_for_missing_cursor(api_client, mon
     assert response.json() == {"items": [], "next_cursor": ""}
 
 
+def test_admin_audit_events_clamp_limit_below_one_to_single_item(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_limit_floor",
+                "display_name": "Limit Floor Admin",
+                "email": "limit-floor@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("limit-floor-token"),
+            }
+        ],
+    )
+    created_at = datetime(2026, 5, 28, 13, 0, tzinfo=timezone.utc)
+    for index in range(2):
+        _seed_audit_event(
+            audit_id=f"audit_task2_limit_floor_{index:03d}",
+            actor_id="admin_limit_floor",
+            tenant_scope="tenant_task2_limit_floor",
+            action="admin.task2.limit_floor",
+            resource_type="admin_audit_event",
+            risk_level="low",
+            created_at=created_at,
+        )
+
+    response = api_client.get(
+        "/v1/admin/audit-events",
+        params={
+            "tenant_scope": "tenant_task2_limit_floor",
+            "action": "admin.task2.limit_floor",
+            "actor_id": "admin_limit_floor",
+            "limit": "0",
+        },
+        headers={"X-Admin-Token": "limit-floor-token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["items"]) == 1
+    assert payload["next_cursor"]
+
+
+def test_admin_audit_events_clamp_limit_above_one_hundred(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_limit_ceiling",
+                "display_name": "Limit Ceiling Admin",
+                "email": "limit-ceiling@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("limit-ceiling-token"),
+            }
+        ],
+    )
+    created_at = datetime(2026, 5, 28, 14, 0, tzinfo=timezone.utc)
+    for index in range(101):
+        _seed_audit_event(
+            audit_id=f"audit_task2_limit_ceiling_{index:03d}",
+            actor_id="admin_limit_ceiling",
+            tenant_scope="tenant_task2_limit_ceiling",
+            action="admin.task2.limit_ceiling",
+            resource_type="admin_audit_event",
+            risk_level="low",
+            created_at=created_at,
+        )
+
+    response = api_client.get(
+        "/v1/admin/audit-events",
+        params={
+            "tenant_scope": "tenant_task2_limit_ceiling",
+            "action": "admin.task2.limit_ceiling",
+            "actor_id": "admin_limit_ceiling",
+            "limit": "101",
+        },
+        headers={"X-Admin-Token": "limit-ceiling-token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["items"]) == 100
+    assert payload["next_cursor"]
+
+
 def test_admin_audit_events_require_audit_read_permission(api_client, monkeypatch) -> None:
     _set_admin_credentials(
         monkeypatch,
