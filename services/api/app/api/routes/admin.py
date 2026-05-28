@@ -11,7 +11,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -53,6 +53,7 @@ AI_PROVIDERS = {"stub", "doubao"}
 MEDIA_PROVIDERS = {"mock", "real"}
 FALLBACK_MODES = {"global_stub", "auto_to_mock", "per_tenant"}
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")
+TENANT_DETAIL_LATEST_LIMIT = 5
 
 
 @dataclass(frozen=True)
@@ -320,11 +321,11 @@ def get_admin_tenant_detail(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.tenant.read permission")
 
     normalized_tenant_id = tenant_id.strip()
+    if tenant_scope != "all" and tenant_scope != normalized_tenant_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
     tenant = db.get(ParentAccountModel, normalized_tenant_id)
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
-    if tenant_scope != "all" and tenant.id != tenant_scope:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found in tenant scope")
 
     _ensure_admin_user(db, actor)
     children = db.scalars(
@@ -334,41 +335,44 @@ def get_admin_tenant_detail(
     ).all()
     child_by_id = {child.id: child for child in children}
     child_ids = [child.id for child in children]
-    materials = db.scalars(
-        select(CourseMaterialModel)
-        .where(CourseMaterialModel.child_id.in_(child_ids or [""]))
-        .order_by(CourseMaterialModel.updated_at.desc(), CourseMaterialModel.id.desc())
-    ).all()
-    material_ids = [material.id for material in materials]
+    material_counts = _tenant_material_status_counts(db, child_ids)
+    materials = _latest_tenant_materials(db, child_ids)
+    recent_material_ids = [material.id for material in materials]
     jobs = db.scalars(
         select(MaterialParseJobModel)
-        .where(MaterialParseJobModel.material_id.in_(material_ids or [""]))
+        .where(MaterialParseJobModel.material_id.in_(recent_material_ids or [""]))
         .order_by(MaterialParseJobModel.started_at.desc(), MaterialParseJobModel.id.desc())
     ).all()
     job_by_material = {job.material_id: job for job in jobs}
+    job_counts = _tenant_job_status_counts(db, tenant.id)
+    stale_processing_jobs = _tenant_stale_processing_job_count(db, tenant.id)
     policy = db.scalar(select(TenantProviderPolicyModel).where(TenantProviderPolicyModel.tenant_id == tenant.id))
     module_rows = db.scalars(
         select(TenantModuleSettingModel)
         .where(TenantModuleSettingModel.tenant_id == tenant.id)
         .order_by(TenantModuleSettingModel.updated_at.desc())
     ).all()
-    reports = db.scalars(
-        select(WeeklyReportModel)
-        .where(WeeklyReportModel.child_id.in_(child_ids or [""]))
-        .order_by(WeeklyReportModel.week_start.desc(), WeeklyReportModel.id.desc())
-    ).all()
-    attempts = db.scalars(
-        select(SpeakingAttemptModel)
-        .where(SpeakingAttemptModel.child_id.in_(child_ids or [""]))
-        .order_by(SpeakingAttemptModel.updated_at.desc(), SpeakingAttemptModel.id.desc())
-    ).all()
+    latest_reports = _latest_weekly_reports(db, child_ids)
+    weekly_report_aggregate = _weekly_report_aggregate(db, child_ids)
+    latest_report_by_child = _latest_report_by_child(db, child_ids)
+    latest_attempts = _latest_speaking_attempts(db, child_ids)
+    speaking_status_counts = _speaking_attempt_status_counts(db, child_ids)
+    speaking_average_score = _speaking_attempt_average_score(db, child_ids)
+    attempt_count_by_child = _speaking_attempt_counts_by_child(db, child_ids)
 
     material_payloads = [
         _admin_material_payload(material, child_by_id[material.child_id], tenant, job_by_material.get(material.id))
         for material in materials
         if material.child_id in child_by_id
     ]
-    risk_summary = _tenant_risk_summary(materials, jobs, attempts)
+    risk_summary = _tenant_risk_summary(
+        materials,
+        jobs,
+        material_counts,
+        job_counts,
+        stale_processing_jobs,
+        speaking_status_counts,
+    )
     audit_event = _record_audit_event(
         db,
         actor=actor,
@@ -380,21 +384,21 @@ def get_admin_tenant_detail(
         result="success",
         trace_id=_trace_id(request),
     )
-    recent_audit_events = db.scalars(
-        select(AdminAuditEventModel)
-        .where(_audit_scope_filter(tenant.id))
-        .order_by(AdminAuditEventModel.created_at.desc(), AdminAuditEventModel.id.desc())
-        .limit(5)
-    ).all()
-    if audit_event.id not in {event.id for event in recent_audit_events}:
-        recent_audit_events = [audit_event, *recent_audit_events[:4]]
+    recent_audit_events: list[AdminAuditEventModel] = []
+    if "admin.audit.read" in actor.permissions:
+        recent_audit_events = db.scalars(
+            select(AdminAuditEventModel)
+            .where(_audit_scope_filter(tenant.id))
+            .order_by(AdminAuditEventModel.created_at.desc(), AdminAuditEventModel.id.desc())
+            .limit(TENANT_DETAIL_LATEST_LIMIT)
+        ).all()
+        if audit_event.id not in {event.id for event in recent_audit_events}:
+            recent_audit_events = [audit_event, *recent_audit_events[: TENANT_DETAIL_LATEST_LIMIT - 1]]
 
-    latest_report_by_child = _latest_report_by_child(reports)
-    attempt_count_by_child = _count_attempts_by_child(attempts)
     return {
         "required_permission": "admin.tenant.read",
         "tenant": _admin_tenant_detail_payload(tenant, risk_summary["risk_level"]),
-        "summary": _tenant_summary_payload(children, materials),
+        "summary": _tenant_summary_payload(children, material_counts),
         "children": [
             _admin_child_payload(child, latest_report_by_child.get(child.id), attempt_count_by_child.get(child.id, 0))
             for child in children
@@ -402,8 +406,8 @@ def get_admin_tenant_detail(
         "materials": material_payloads,
         "provider_policy": _effective_tenant_provider_policy_payload(tenant.id, policy),
         "module_settings": _module_settings_payload([tenant], module_rows),
-        "weekly_reports": _weekly_report_payload(reports),
-        "speaking_attempts": _speaking_attempt_payload(attempts),
+        "weekly_reports": _weekly_report_payload(latest_reports, weekly_report_aggregate),
+        "speaking_attempts": _speaking_attempt_payload(latest_attempts, speaking_status_counts, speaking_average_score),
         "risk_summary": risk_summary,
         "audit_event": _audit_event_payload(audit_event),
         "access_context": _access_context_payload(actor, recent_audit_events),
@@ -864,14 +868,63 @@ def _admin_tenant_detail_payload(parent: ParentAccountModel, risk_level: str) ->
     }
 
 
-def _tenant_summary_payload(children: list[ChildProfileModel], materials: list[CourseMaterialModel]) -> dict:
+def _tenant_material_status_counts(db: Session, child_ids: list[str]) -> dict[str, int]:
+    if not child_ids:
+        return {}
+    rows = db.execute(
+        select(CourseMaterialModel.status, func.count(CourseMaterialModel.id))
+        .where(CourseMaterialModel.child_id.in_(child_ids))
+        .group_by(CourseMaterialModel.status)
+    ).all()
+    return {status_value: int(count) for status_value, count in rows}
+
+
+def _latest_tenant_materials(db: Session, child_ids: list[str]) -> list[CourseMaterialModel]:
+    if not child_ids:
+        return []
+    return db.scalars(
+        select(CourseMaterialModel)
+        .where(CourseMaterialModel.child_id.in_(child_ids))
+        .order_by(CourseMaterialModel.updated_at.desc(), CourseMaterialModel.id.desc())
+        .limit(TENANT_DETAIL_LATEST_LIMIT)
+    ).all()
+
+
+def _tenant_job_status_counts(db: Session, tenant_id: str) -> dict[str, int]:
+    rows = db.execute(
+        select(MaterialParseJobModel.status, func.count(MaterialParseJobModel.id))
+        .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(ChildProfileModel.parent_account_id == tenant_id)
+        .group_by(MaterialParseJobModel.status)
+    ).all()
+    return {status_value: int(count) for status_value, count in rows}
+
+
+def _tenant_stale_processing_job_count(db: Session, tenant_id: str) -> int:
+    stale_before = datetime.now(timezone.utc) - timedelta(minutes=30)
+    value = db.scalar(
+        select(func.count(MaterialParseJobModel.id))
+        .join(CourseMaterialModel, CourseMaterialModel.id == MaterialParseJobModel.material_id)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .where(
+            ChildProfileModel.parent_account_id == tenant_id,
+            MaterialParseJobModel.status == JobStatus.processing.value,
+            MaterialParseJobModel.started_at < stale_before,
+        )
+    )
+    return int(value or 0)
+
+
+def _tenant_summary_payload(children: list[ChildProfileModel], material_counts: dict[str, int]) -> dict:
+    total_materials = sum(material_counts.values())
     return {
         "active_parents": 1,
         "children": len(children),
-        "materials": len(materials),
-        "ready_materials": sum(1 for material in materials if material.status == MaterialStatus.ready.value),
-        "failed_materials": sum(1 for material in materials if material.status == MaterialStatus.failed.value),
-        "processing_materials": sum(1 for material in materials if material.status == MaterialStatus.processing.value),
+        "materials": total_materials,
+        "ready_materials": material_counts.get(MaterialStatus.ready.value, 0),
+        "failed_materials": material_counts.get(MaterialStatus.failed.value, 0),
+        "processing_materials": material_counts.get(MaterialStatus.processing.value, 0),
     }
 
 
@@ -897,27 +950,72 @@ def _admin_child_payload(
     }
 
 
-def _latest_report_by_child(reports: list[WeeklyReportModel]) -> dict[str, WeeklyReportModel]:
+def _latest_report_by_child(db: Session, child_ids: list[str]) -> dict[str, WeeklyReportModel]:
     latest: dict[str, WeeklyReportModel] = {}
-    for report in reports:
-        latest.setdefault(report.child_id, report)
+    for child_id in child_ids:
+        report = db.scalars(
+            select(WeeklyReportModel)
+            .where(WeeklyReportModel.child_id == child_id)
+            .order_by(WeeklyReportModel.week_start.desc(), WeeklyReportModel.id.desc())
+            .limit(1)
+        ).first()
+        if report is not None:
+            latest[child_id] = report
     return latest
 
 
-def _weekly_report_payload(reports: list[WeeklyReportModel]) -> dict:
+def _latest_weekly_reports(db: Session, child_ids: list[str]) -> list[WeeklyReportModel]:
+    if not child_ids:
+        return []
+    return db.scalars(
+        select(WeeklyReportModel)
+        .where(WeeklyReportModel.child_id.in_(child_ids))
+        .order_by(WeeklyReportModel.week_start.desc(), WeeklyReportModel.id.desc())
+        .limit(TENANT_DETAIL_LATEST_LIMIT)
+    ).all()
+
+
+def _weekly_report_aggregate(db: Session, child_ids: list[str]) -> dict:
+    if not child_ids:
+        return {
+            "total": 0,
+            "children_with_reports": 0,
+            "completed_sessions": 0,
+            "reviewed_words": 0,
+            "speaking_attempts": 0,
+        }
+    row = db.execute(
+        select(
+            func.count(WeeklyReportModel.id),
+            func.count(func.distinct(WeeklyReportModel.child_id)),
+            func.coalesce(func.sum(WeeklyReportModel.completed_sessions), 0),
+            func.coalesce(func.sum(WeeklyReportModel.reviewed_words), 0),
+            func.coalesce(func.sum(WeeklyReportModel.speaking_attempts), 0),
+        ).where(WeeklyReportModel.child_id.in_(child_ids))
+    ).one()
+    return {
+        "total": int(row[0] or 0),
+        "children_with_reports": int(row[1] or 0),
+        "completed_sessions": int(row[2] or 0),
+        "reviewed_words": int(row[3] or 0),
+        "speaking_attempts": int(row[4] or 0),
+    }
+
+
+def _weekly_report_payload(reports: list[WeeklyReportModel], aggregate: dict) -> dict:
     latest = reports[0] if reports else None
     return {
-        "total": len(reports),
-        "children_with_reports": len({report.child_id for report in reports}),
-        "completed_sessions": sum(report.completed_sessions for report in reports),
-        "reviewed_words": sum(report.reviewed_words for report in reports),
-        "speaking_attempts": sum(report.speaking_attempts for report in reports),
+        "total": aggregate["total"],
+        "children_with_reports": aggregate["children_with_reports"],
+        "completed_sessions": aggregate["completed_sessions"],
+        "reviewed_words": aggregate["reviewed_words"],
+        "speaking_attempts": aggregate["speaking_attempts"],
         "weak_items": _unique_strings(item for report in reports for item in (report.weak_items or [])),
         "recommended_actions": _unique_strings(
             item for report in reports for item in (report.recommended_actions or [])
         ),
         "latest": _weekly_report_item_payload(latest) if latest else None,
-        "history": [_weekly_report_item_payload(report) for report in reports[:5]],
+        "history": [_weekly_report_item_payload(report) for report in reports],
     }
 
 
@@ -935,29 +1033,67 @@ def _weekly_report_item_payload(report: WeeklyReportModel) -> dict:
     }
 
 
-def _count_attempts_by_child(attempts: list[SpeakingAttemptModel]) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for attempt in attempts:
-        counts[attempt.child_id] = counts.get(attempt.child_id, 0) + 1
+def _latest_speaking_attempts(db: Session, child_ids: list[str]) -> list[SpeakingAttemptModel]:
+    if not child_ids:
+        return []
+    return db.scalars(
+        select(SpeakingAttemptModel)
+        .where(SpeakingAttemptModel.child_id.in_(child_ids))
+        .order_by(SpeakingAttemptModel.updated_at.desc(), SpeakingAttemptModel.id.desc())
+        .limit(TENANT_DETAIL_LATEST_LIMIT)
+    ).all()
+
+
+def _speaking_attempt_status_counts(db: Session, child_ids: list[str]) -> dict[str, int]:
+    counts = {status.value: 0 for status in SpeakingAttemptStatus}
+    if not child_ids:
+        return counts
+    rows = db.execute(
+        select(SpeakingAttemptModel.status, func.count(SpeakingAttemptModel.id))
+        .where(SpeakingAttemptModel.child_id.in_(child_ids))
+        .group_by(SpeakingAttemptModel.status)
+    ).all()
+    for status_value, count in rows:
+        counts[status_value] = int(count)
     return counts
 
 
-def _speaking_attempt_payload(attempts: list[SpeakingAttemptModel]) -> dict:
-    by_status = {status.value: 0 for status in SpeakingAttemptStatus}
-    for attempt in attempts:
-        if attempt.status not in by_status:
-            by_status[attempt.status] = 0
-        by_status[attempt.status] += 1
-    scored_attempts = [attempt for attempt in attempts if attempt.status == SpeakingAttemptStatus.scored.value]
-    scored_values = [attempt.overall_score for attempt in scored_attempts if attempt.overall_score is not None]
-    average_score = round(sum(scored_values) / len(scored_values), 1) if scored_values else None
+def _speaking_attempt_average_score(db: Session, child_ids: list[str]) -> Optional[float]:
+    if not child_ids:
+        return None
+    value = db.scalar(
+        select(func.avg(SpeakingAttemptModel.overall_score)).where(
+            SpeakingAttemptModel.child_id.in_(child_ids),
+            SpeakingAttemptModel.status == SpeakingAttemptStatus.scored.value,
+        )
+    )
+    return round(float(value), 1) if value is not None else None
+
+
+def _speaking_attempt_counts_by_child(db: Session, child_ids: list[str]) -> dict[str, int]:
+    if not child_ids:
+        return {}
+    rows = db.execute(
+        select(SpeakingAttemptModel.child_id, func.count(SpeakingAttemptModel.id))
+        .where(SpeakingAttemptModel.child_id.in_(child_ids))
+        .group_by(SpeakingAttemptModel.child_id)
+    ).all()
+    return {child_id: int(count) for child_id, count in rows}
+
+
+def _speaking_attempt_payload(
+    attempts: list[SpeakingAttemptModel],
+    by_status: dict[str, int],
+    average_score: Optional[float],
+) -> dict:
+    total = sum(by_status.values())
     return {
-        "total": len(attempts),
+        "total": total,
         "by_status": by_status,
         "scored": by_status.get(SpeakingAttemptStatus.scored.value, 0),
         "failed": by_status.get(SpeakingAttemptStatus.failed.value, 0),
         "average_overall_score": average_score,
-        "latest": [_speaking_attempt_item_payload(attempt) for attempt in attempts[:5]],
+        "latest": [_speaking_attempt_item_payload(attempt) for attempt in attempts],
     }
 
 
@@ -978,19 +1114,17 @@ def _speaking_attempt_item_payload(attempt: SpeakingAttemptModel) -> dict:
 def _tenant_risk_summary(
     materials: list[CourseMaterialModel],
     jobs: list[MaterialParseJobModel],
-    attempts: list[SpeakingAttemptModel],
+    material_counts: dict[str, int],
+    job_counts: dict[str, int],
+    stale_processing_jobs: int,
+    speaking_status_counts: dict[str, int],
 ) -> dict:
     media_failure_count = _media_failure_count(materials, jobs)
-    failed_materials = sum(1 for material in materials if material.status == MaterialStatus.failed.value)
-    failed_material_jobs = sum(1 for job in jobs if job.status == JobStatus.failed.value)
-    processing_materials = sum(1 for material in materials if material.status == MaterialStatus.processing.value)
-    needs_review_materials = sum(1 for material in materials if material.status == MaterialStatus.needs_review.value)
-    stale_processing_jobs = sum(
-        1 for job in jobs if job.status == JobStatus.processing.value and _elapsed_minutes(job.started_at) > 30
-    )
-    failed_speaking_attempts = sum(
-        1 for attempt in attempts if attempt.status == SpeakingAttemptStatus.failed.value
-    )
+    failed_materials = material_counts.get(MaterialStatus.failed.value, 0)
+    failed_material_jobs = job_counts.get(JobStatus.failed.value, 0)
+    processing_materials = material_counts.get(MaterialStatus.processing.value, 0)
+    needs_review_materials = material_counts.get(MaterialStatus.needs_review.value, 0)
+    failed_speaking_attempts = speaking_status_counts.get(SpeakingAttemptStatus.failed.value, 0)
     risk_level = "low"
     if media_failure_count or failed_materials or failed_material_jobs or failed_speaking_attempts:
         risk_level = "high"
@@ -1007,7 +1141,7 @@ def _tenant_risk_summary(
         "needs_review_materials": needs_review_materials,
         "stale_processing_jobs": stale_processing_jobs,
         "failed_speaking_attempts": failed_speaking_attempts,
-        "material_count": len(materials),
+        "material_count": sum(material_counts.values()),
     }
 
 

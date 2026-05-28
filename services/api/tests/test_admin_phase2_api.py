@@ -6,8 +6,9 @@ import json
 from datetime import date, datetime, timezone
 
 import pytest
+from sqlalchemy import event
 
-from app.core.db import SessionLocal
+from app.core.db import SessionLocal, engine
 from app.core.settings import get_settings
 from app.db.models import (
     AdminAuditEventModel,
@@ -239,6 +240,85 @@ def _seed_tenant_detail_fixture(*, tenant_id: str, display_name: str, phone_numb
     return {"tenant_id": tenant_id, "child_a_id": child_a_id, "child_b_id": child_b_id, "material_id": material_id}
 
 
+def _seed_additional_tenant_activity(*, tenant_id: str, child_id: str, material_id: str, count: int = 7) -> None:
+    now = datetime(2026, 5, 28, 16, 0, tzinfo=timezone.utc)
+    with SessionLocal() as db:
+        for index in range(count):
+            extra_child_id = f"child_{tenant_id}_extra_{index}"
+            extra_material_id = f"material_{tenant_id}_extra_{index}"
+            db.add(
+                ChildProfileModel(
+                    id=extra_child_id,
+                    parent_account_id=tenant_id,
+                    name=f"Extra {index}",
+                    avatar_url="",
+                    age=6,
+                    level="starter",
+                    learning_goal="Bounded history coverage",
+                    preferred_review_duration_minutes=10,
+                    parent_notes="",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            db.add(
+                WeeklyReportModel(
+                    id=f"report_{tenant_id}_extra_{index}",
+                    child_id=extra_child_id,
+                    week_start=date(2026, 5, 11),
+                    week_end=date(2026, 5, 17),
+                    completed_sessions=1,
+                    reviewed_words=2,
+                    speaking_attempts=1,
+                    weak_items=[f"weak_{index}"],
+                    recommended_actions=[f"action_{index}"],
+                )
+            )
+            db.add(
+                CourseMaterialModel(
+                    id=extra_material_id,
+                    child_id=child_id,
+                    teacher_name="Emma",
+                    lesson_date=date(2026, 5, 25),
+                    title=f"Extra Material {index}",
+                    topic="phonics",
+                    status="ready",
+                    source_images=[],
+                    image_records=[],
+                    learning_assets=[],
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            db.add(
+                MaterialParseJobModel(
+                    id=f"job_{tenant_id}_extra_{index}",
+                    material_id=extra_material_id,
+                    status="ready",
+                    confidence_summary="Ready",
+                    warnings=[],
+                    started_at=now,
+                    finished_at=now,
+                    draft_learning_assets=[],
+                )
+            )
+            db.add(
+                SpeakingAttemptModel(
+                    id=f"attempt_{tenant_id}_extra_{index}",
+                    child_id=child_id,
+                    material_id=material_id,
+                    prompt_text=f"Extra prompt {index}.",
+                    target_text="extra",
+                    status=SpeakingAttemptStatus.scored.value,
+                    overall_score=70 + index,
+                    provider="stub",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+        db.commit()
+
+
 def test_admin_credentials_resolve_actor_and_exact_permissions(api_client, monkeypatch) -> None:
     _set_admin_credentials(
         monkeypatch,
@@ -393,9 +473,38 @@ def test_admin_tenant_detail_returns_admin_read_model_for_all_scope(api_client, 
     assert payload["audit_event"]["trace_id"] == "req_task3_read"
     assert payload["access_context"]["current_admin"]["id"] == "admin_tenant_reader"
     assert payload["access_context"]["current_admin"]["role"] == "Support Viewer"
-    assert payload["access_context"]["recent_audit_events"][0]["action"] == "admin.tenant.read"
-    assert payload["access_context"]["recent_audit_events"][0]["trace_id"] == "req_task3_read"
+    assert payload["access_context"]["recent_audit_events"] == []
     assert "tenant-reader-token" not in str(payload)
+
+
+def test_admin_tenant_detail_gates_recent_audit_history_behind_audit_read(api_client, monkeypatch) -> None:
+    fixture = _seed_tenant_detail_fixture(tenant_id="tenant_task3_audit_gate", display_name="Audit Gate Family")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_tenant_auditor",
+                "display_name": "Tenant Auditor",
+                "email": "tenant-auditor@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.tenant.read", "admin.audit.read"],
+                "token_sha256": _token_hash("tenant-auditor-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        f"/v1/admin/tenants/{fixture['tenant_id']}?tenant_scope=all",
+        headers={"X-Admin-Token": "tenant-auditor-token", "X-Request-ID": "req_task3_audit_gate"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["audit_event"]["trace_id"] == "req_task3_audit_gate"
+    assert payload["access_context"]["recent_audit_events"]
+    assert payload["access_context"]["recent_audit_events"][0]["action"] == "admin.tenant.read"
+    assert payload["access_context"]["recent_audit_events"][0]["trace_id"] == "req_task3_audit_gate"
 
 
 def test_admin_tenant_detail_requires_tenant_read_permission(api_client, monkeypatch) -> None:
@@ -450,11 +559,68 @@ def test_admin_tenant_detail_honors_tenant_scope_without_disclosure(api_client, 
         "/v1/admin/tenants/tenant_task3_other?tenant_scope=tenant_task3_scoped",
         headers={"X-Admin-Token": "scoped-reader-token"},
     )
+    missing_response = api_client.get(
+        "/v1/admin/tenants/tenant_task3_missing?tenant_scope=tenant_task3_scoped",
+        headers={"X-Admin-Token": "scoped-reader-token"},
+    )
 
     assert scoped_response.status_code == 200
     assert scoped_response.json()["tenant"]["id"] == "tenant_task3_scoped"
     assert out_of_scope_response.status_code == 404
-    assert out_of_scope_response.json()["detail"] == "Tenant not found in tenant scope"
+    assert out_of_scope_response.json()["detail"] == "Tenant not found"
+    assert missing_response.status_code == 404
+    assert missing_response.json() == out_of_scope_response.json()
+
+
+def test_admin_tenant_detail_uses_aggregate_queries_and_bounded_latest_lists(api_client, monkeypatch) -> None:
+    fixture = _seed_tenant_detail_fixture(tenant_id="tenant_task3_bounded", display_name="Bounded Family")
+    _seed_additional_tenant_activity(
+        tenant_id=fixture["tenant_id"],
+        child_id=fixture["child_a_id"],
+        material_id=fixture["material_id"],
+    )
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_bounded_reader",
+                "display_name": "Bounded Reader",
+                "email": "bounded-reader@example.com",
+                "role": "Support Viewer",
+                "status": "active",
+                "permissions": ["admin.tenant.read"],
+                "token_sha256": _token_hash("bounded-reader-token"),
+            }
+        ],
+    )
+    statements: list[str] = []
+
+    def capture_sql(conn, cursor, statement, parameters, context, executemany) -> None:
+        statements.append(" ".join(statement.lower().split()))
+
+    event.listen(engine, "before_cursor_execute", capture_sql)
+    try:
+        response = api_client.get(
+            f"/v1/admin/tenants/{fixture['tenant_id']}?tenant_scope=all",
+            headers={"X-Admin-Token": "bounded-reader-token"},
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", capture_sql)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summary"]["materials"] == 8
+    assert len(payload["materials"]) == 5
+    assert payload["weekly_reports"]["total"] == 8
+    assert len(payload["weekly_reports"]["history"]) == 5
+    assert payload["speaking_attempts"]["total"] == 9
+    assert len(payload["speaking_attempts"]["latest"]) == 5
+    weekly_selects = [statement for statement in statements if "from weekly_reports" in statement]
+    speaking_selects = [statement for statement in statements if "from speaking_attempts" in statement]
+    assert any("count(" in statement for statement in weekly_selects)
+    assert any(" limit " in statement for statement in weekly_selects)
+    assert any("count(" in statement for statement in speaking_selects)
+    assert any(" limit " in statement for statement in speaking_selects)
 
 
 def test_read_only_admin_token_is_forbidden_from_provider_override(api_client, monkeypatch) -> None:
