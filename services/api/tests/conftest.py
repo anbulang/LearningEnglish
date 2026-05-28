@@ -24,6 +24,7 @@ def configure_test_environment(prefix: str) -> None:
     os.environ["JWT_SECRET"] = "learning-english-test-secret-at-least-32-bytes"
     os.environ["AI_PROVIDER"] = "stub"
     os.environ["ADMIN_API_TOKEN"] = "local-admin-token"
+    os.environ.pop("ADMIN_API_CREDENTIALS_JSON", None)
 
 
 configure_test_environment("learning-english-api-suite-")
