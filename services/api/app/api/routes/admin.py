@@ -168,6 +168,9 @@ def get_admin_dashboard(
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
+    if "admin.dashboard.read" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.dashboard.read permission")
+
     _ensure_admin_user(db, actor)
     tenants = db.scalars(select(ParentAccountModel).order_by(ParentAccountModel.created_at.asc())).all()
     tenant_ids = {tenant.id for tenant in tenants}
@@ -231,6 +234,9 @@ def get_admin_access(
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
+    if "admin.audit.read" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.audit.read permission")
+
     _ensure_admin_user(db, actor)
     events = db.scalars(
         select(AdminAuditEventModel)

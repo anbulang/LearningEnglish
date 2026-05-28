@@ -113,6 +113,56 @@ def test_read_only_admin_token_is_forbidden_from_provider_override(api_client, m
     assert response.json()["detail"] == "Missing admin.provider.override permission"
 
 
+def test_admin_dashboard_requires_dashboard_read_permission(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_audit_only",
+                "display_name": "Audit Only Admin",
+                "email": "audit-only@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("audit-only-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/dashboard?tenant_scope=all",
+        headers={"X-Admin-Token": "audit-only-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing admin.dashboard.read permission"
+
+
+def test_admin_access_requires_audit_read_permission(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_dashboard_only",
+                "display_name": "Dashboard Only Admin",
+                "email": "dashboard-only@example.com",
+                "role": "Dashboard Viewer",
+                "status": "active",
+                "permissions": ["admin.dashboard.read"],
+                "token_sha256": _token_hash("dashboard-only-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/access?tenant_scope=all",
+        headers={"X-Admin-Token": "dashboard-only-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing admin.audit.read permission"
+
+
 def test_inactive_admin_credential_is_rejected(api_client, monkeypatch) -> None:
     _set_admin_credentials(
         monkeypatch,
