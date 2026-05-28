@@ -112,6 +112,10 @@ class AdminImpersonationSessionRequest(BaseModel):
     reason: str = ""
 
 
+class AdminImpersonationSessionEndRequest(BaseModel):
+    reason: str = ""
+
+
 def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> AdminActor:
     if not x_admin_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing admin token")
@@ -810,7 +814,7 @@ def start_admin_impersonation_session(
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
     if tenant_scope != "all" and tenant.id != tenant_scope:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found in tenant scope")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
     target_parent = db.get(ParentAccountModel, payload.target_parent_id.strip())
     if target_parent is None or target_parent.id != tenant.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target parent not found in tenant scope")
@@ -853,11 +857,15 @@ def start_admin_impersonation_session(
 @router.post("/impersonation-sessions/{session_id}/end")
 def end_admin_impersonation_session(
     session_id: str,
+    payload: AdminImpersonationSessionEndRequest,
     request: Request,
     tenant_scope: str = Query(..., min_length=1),
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
+    reason = payload.reason.strip()
+    if not reason:
+        raise HTTPException(status_code=422, detail="Impersonation end reason is required")
     if "admin.impersonation.end" not in actor.permissions:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.impersonation.end permission")
     _ensure_admin_tenant_scope(db, tenant_scope)
@@ -898,7 +906,7 @@ def end_admin_impersonation_session(
         risk_level=audit_risk_level,
         result=audit_result,
         trace_id=_trace_id(request),
-        reason=impersonation_session.reason,
+        reason=reason,
     )
     return {
         "required_permission": "admin.impersonation.end",

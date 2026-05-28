@@ -986,6 +986,7 @@ def test_admin_impersonation_session_end_ends_active_session_and_records_audit(a
     response = api_client.post(
         f"/v1/admin/impersonation-sessions/{fixture['active_newer_id']}/end",
         params={"tenant_scope": "all"},
+        json={"reason": "Support handoff complete; ending parent access."},
         headers={"X-Admin-Token": "impersonation-ender-token", "X-Request-ID": "req_task5_end_active"},
     )
 
@@ -1007,12 +1008,41 @@ def test_admin_impersonation_session_end_ends_active_session_and_records_audit(a
     assert audit_event["resource_id"] == fixture["active_newer_id"]
     assert audit_event["risk_level"] == "high"
     assert audit_event["result"] == "success"
+    assert audit_event["reason"] == "Support handoff complete; ending parent access."
     assert audit_event["trace_id"] == "req_task5_end_active"
     with SessionLocal() as db:
         persisted_session = db.get(AdminImpersonationSessionModel, fixture["active_newer_id"])
         assert persisted_session is not None
         assert persisted_session.status == "ended"
         assert persisted_session.ended_at is not None
+
+
+def test_admin_impersonation_session_end_requires_reason(api_client, monkeypatch) -> None:
+    fixture = _seed_impersonation_session_fixture(prefix="task5_end_reason")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_reason_ender",
+                "display_name": "Impersonation Reason Ender",
+                "email": "impersonation-reason-ender@example.com",
+                "role": "Support Supervisor",
+                "status": "active",
+                "permissions": ["admin.impersonation.end"],
+                "token_sha256": _token_hash("impersonation-reason-ender-token"),
+            }
+        ],
+    )
+
+    response = api_client.post(
+        f"/v1/admin/impersonation-sessions/{fixture['active_newer_id']}/end",
+        params={"tenant_scope": "all"},
+        json={"reason": "  "},
+        headers={"X-Admin-Token": "impersonation-reason-ender-token"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Impersonation end reason is required"
 
 
 def test_admin_impersonation_session_end_is_idempotent_and_preserves_ended_at(api_client, monkeypatch) -> None:
@@ -1035,6 +1065,7 @@ def test_admin_impersonation_session_end_is_idempotent_and_preserves_ended_at(ap
     response = api_client.post(
         f"/v1/admin/impersonation-sessions/{fixture['ended_id']}/end",
         params={"tenant_scope": fixture["tenant_a_id"]},
+        json={"reason": "Supervisor verified session was already closed."},
         headers={
             "X-Admin-Token": "impersonation-idempotent-ender-token",
             "X-Request-ID": "req_task5_end_idempotent",
@@ -1048,6 +1079,7 @@ def test_admin_impersonation_session_end_is_idempotent_and_preserves_ended_at(ap
     assert payload["audit_event"]["action"] == "admin.impersonation.end.already_ended"
     assert payload["audit_event"]["risk_level"] == "medium"
     assert payload["audit_event"]["result"] == "noop"
+    assert payload["audit_event"]["reason"] == "Supervisor verified session was already closed."
     assert payload["audit_event"]["trace_id"] == "req_task5_end_idempotent"
     with SessionLocal() as db:
         persisted_session = db.get(AdminImpersonationSessionModel, fixture["ended_id"])
@@ -1075,16 +1107,62 @@ def test_admin_impersonation_session_end_honors_scope_without_disclosure(api_cli
     out_of_scope_response = api_client.post(
         f"/v1/admin/impersonation-sessions/{fixture['active_other_id']}/end",
         params={"tenant_scope": fixture["tenant_a_id"]},
+        json={"reason": "Scoped support supervisor requested end."},
         headers={"X-Admin-Token": "impersonation-scoped-ender-token"},
     )
     missing_response = api_client.post(
         "/v1/admin/impersonation-sessions/task5_end_scope_missing/end",
         params={"tenant_scope": fixture["tenant_a_id"]},
+        json={"reason": "Scoped support supervisor requested end."},
         headers={"X-Admin-Token": "impersonation-scoped-ender-token"},
     )
 
     assert out_of_scope_response.status_code == 404
     assert out_of_scope_response.json()["detail"] == "Impersonation session not found"
+    assert missing_response.status_code == 404
+    assert missing_response.json() == out_of_scope_response.json()
+
+
+def test_admin_impersonation_start_uses_generic_tenant_not_found_for_out_of_scope(api_client, monkeypatch) -> None:
+    fixture = _seed_impersonation_session_fixture(prefix="task5_start_scope")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_starter_scope",
+                "display_name": "Impersonation Starter Scope",
+                "email": "impersonation-starter-scope@example.com",
+                "role": "Support Supervisor",
+                "status": "active",
+                "permissions": ["admin.impersonation.start"],
+                "token_sha256": _token_hash("impersonation-starter-scope-token"),
+            }
+        ],
+    )
+
+    out_of_scope_response = api_client.post(
+        "/v1/admin/impersonation-sessions",
+        params={"tenant_scope": fixture["tenant_a_id"]},
+        json={
+            "tenant_id": fixture["tenant_b_id"],
+            "target_parent_id": fixture["tenant_b_id"],
+            "reason": "Need supervised support session.",
+        },
+        headers={"X-Admin-Token": "impersonation-starter-scope-token"},
+    )
+    missing_response = api_client.post(
+        "/v1/admin/impersonation-sessions",
+        params={"tenant_scope": fixture["tenant_a_id"]},
+        json={
+            "tenant_id": "task5_start_scope_missing",
+            "target_parent_id": "task5_start_scope_missing",
+            "reason": "Need supervised support session.",
+        },
+        headers={"X-Admin-Token": "impersonation-starter-scope-token"},
+    )
+
+    assert out_of_scope_response.status_code == 404
+    assert out_of_scope_response.json()["detail"] == "Tenant not found"
     assert missing_response.status_code == 404
     assert missing_response.json() == out_of_scope_response.json()
 
