@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 import hashlib
 import json
 from datetime import datetime, timezone
+
+import pytest
 
 from app.core.db import SessionLocal
 from app.core.settings import get_settings
@@ -11,6 +14,13 @@ from conftest import configure_test_environment
 
 
 configure_test_environment("learning-english-api-admin-phase2-")
+
+
+@pytest.fixture(autouse=True)
+def clear_settings_cache_between_phase2_tests() -> Iterator[None]:
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def _token_hash(value: str) -> str:
@@ -358,6 +368,59 @@ def test_admin_audit_events_return_empty_page_for_missing_cursor(api_client, mon
         "/v1/admin/audit-events",
         params={"tenant_scope": "all", "cursor": "audit_task2_missing"},
         headers={"X-Admin-Token": "ops-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "next_cursor": ""}
+
+
+def test_admin_audit_events_return_empty_page_for_cursor_outside_active_filter(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_cursor_match",
+                "display_name": "Cursor Match Admin",
+                "email": "cursor-match@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("cursor-match-token"),
+            }
+        ],
+    )
+    created_at = datetime(2026, 5, 28, 12, 30, tzinfo=timezone.utc)
+    _seed_audit_event(
+        audit_id="audit_task2_cursor_match_001",
+        actor_id="admin_cursor_match",
+        tenant_scope="tenant_task2_cursor_match",
+        action="admin.task2.cursor_match",
+        created_at=created_at,
+    )
+    _seed_audit_event(
+        audit_id="audit_task2_cursor_match_002",
+        actor_id="admin_cursor_match",
+        tenant_scope="tenant_task2_cursor_match",
+        action="admin.task2.cursor_match",
+        created_at=created_at,
+    )
+    _seed_audit_event(
+        audit_id="audit_task2_cursor_other_999",
+        actor_id="admin_cursor_other",
+        tenant_scope="tenant_task2_cursor_other",
+        action="admin.task2.cursor_other",
+        created_at=created_at,
+    )
+
+    response = api_client.get(
+        "/v1/admin/audit-events",
+        params={
+            "tenant_scope": "tenant_task2_cursor_match",
+            "action": "admin.task2.cursor_match",
+            "actor_id": "admin_cursor_match",
+            "cursor": "audit_task2_cursor_other_999",
+        },
+        headers={"X-Admin-Token": "cursor-match-token"},
     )
 
     assert response.status_code == 200

@@ -285,7 +285,7 @@ def list_admin_audit_events(
     if actor_id:
         stmt = stmt.where(AdminAuditEventModel.actor_id == actor_id)
     if cursor:
-        cursor_event = db.get(AdminAuditEventModel, cursor)
+        cursor_event = db.scalars(stmt.where(AdminAuditEventModel.id == cursor).limit(1)).first()
         if cursor_event is None:
             return {"items": [], "next_cursor": ""}
         stmt = stmt.where(

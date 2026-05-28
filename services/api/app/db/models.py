@@ -4,7 +4,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -57,6 +57,12 @@ class AdminUserModel(Base):
 
 class AdminAuditEventModel(Base):
     __tablename__ = "admin_audit_events"
+    __table_args__ = (
+        Index("ix_admin_audit_events_tenant_scope_created_id", "tenant_scope", "created_at", "id"),
+        Index("ix_admin_audit_events_actor_id_created_id", "actor_id", "created_at", "id"),
+        Index("ix_admin_audit_events_action_created_id", "action", "created_at", "id"),
+        Index("ix_admin_audit_events_result_created_id", "result", "created_at", "id"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"audit_{uuid4().hex[:12]}")
     actor_id: Mapped[str] = mapped_column(String(64), index=True)
