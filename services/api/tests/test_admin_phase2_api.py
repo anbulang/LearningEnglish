@@ -611,6 +611,11 @@ def test_admin_tenant_detail_uses_aggregate_queries_and_bounded_latest_lists(api
     payload = response.json()
     assert payload["summary"]["materials"] == 8
     assert len(payload["materials"]) == 5
+    assert fixture["material_id"] not in {material["id"] for material in payload["materials"]}
+    assert payload["risk_summary"]["media_failure_count"] == 2
+    assert payload["risk_summary"]["media_failures"] == 2
+    assert payload["risk_summary"]["failed_materials"] == 1
+    assert payload["risk_summary"]["failed_material_jobs"] == 1
     assert payload["weekly_reports"]["total"] == 8
     assert len(payload["weekly_reports"]["history"]) == 5
     assert payload["speaking_attempts"]["total"] == 9
