@@ -3,13 +3,22 @@ from __future__ import annotations
 from collections.abc import Iterator
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
 from app.core.db import SessionLocal
 from app.core.settings import get_settings
-from app.db.models import AdminAuditEventModel
+from app.db.models import (
+    AdminAuditEventModel,
+    ChildProfileModel,
+    CourseMaterialModel,
+    MaterialParseJobModel,
+    ParentAccountModel,
+    SpeakingAttemptModel,
+    WeeklyReportModel,
+)
+from app.models.contracts import SpeakingAttemptStatus
 from conftest import configure_test_environment
 
 
@@ -65,6 +74,169 @@ def _seed_audit_event(
             )
         )
         db.commit()
+
+
+def _seed_tenant_detail_fixture(*, tenant_id: str, display_name: str, phone_number: str = "13800139001") -> dict:
+    child_a_id = f"child_{tenant_id}_a"
+    child_b_id = f"child_{tenant_id}_b"
+    material_id = f"material_{tenant_id}"
+    now = datetime(2026, 5, 28, 15, 0, tzinfo=timezone.utc)
+    with SessionLocal() as db:
+        db.add(
+            ParentAccountModel(
+                id=tenant_id,
+                display_name=display_name,
+                avatar_url="http://testserver/avatar.png",
+                phone_number=phone_number,
+                phone_verified_at=now,
+                wechat_union_id=f"wechat_union_{tenant_id}",
+                wechat_open_id=f"wechat_open_{tenant_id}",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        db.add_all(
+            [
+                ChildProfileModel(
+                    id=child_a_id,
+                    parent_account_id=tenant_id,
+                    name="Ivy",
+                    avatar_url="",
+                    age=7,
+                    level="starter",
+                    learning_goal="Read short phonics stories",
+                    preferred_review_duration_minutes=12,
+                    parent_notes="Needs gentle speaking prompts.",
+                    created_at=now,
+                    updated_at=now,
+                ),
+                ChildProfileModel(
+                    id=child_b_id,
+                    parent_account_id=tenant_id,
+                    name="Leo",
+                    avatar_url="",
+                    age=5,
+                    level="pre-starter",
+                    learning_goal="Build picture-word confidence",
+                    preferred_review_duration_minutes=8,
+                    parent_notes="",
+                    created_at=now,
+                    updated_at=now,
+                ),
+            ]
+        )
+        db.add(
+            CourseMaterialModel(
+                id=material_id,
+                child_id=child_a_id,
+                teacher_name="Emma",
+                lesson_date=date(2026, 5, 25),
+                title="Tenant Detail Worksheet",
+                topic="phonics",
+                status="failed",
+                source_images=["http://testserver/uploads/tenant-detail.jpg"],
+                image_records=[
+                    {
+                        "id": "page_001",
+                        "page_index": 1,
+                        "url": "http://testserver/uploads/tenant-detail.jpg",
+                        "source_type": "gallery",
+                    }
+                ],
+                learning_assets=[
+                    {
+                        "id": "asset_failed",
+                        "text": "queen",
+                        "kind": "word",
+                        "generated_image_status": "failed",
+                        "tts_us_status": "ready",
+                        "tts_uk_status": "failed",
+                    },
+                    {
+                        "id": "asset_ready",
+                        "text": "rabbit",
+                        "kind": "word",
+                        "generated_image_status": "ready",
+                        "tts_us_status": "ready",
+                        "tts_uk_status": "ready",
+                    },
+                ],
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        db.add(
+            MaterialParseJobModel(
+                id=f"job_{tenant_id}",
+                material_id=material_id,
+                status="failed",
+                confidence_summary="Media generation failed for two assets.",
+                warnings=["Image generation timeout", "UK TTS timeout"],
+                started_at=now,
+                finished_at=now,
+                draft_learning_assets=[],
+            )
+        )
+        db.add(
+            WeeklyReportModel(
+                id=f"report_{tenant_id}",
+                child_id=child_a_id,
+                week_start=date(2026, 5, 18),
+                week_end=date(2026, 5, 24),
+                completed_sessions=3,
+                reviewed_words=18,
+                speaking_attempts=2,
+                weak_items=["queen"],
+                recommended_actions=["Repeat /kw/ sound"],
+            )
+        )
+        db.add_all(
+            [
+                SpeakingAttemptModel(
+                    id=f"attempt_{tenant_id}_scored",
+                    child_id=child_a_id,
+                    material_id=material_id,
+                    prompt_text="Say queen.",
+                    target_text="queen",
+                    status=SpeakingAttemptStatus.scored.value,
+                    overall_score=82.5,
+                    provider="stub",
+                    created_at=now,
+                    updated_at=now,
+                ),
+                SpeakingAttemptModel(
+                    id=f"attempt_{tenant_id}_failed",
+                    child_id=child_a_id,
+                    material_id=material_id,
+                    prompt_text="Say rabbit.",
+                    target_text="rabbit",
+                    status=SpeakingAttemptStatus.failed.value,
+                    failure_reason="Audio was too short.",
+                    provider="stub",
+                    created_at=now,
+                    updated_at=now,
+                ),
+            ]
+        )
+        db.add(
+            AdminAuditEventModel(
+                id=f"audit_{tenant_id}_prior",
+                actor_id="admin_ops",
+                actor_role="Operations",
+                tenant_scope=tenant_id,
+                action="admin.provider_policy.override",
+                resource_type="tenant_provider_policy",
+                resource_id=tenant_id,
+                risk_level="high",
+                result="success",
+                reason="Task 3 prior audit fixture",
+                trace_id=f"req_{tenant_id}_prior",
+                content_json={},
+                created_at=now,
+            )
+        )
+        db.commit()
+    return {"tenant_id": tenant_id, "child_a_id": child_a_id, "child_b_id": child_b_id, "material_id": material_id}
 
 
 def test_admin_credentials_resolve_actor_and_exact_permissions(api_client, monkeypatch) -> None:
@@ -125,6 +297,164 @@ def test_admin_credentials_resolve_actor_and_exact_permissions(api_client, monke
     }
     assert ops_payload["permissions"] == ["admin.dashboard.read", "admin.audit.read", "admin.provider.override"]
     assert "ops-token" not in str(ops_payload)
+
+
+def test_admin_tenant_detail_returns_admin_read_model_for_all_scope(api_client, monkeypatch) -> None:
+    fixture = _seed_tenant_detail_fixture(tenant_id="tenant_task3_primary", display_name="Task 3 Family")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_tenant_reader",
+                "display_name": "Tenant Reader",
+                "email": "tenant-reader@example.com",
+                "role": "Support Viewer",
+                "status": "active",
+                "permissions": ["admin.tenant.read"],
+                "token_sha256": _token_hash("tenant-reader-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        f"/v1/admin/tenants/{fixture['tenant_id']}?tenant_scope=all",
+        headers={"X-Admin-Token": "tenant-reader-token", "X-Request-ID": "req_task3_read"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload.keys()) == {
+        "required_permission",
+        "tenant",
+        "summary",
+        "children",
+        "materials",
+        "provider_policy",
+        "module_settings",
+        "weekly_reports",
+        "speaking_attempts",
+        "risk_summary",
+        "audit_event",
+        "access_context",
+    }
+    assert payload["required_permission"] == "admin.tenant.read"
+    assert payload["tenant"] == {
+        "id": "tenant_task3_primary",
+        "name": "Task 3 Family",
+        "display_name": "Task 3 Family",
+        "avatar_url": "http://testserver/avatar.png",
+        "phone_number": "13800139001",
+        "phone_verified_at": "2026-05-28T15:00:00+00:00",
+        "wechat_union_id": "wechat_union_tenant_task3_primary",
+        "wechat_open_id": "wechat_open_tenant_task3_primary",
+        "tenant_type": "pilot_family",
+        "status": "warning",
+        "region": "local",
+        "tier": "pilot",
+        "created_at": "2026-05-28T15:00:00+00:00",
+        "updated_at": "2026-05-28T15:00:00+00:00",
+    }
+    assert payload["summary"] == {
+        "active_parents": 1,
+        "children": 2,
+        "materials": 1,
+        "ready_materials": 0,
+        "failed_materials": 1,
+        "processing_materials": 0,
+    }
+    assert [child["id"] for child in payload["children"]] == [fixture["child_a_id"], fixture["child_b_id"]]
+    assert payload["children"][0]["name"] == "Ivy"
+    assert payload["children"][0]["weekly_report_id"] == "report_tenant_task3_primary"
+    assert payload["children"][0]["speaking_attempts"] == 2
+    assert payload["materials"][0]["id"] == fixture["material_id"]
+    assert payload["materials"][0]["tenant_id"] == "tenant_task3_primary"
+    assert payload["provider_policy"]["tenant_id"] == "tenant_task3_primary"
+    assert any(item["module_key"] == "weekly_reports" for item in payload["module_settings"])
+    assert payload["weekly_reports"]["total"] == 1
+    assert payload["weekly_reports"]["latest"]["id"] == "report_tenant_task3_primary"
+    assert payload["weekly_reports"]["completed_sessions"] == 3
+    assert payload["weekly_reports"]["reviewed_words"] == 18
+    assert payload["speaking_attempts"]["total"] == 2
+    assert payload["speaking_attempts"]["by_status"] == {
+        "queued": 0,
+        "recording_uploaded": 0,
+        "transcribing": 0,
+        "scored": 1,
+        "failed": 1,
+    }
+    assert payload["speaking_attempts"]["failed"] == 1
+    assert payload["risk_summary"]["risk_level"] == "high"
+    assert payload["risk_summary"]["media_failure_count"] == 2
+    assert payload["risk_summary"]["media_failures"] == 2
+    assert payload["risk_summary"]["failed_material_jobs"] == 1
+    assert payload["risk_summary"]["failed_jobs"] == 1
+    assert payload["risk_summary"]["failed_speaking_attempts"] == 1
+    assert payload["audit_event"]["action"] == "admin.tenant.read"
+    assert payload["audit_event"]["trace_id"] == "req_task3_read"
+    assert payload["access_context"]["current_admin"]["id"] == "admin_tenant_reader"
+    assert payload["access_context"]["current_admin"]["role"] == "Support Viewer"
+    assert payload["access_context"]["recent_audit_events"][0]["action"] == "admin.tenant.read"
+    assert payload["access_context"]["recent_audit_events"][0]["trace_id"] == "req_task3_read"
+    assert "tenant-reader-token" not in str(payload)
+
+
+def test_admin_tenant_detail_requires_tenant_read_permission(api_client, monkeypatch) -> None:
+    _seed_tenant_detail_fixture(tenant_id="tenant_task3_forbidden", display_name="Forbidden Family")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_without_tenant_read",
+                "display_name": "Dashboard Only",
+                "email": "dashboard-only@example.com",
+                "role": "Dashboard Viewer",
+                "status": "active",
+                "permissions": ["admin.dashboard.read"],
+                "token_sha256": _token_hash("dashboard-only-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/tenants/tenant_task3_forbidden?tenant_scope=all",
+        headers={"X-Admin-Token": "dashboard-only-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing admin.tenant.read permission"
+
+
+def test_admin_tenant_detail_honors_tenant_scope_without_disclosure(api_client, monkeypatch) -> None:
+    _seed_tenant_detail_fixture(tenant_id="tenant_task3_scoped", display_name="Scoped Family")
+    _seed_tenant_detail_fixture(tenant_id="tenant_task3_other", display_name="Other Family", phone_number="13800139002")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_scoped_reader",
+                "display_name": "Scoped Reader",
+                "email": "scoped-reader@example.com",
+                "role": "Tenant Support",
+                "status": "active",
+                "permissions": ["admin.tenant.read"],
+                "token_sha256": _token_hash("scoped-reader-token"),
+            }
+        ],
+    )
+
+    scoped_response = api_client.get(
+        "/v1/admin/tenants/tenant_task3_scoped?tenant_scope=tenant_task3_scoped",
+        headers={"X-Admin-Token": "scoped-reader-token"},
+    )
+    out_of_scope_response = api_client.get(
+        "/v1/admin/tenants/tenant_task3_other?tenant_scope=tenant_task3_scoped",
+        headers={"X-Admin-Token": "scoped-reader-token"},
+    )
+
+    assert scoped_response.status_code == 200
+    assert scoped_response.json()["tenant"]["id"] == "tenant_task3_scoped"
+    assert out_of_scope_response.status_code == 404
+    assert out_of_scope_response.json()["detail"] == "Tenant not found in tenant scope"
 
 
 def test_read_only_admin_token_is_forbidden_from_provider_override(api_client, monkeypatch) -> None:
