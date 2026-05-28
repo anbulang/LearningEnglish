@@ -12,6 +12,7 @@ from app.core.db import SessionLocal, engine
 from app.core.settings import get_settings
 from app.db.models import (
     AdminAuditEventModel,
+    AdminImpersonationSessionModel,
     ChildProfileModel,
     CourseMaterialModel,
     MaterialParseJobModel,
@@ -463,6 +464,103 @@ def _seed_operations_provider_overrides(*, prefix: str, count: int = 7) -> None:
         db.commit()
 
 
+def _seed_impersonation_session_fixture(*, prefix: str) -> dict:
+    now = datetime(2026, 5, 28, 19, 0, tzinfo=timezone.utc)
+    tenant_a_id = f"{prefix}_tenant_a"
+    tenant_b_id = f"{prefix}_tenant_b"
+    active_newer_id = f"{prefix}_session_active_newer"
+    active_older_id = f"{prefix}_session_active_older"
+    active_other_id = f"{prefix}_session_active_other"
+    ended_id = f"{prefix}_session_ended"
+    ended_at = now + timedelta(minutes=14)
+    with SessionLocal() as db:
+        db.add_all(
+            [
+                ParentAccountModel(
+                    id=tenant_a_id,
+                    display_name=f"{prefix} Tenant A",
+                    avatar_url="",
+                    phone_number="13800139301",
+                    phone_verified_at=now,
+                    wechat_union_id=f"wechat_union_{tenant_a_id}",
+                    wechat_open_id=f"wechat_open_{tenant_a_id}",
+                    created_at=now,
+                    updated_at=now,
+                ),
+                ParentAccountModel(
+                    id=tenant_b_id,
+                    display_name=f"{prefix} Tenant B",
+                    avatar_url="",
+                    phone_number="13800139302",
+                    phone_verified_at=now,
+                    wechat_union_id=f"wechat_union_{tenant_b_id}",
+                    wechat_open_id=f"wechat_open_{tenant_b_id}",
+                    created_at=now,
+                    updated_at=now,
+                ),
+            ]
+        )
+        db.add_all(
+            [
+                AdminImpersonationSessionModel(
+                    id=active_newer_id,
+                    tenant_id=tenant_a_id,
+                    target_parent_id=tenant_a_id,
+                    actor_id="admin_task5_starter",
+                    status="active",
+                    reason="Help parent recover review flow.",
+                    expires_at=now + timedelta(minutes=45),
+                    created_at=now + timedelta(minutes=12),
+                    updated_at=now + timedelta(minutes=12),
+                ),
+                AdminImpersonationSessionModel(
+                    id=active_older_id,
+                    tenant_id=tenant_a_id,
+                    target_parent_id=tenant_a_id,
+                    actor_id="admin_task5_starter",
+                    status="active",
+                    reason="Older active support session.",
+                    expires_at=now + timedelta(minutes=30),
+                    created_at=now + timedelta(minutes=5),
+                    updated_at=now + timedelta(minutes=5),
+                ),
+                AdminImpersonationSessionModel(
+                    id=active_other_id,
+                    tenant_id=tenant_b_id,
+                    target_parent_id=tenant_b_id,
+                    actor_id="admin_task5_other",
+                    status="active",
+                    reason="Other tenant support session.",
+                    expires_at=now + timedelta(minutes=35),
+                    created_at=now + timedelta(minutes=9),
+                    updated_at=now + timedelta(minutes=9),
+                ),
+                AdminImpersonationSessionModel(
+                    id=ended_id,
+                    tenant_id=tenant_a_id,
+                    target_parent_id=tenant_a_id,
+                    actor_id="admin_task5_starter",
+                    status="ended",
+                    reason="Already ended support session.",
+                    expires_at=now + timedelta(minutes=25),
+                    ended_at=ended_at,
+                    created_at=now + timedelta(minutes=3),
+                    updated_at=ended_at,
+                ),
+            ]
+        )
+        db.commit()
+    return {
+        "tenant_a_id": tenant_a_id,
+        "tenant_b_id": tenant_b_id,
+        "active_newer_id": active_newer_id,
+        "active_older_id": active_older_id,
+        "active_other_id": active_other_id,
+        "ended_id": ended_id,
+        "ended_at": ended_at,
+    }
+
+
 def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_client, monkeypatch) -> None:
     fixture = _seed_operations_snapshot_fixture(prefix="task4_all")
     monkeypatch.setenv("AI_PROVIDER", "doubao")
@@ -729,6 +827,266 @@ def test_admin_operations_snapshot_uses_aggregate_queries_and_bounded_latest_lis
     assert any(" limit " in statement for statement in speaking_selects)
     assert not any("from parent_accounts order by" in statement for statement in statements)
     assert not any("tenant_module_settings.tenant_id in" in statement for statement in statements)
+
+
+def test_admin_impersonation_sessions_list_active_all_scope_returns_audited_payload(api_client, monkeypatch) -> None:
+    fixture = _seed_impersonation_session_fixture(prefix="task5_list_all")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_reader",
+                "display_name": "Impersonation Reader",
+                "email": "impersonation-reader@example.com",
+                "role": "Support Supervisor",
+                "status": "active",
+                "permissions": ["admin.impersonation.read"],
+                "token_sha256": _token_hash("impersonation-reader-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/impersonation-sessions",
+        params={"tenant_scope": "all", "status": "active"},
+        headers={"X-Admin-Token": "impersonation-reader-token", "X-Request-ID": "req_task5_list_all"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload.keys()) == {"required_permission", "tenant_scope", "status", "items", "audit_event"}
+    assert payload["required_permission"] == "admin.impersonation.read"
+    assert payload["tenant_scope"] == "all"
+    assert payload["status"] == "active"
+    assert len(payload["items"]) <= 50
+    seeded_items = {item["id"]: item for item in payload["items"] if item["id"].startswith("task5_list_all_")}
+    assert set(seeded_items) == {
+        fixture["active_newer_id"],
+        fixture["active_older_id"],
+        fixture["active_other_id"],
+    }
+    assert {item["tenant_id"] for item in seeded_items.values()} == {fixture["tenant_a_id"], fixture["tenant_b_id"]}
+    assert all(item["status"] == "active" for item in seeded_items.values())
+    newest_item = seeded_items[fixture["active_newer_id"]]
+    assert set(newest_item.keys()) == {
+        "id",
+        "tenant_id",
+        "target_parent_id",
+        "actor_id",
+        "status",
+        "reason",
+        "created_at",
+        "expires_at",
+        "ended_at",
+        "updated_at",
+        "tenant_display_name",
+        "target_parent_display_name",
+    }
+    assert newest_item["tenant_display_name"] == "task5_list_all Tenant A"
+    assert newest_item["target_parent_display_name"] == "task5_list_all Tenant A"
+    assert newest_item["ended_at"] == ""
+    assert newest_item["created_at"] == "2026-05-28T19:12:00+00:00"
+    audit_event = payload["audit_event"]
+    assert audit_event["action"] == "admin.impersonation.read"
+    assert audit_event["resource_type"] == "admin_impersonation_session"
+    assert audit_event["resource_id"] == "list"
+    assert audit_event["risk_level"] == "low"
+    assert audit_event["result"] == "success"
+    assert audit_event["trace_id"] == "req_task5_list_all"
+
+
+def test_admin_impersonation_sessions_list_honors_scope_status_and_validation(api_client, monkeypatch) -> None:
+    fixture = _seed_impersonation_session_fixture(prefix="task5_list_scope")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_scope_reader",
+                "display_name": "Impersonation Scope Reader",
+                "email": "impersonation-scope-reader@example.com",
+                "role": "Support Supervisor",
+                "status": "active",
+                "permissions": ["admin.impersonation.read"],
+                "token_sha256": _token_hash("impersonation-scope-reader-token"),
+            }
+        ],
+    )
+
+    scoped_response = api_client.get(
+        "/v1/admin/impersonation-sessions",
+        params={"tenant_scope": fixture["tenant_a_id"], "status": "ended"},
+        headers={"X-Admin-Token": "impersonation-scope-reader-token"},
+    )
+    invalid_scope_response = api_client.get(
+        "/v1/admin/impersonation-sessions",
+        params={"tenant_scope": "task5_list_scope_missing", "status": "active"},
+        headers={"X-Admin-Token": "impersonation-scope-reader-token"},
+    )
+    invalid_status_response = api_client.get(
+        "/v1/admin/impersonation-sessions",
+        params={"tenant_scope": "all", "status": "suspended"},
+        headers={"X-Admin-Token": "impersonation-scope-reader-token"},
+    )
+
+    assert scoped_response.status_code == 200
+    payload = scoped_response.json()
+    assert payload["tenant_scope"] == fixture["tenant_a_id"]
+    assert payload["status"] == "ended"
+    assert [item["id"] for item in payload["items"]] == [fixture["ended_id"]]
+    assert payload["items"][0]["ended_at"] == "2026-05-28T19:14:00+00:00"
+    assert fixture["tenant_b_id"] not in str(payload)
+    assert invalid_scope_response.status_code == 404
+    assert invalid_scope_response.json()["detail"] == "Tenant scope not found"
+    assert invalid_status_response.status_code == 422
+    assert invalid_status_response.json()["detail"] == "Unsupported impersonation session status"
+
+
+def test_admin_impersonation_sessions_list_requires_read_permission(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_start_only",
+                "display_name": "Impersonation Start Only",
+                "email": "impersonation-start-only@example.com",
+                "role": "Support Agent",
+                "status": "active",
+                "permissions": ["admin.impersonation.start"],
+                "token_sha256": _token_hash("impersonation-start-only-token"),
+            }
+        ],
+    )
+
+    response = api_client.get(
+        "/v1/admin/impersonation-sessions?tenant_scope=all",
+        headers={"X-Admin-Token": "impersonation-start-only-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing admin.impersonation.read permission"
+
+
+def test_admin_impersonation_session_end_ends_active_session_and_records_audit(api_client, monkeypatch) -> None:
+    fixture = _seed_impersonation_session_fixture(prefix="task5_end_active")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_ender",
+                "display_name": "Impersonation Ender",
+                "email": "impersonation-ender@example.com",
+                "role": "Support Supervisor",
+                "status": "active",
+                "permissions": ["admin.impersonation.end"],
+                "token_sha256": _token_hash("impersonation-ender-token"),
+            }
+        ],
+    )
+
+    response = api_client.post(
+        f"/v1/admin/impersonation-sessions/{fixture['active_newer_id']}/end",
+        params={"tenant_scope": "all"},
+        headers={"X-Admin-Token": "impersonation-ender-token", "X-Request-ID": "req_task5_end_active"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload.keys()) == {"required_permission", "impersonation_session", "audit_event"}
+    assert payload["required_permission"] == "admin.impersonation.end"
+    session = payload["impersonation_session"]
+    assert session["id"] == fixture["active_newer_id"]
+    assert session["tenant_id"] == fixture["tenant_a_id"]
+    assert session["target_parent_id"] == fixture["tenant_a_id"]
+    assert session["status"] == "ended"
+    assert session["ended_at"]
+    assert session["updated_at"]
+    assert session["tenant_display_name"] == "task5_end_active Tenant A"
+    audit_event = payload["audit_event"]
+    assert audit_event["action"] == "admin.impersonation.end"
+    assert audit_event["resource_type"] == "admin_impersonation_session"
+    assert audit_event["resource_id"] == fixture["active_newer_id"]
+    assert audit_event["risk_level"] == "high"
+    assert audit_event["result"] == "success"
+    assert audit_event["trace_id"] == "req_task5_end_active"
+    with SessionLocal() as db:
+        persisted_session = db.get(AdminImpersonationSessionModel, fixture["active_newer_id"])
+        assert persisted_session is not None
+        assert persisted_session.status == "ended"
+        assert persisted_session.ended_at is not None
+
+
+def test_admin_impersonation_session_end_is_idempotent_and_preserves_ended_at(api_client, monkeypatch) -> None:
+    fixture = _seed_impersonation_session_fixture(prefix="task5_end_idempotent")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_idempotent_ender",
+                "display_name": "Impersonation Idempotent Ender",
+                "email": "impersonation-idempotent-ender@example.com",
+                "role": "Support Supervisor",
+                "status": "active",
+                "permissions": ["admin.impersonation.end"],
+                "token_sha256": _token_hash("impersonation-idempotent-ender-token"),
+            }
+        ],
+    )
+
+    response = api_client.post(
+        f"/v1/admin/impersonation-sessions/{fixture['ended_id']}/end",
+        params={"tenant_scope": fixture["tenant_a_id"]},
+        headers={
+            "X-Admin-Token": "impersonation-idempotent-ender-token",
+            "X-Request-ID": "req_task5_end_idempotent",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["impersonation_session"]["status"] == "ended"
+    assert payload["impersonation_session"]["ended_at"] == "2026-05-28T19:14:00+00:00"
+    assert payload["audit_event"]["action"] == "admin.impersonation.end.already_ended"
+    assert payload["audit_event"]["risk_level"] == "medium"
+    assert payload["audit_event"]["result"] == "noop"
+    assert payload["audit_event"]["trace_id"] == "req_task5_end_idempotent"
+    with SessionLocal() as db:
+        persisted_session = db.get(AdminImpersonationSessionModel, fixture["ended_id"])
+        assert persisted_session is not None
+        assert persisted_session.ended_at == fixture["ended_at"].replace(tzinfo=None)
+
+
+def test_admin_impersonation_session_end_honors_scope_without_disclosure(api_client, monkeypatch) -> None:
+    fixture = _seed_impersonation_session_fixture(prefix="task5_end_scope")
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_impersonation_scoped_ender",
+                "display_name": "Impersonation Scoped Ender",
+                "email": "impersonation-scoped-ender@example.com",
+                "role": "Support Supervisor",
+                "status": "active",
+                "permissions": ["admin.impersonation.end"],
+                "token_sha256": _token_hash("impersonation-scoped-ender-token"),
+            }
+        ],
+    )
+
+    out_of_scope_response = api_client.post(
+        f"/v1/admin/impersonation-sessions/{fixture['active_other_id']}/end",
+        params={"tenant_scope": fixture["tenant_a_id"]},
+        headers={"X-Admin-Token": "impersonation-scoped-ender-token"},
+    )
+    missing_response = api_client.post(
+        "/v1/admin/impersonation-sessions/task5_end_scope_missing/end",
+        params={"tenant_scope": fixture["tenant_a_id"]},
+        headers={"X-Admin-Token": "impersonation-scoped-ender-token"},
+    )
+
+    assert out_of_scope_response.status_code == 404
+    assert out_of_scope_response.json()["detail"] == "Impersonation session not found"
+    assert missing_response.status_code == 404
+    assert missing_response.json() == out_of_scope_response.json()
 
 
 def test_admin_credentials_resolve_actor_and_exact_permissions(api_client, monkeypatch) -> None:

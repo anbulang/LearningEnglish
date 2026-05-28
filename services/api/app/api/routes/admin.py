@@ -47,6 +47,8 @@ ADMIN_PERMISSIONS = [
     "admin.tenant.module.toggle",
     "admin.provider.override",
     "admin.impersonation.start",
+    "admin.impersonation.read",
+    "admin.impersonation.end",
     "admin.audit.read",
 ]
 
@@ -58,6 +60,8 @@ TENANT_DETAIL_LATEST_LIMIT = 5
 OPERATIONS_LATEST_LIMIT = 5
 OPERATIONS_STALE_THRESHOLD_MINUTES = 30
 PROVIDER_OVERRIDE_SAMPLE_LIMIT = 5
+IMPERSONATION_SESSION_LATEST_LIMIT = 50
+IMPERSONATION_SESSION_STATUSES = {"active", "ended", "all"}
 
 
 @dataclass(frozen=True)
@@ -733,6 +737,61 @@ def toggle_admin_tenant_module(
     }
 
 
+@router.get("/impersonation-sessions")
+def list_admin_impersonation_sessions(
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    session_status: str = Query("active", alias="status"),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    if "admin.impersonation.read" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.impersonation.read permission")
+
+    _ensure_admin_tenant_scope(db, tenant_scope)
+    normalized_status = session_status.strip().lower()
+    if normalized_status not in IMPERSONATION_SESSION_STATUSES:
+        raise HTTPException(status_code=422, detail="Unsupported impersonation session status")
+
+    _ensure_admin_user(db, actor)
+    stmt = select(AdminImpersonationSessionModel).where(_impersonation_session_scope_filter(tenant_scope))
+    if normalized_status != "all":
+        stmt = stmt.where(AdminImpersonationSessionModel.status == normalized_status)
+    impersonation_sessions = db.scalars(
+        stmt.order_by(
+            AdminImpersonationSessionModel.updated_at.desc(),
+            AdminImpersonationSessionModel.created_at.desc(),
+            AdminImpersonationSessionModel.id.desc(),
+        ).limit(IMPERSONATION_SESSION_LATEST_LIMIT)
+    ).all()
+    parent_by_id = _impersonation_session_parent_map(db, impersonation_sessions)
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant_scope,
+        action="admin.impersonation.read",
+        resource_type="admin_impersonation_session",
+        resource_id="list",
+        risk_level="low",
+        result="success",
+        trace_id=_trace_id(request),
+    )
+    return {
+        "required_permission": "admin.impersonation.read",
+        "tenant_scope": tenant_scope,
+        "status": normalized_status,
+        "items": [
+            _impersonation_session_payload(
+                impersonation_session,
+                tenant=parent_by_id.get(impersonation_session.tenant_id),
+                target_parent=parent_by_id.get(impersonation_session.target_parent_id),
+            )
+            for impersonation_session in impersonation_sessions
+        ],
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
 @router.post("/impersonation-sessions")
 def start_admin_impersonation_session(
     payload: AdminImpersonationSessionRequest,
@@ -782,7 +841,72 @@ def start_admin_impersonation_session(
     )
     return {
         "required_permission": "admin.impersonation.start",
-        "impersonation_session": _impersonation_session_payload(impersonation_session),
+        "impersonation_session": _impersonation_session_payload(
+            impersonation_session,
+            tenant=tenant,
+            target_parent=target_parent,
+        ),
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
+@router.post("/impersonation-sessions/{session_id}/end")
+def end_admin_impersonation_session(
+    session_id: str,
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    if "admin.impersonation.end" not in actor.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.impersonation.end permission")
+    _ensure_admin_tenant_scope(db, tenant_scope)
+
+    _ensure_admin_user(db, actor)
+    stmt = select(AdminImpersonationSessionModel).where(AdminImpersonationSessionModel.id == session_id)
+    if tenant_scope != "all":
+        stmt = stmt.where(AdminImpersonationSessionModel.tenant_id == tenant_scope)
+    impersonation_session = db.scalar(stmt)
+    if impersonation_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Impersonation session not found")
+
+    already_ended = impersonation_session.status == "ended"
+    if already_ended:
+        audit_action = "admin.impersonation.end.already_ended"
+        audit_risk_level = "medium"
+        audit_result = "noop"
+    else:
+        now = datetime.now(timezone.utc)
+        impersonation_session.status = "ended"
+        impersonation_session.ended_at = now
+        impersonation_session.updated_at = now
+        db.add(impersonation_session)
+        db.commit()
+        db.refresh(impersonation_session)
+        audit_action = "admin.impersonation.end"
+        audit_risk_level = "high"
+        audit_result = "success"
+
+    parent_by_id = _impersonation_session_parent_map(db, [impersonation_session])
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=impersonation_session.tenant_id,
+        action=audit_action,
+        resource_type="admin_impersonation_session",
+        resource_id=impersonation_session.id,
+        risk_level=audit_risk_level,
+        result=audit_result,
+        trace_id=_trace_id(request),
+        reason=impersonation_session.reason,
+    )
+    return {
+        "required_permission": "admin.impersonation.end",
+        "impersonation_session": _impersonation_session_payload(
+            impersonation_session,
+            tenant=parent_by_id.get(impersonation_session.tenant_id),
+            target_parent=parent_by_id.get(impersonation_session.target_parent_id),
+        ),
         "audit_event": _audit_event_payload(audit_event),
     }
 
@@ -843,6 +967,28 @@ def _tenant_module_setting_scope_filter(tenant_scope: str):
     if tenant_scope == "all":
         return TenantModuleSettingModel.tenant_id != ""
     return TenantModuleSettingModel.tenant_id == tenant_scope
+
+
+def _impersonation_session_scope_filter(tenant_scope: str):
+    if tenant_scope == "all":
+        return AdminImpersonationSessionModel.tenant_id != ""
+    return AdminImpersonationSessionModel.tenant_id == tenant_scope
+
+
+def _impersonation_session_parent_map(
+    db: Session,
+    impersonation_sessions: list[AdminImpersonationSessionModel],
+) -> dict[str, ParentAccountModel]:
+    parent_ids = {
+        parent_id
+        for impersonation_session in impersonation_sessions
+        for parent_id in (impersonation_session.tenant_id, impersonation_session.target_parent_id)
+        if parent_id
+    }
+    if not parent_ids:
+        return {}
+    parents = db.scalars(select(ParentAccountModel).where(ParentAccountModel.id.in_(parent_ids))).all()
+    return {parent.id: parent for parent in parents}
 
 
 def _operations_material_parse_job_payload(db: Session, tenant_scope: str) -> dict:
@@ -2047,7 +2193,12 @@ def _tenant_module_setting_payload(setting: TenantModuleSettingModel) -> dict:
     }
 
 
-def _impersonation_session_payload(impersonation_session: AdminImpersonationSessionModel) -> dict:
+def _impersonation_session_payload(
+    impersonation_session: AdminImpersonationSessionModel,
+    *,
+    tenant: Optional[ParentAccountModel] = None,
+    target_parent: Optional[ParentAccountModel] = None,
+) -> dict:
     return {
         "id": impersonation_session.id,
         "tenant_id": impersonation_session.tenant_id,
@@ -2055,9 +2206,19 @@ def _impersonation_session_payload(impersonation_session: AdminImpersonationSess
         "actor_id": impersonation_session.actor_id,
         "status": impersonation_session.status,
         "reason": impersonation_session.reason,
-        "expires_at": _iso(impersonation_session.expires_at),
         "created_at": _iso(impersonation_session.created_at),
+        "expires_at": _iso(impersonation_session.expires_at),
+        "ended_at": _iso(impersonation_session.ended_at) if impersonation_session.ended_at else "",
+        "updated_at": _iso(impersonation_session.updated_at),
+        "tenant_display_name": _parent_display_name(tenant, impersonation_session.tenant_id),
+        "target_parent_display_name": _parent_display_name(target_parent, impersonation_session.target_parent_id),
     }
+
+
+def _parent_display_name(parent: Optional[ParentAccountModel], fallback_id: str) -> str:
+    if parent is None:
+        return fallback_id
+    return parent.display_name or _fallback_parent_name(parent)
 
 
 def _age_minutes(value: Optional[datetime]) -> int:
