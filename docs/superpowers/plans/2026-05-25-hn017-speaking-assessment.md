@@ -61,7 +61,7 @@
   - 增加 HN-017 需求和证据目录。
 - Modify: `docs/harness/mvp-readiness-checklist.md`
   - 增加 HN-017 readiness 未完成项。
-- Modify: `docs/project/2026-05-25-status-and-todo.md`
+- Modify: `docs/project/2026-05-26-status-and-todo.md`
   - 更新项目状态和 ToDo；如果保留旧日期文件，先重命名最新状态快照。
 
 ## Task 1: 合同、数据库模型和迁移
@@ -1546,7 +1546,7 @@ git commit -m "feat: show speaking assessment results"
 **Files:**
 - Modify: `docs/harness/upload-recognition-loop.md`
 - Modify: `docs/harness/mvp-readiness-checklist.md`
-- Modify: `docs/project/2026-05-25-status-and-todo.md`
+- Modify: `docs/project/2026-05-26-status-and-todo.md`
 - Modify: `README.md`
 - Modify: `services/api/README.md`
 - Modify: `services/workers/README.md`
@@ -1589,7 +1589,7 @@ Add evidence paths:
 
 - [ ] **Step 3: Update status docs**
 
-Update `docs/project/2026-05-25-status-and-todo.md` after implementation finishes.
+Update `docs/project/2026-05-26-status-and-todo.md` after implementation finishes.
 
 Update HN-017 row:
 
@@ -1658,7 +1658,7 @@ dist/harness/HN-017/real-device-speaking-summary.json
 - [ ] **Step 7: Commit**
 
 ```bash
-git add README.md apps/mobile/README.md services/api/README.md services/workers/README.md docs/harness/upload-recognition-loop.md docs/harness/mvp-readiness-checklist.md docs/project/2026-05-25-status-and-todo.md
+git add README.md apps/mobile/README.md services/api/README.md services/workers/README.md docs/harness/upload-recognition-loop.md docs/harness/mvp-readiness-checklist.md docs/project/2026-05-26-status-and-todo.md
 git commit -m "docs: record HN-017 speaking assessment readiness"
 ```
 
@@ -1686,8 +1686,8 @@ No whitespace errors.
 
 ## Execution Notes
 
-- Keep `SPEECH_PROVIDER=stub` as the local default so main-chain tests stay deterministic.
-- If real Aliyun speech assessment is enabled, missing credentials must fail visibly and never fall back to stub.
+- Keep `SPEECH_PROVIDER=dashscope` as the local example and Compose default; tests set `SPEECH_PROVIDER=stub` explicitly so main-chain tests stay deterministic.
+- If real DashScope speech assessment is enabled, missing credentials or non-public audio URLs must fail visibly and never fall back to stub.
 - `WeeklyReport.speaking_attempts` increments only after scoring succeeds.
 - Do not expose provider raw errors, secrets, signatures or temporary audio URLs to mobile UI.
 - Do not physically delete speaking audio when material is archived in HN-017; archived material filtering is enough for this iteration.

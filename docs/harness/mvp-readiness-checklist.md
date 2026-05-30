@@ -56,7 +56,7 @@
 ## 本次验收记录
 执行人：Codex
 验收时间：2026-04-29，iOS IPA 与真机补充验收：2026-05-01，AI 校对轮询真机补测：2026-05-22
-验收环境：本机开发环境，stub providers，Docker Compose Postgres / Redis / MinIO / API / worker，iOS Simulator，iPhone 真机 `Chaucer`
+验收环境：本机开发环境，Docker Compose Postgres / Redis / MinIO / API / worker，默认 `AI_PROVIDER=qwen` + DashScope 媒体/语音 provider，测试时显式切换 stub/mock，iOS Simulator，iPhone 真机 `Chaucer`
 
 ### 命令结果
 - [x] `HARNESS_RESET=1 make harness-mvp-readiness`
@@ -129,8 +129,9 @@ make harness-capture-ios-screen SCREEN=report-screen
 5. 截图同时保存到 HN-003 目录和 legacy screens 目录。
 
 ### 已知限制
-- 真实微信、真实短信、真实 OCR/LLM 仍未接入
-- 当前环境仍依赖 stub provider
+- 真实微信、真实短信仍未接入
+- 当前登录仍是开发态登录，不是生产微信/短信闭环
+- 真实 OCR / 媒体 / 语音 provider 已接入，但 readiness 仍依赖网络、密钥和真机证据
 - iOS Profile/Internal IPA 已导出：`dist/ios/export/learning_english_mobile.ipa`
 - iOS 工程使用 Team `95RDXKW54K` 与 Bundle ID `com.anbulang.learningenglish`，本机签名 identity 为 `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`
 - Flutter Debug 包不能作为普通内测包从桌面直接启动；iOS 14+ 下会报 `Cannot create a FlutterEngine instance in debug mode without Flutter tooling or Xcode` 并闪退。因此 `make mobile-ios-ipa` 已改为默认产出 Profile/Internal 包
@@ -180,6 +181,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `HN-016`：真实媒体生成 Provider。
 - `HN-016A`：DashScope 国内媒体 Provider。
 - `HN-017`：孩子录音上传与 AI 语音评分。
+- `HN-018`：学习资产掌握度进入独立报告页。
 
 当前实施状态：
 - [x] `HN-008` 上传页已改为拍照/相册优先，不再要求用户填写标题、老师名、主题。
@@ -190,9 +192,10 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
 - [x] `HN-014` 讲义学习资产自动生成：API/worker/mock media 自动化和 job/material JSON 摘录已补齐；AI 校对页和课程详情截图可在下一次真机/模拟器回归时补充。
 - [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除和自动化 Harness 日志已补齐；人工截图可在下一次真机/模拟器回归时补充。
-- [ ] `HN-016` 真实媒体生成 Provider：实现已存在，可通过 `MEDIA_PROVIDER=real` 启用真实彩色配图、US TTS、UK TTS、storage 回填和课程详情失败态；最终 readiness 仍待补齐 HN-016 验证与证据。
-- [ ] `HN-016A` DashScope 国内媒体 Provider：DashScope 直连 provider smoke 与 worker/storage 回填 smoke 已通过；仍待补齐课程详情页截图或真机/模拟器 UI 证据后再勾选 readiness 完成。
-- [ ] `HN-017` 孩子录音上传与 AI 语音评分：录音上传、音频 storage、worker stub 评分、结果页和自动化测试已完成；API multipart 上传、worker 日志、attempt JSON、真机安装启动和局域网连通证据已补；真实语音评分 provider、物理手机录音提交和结果页截图仍待补。
+- [x] `HN-016` 真实媒体生成 Provider：默认已切到 DashScope 真实配图与 US/UK TTS，课程详情 widget 和 iOS 模拟器 App shell 截图证据已补齐；OpenAI 路径仍保留但不作为当前默认验收路径。
+- [x] `HN-016A` DashScope 国内媒体 Provider：DashScope 直连 provider smoke、worker/storage 回填、课程详情 widget UI 截图、iOS 模拟器完整 App shell 截图和自动化回归已通过。
+- [x] `HN-017` 孩子录音上传与 AI 语音评分：录音上传、音频 storage、worker stub 评分、DashScope ASR + Qwen 评分 provider、真实 provider smoke、真实 worker smoke、公网 `/uploads` 隧道 smoke、结果页、自动化测试、公网音频 URL 改写配置、iOS 模拟器 App shell 结果页截图、物理手机 speaking 上传/真实评分回写和真机结果页截图已完成。
+- [x] `HN-018` 学习资产掌握度进入独立报告页：API 已返回 `asset_mastery` / `material_summaries`，移动端 `/reports` 已改为独立 `ReportsScreen`，报告 JSON、widget UI 截图和 iOS 模拟器完整 App shell 截图证据已进入 `dist/harness/HN-018/`。
 
 `HN-012` 当前补测进展：
 - Profile 真机包已用 `API_BASE_URL=http://192.168.2.15:8000/v1` 构建、安装并启动成功。
@@ -220,10 +223,18 @@ make harness-capture-ios-screen SCREEN=report-screen
 - HN-016 真实媒体 provider 证据：`dist/harness/HN-016/`
 - HN-016A DashScope 国内媒体 provider 证据：`dist/harness/HN-016A/`
   - 已有：`dashscope-provider-smoke-summary.json`、`dashscope-reference-edit-smoke-summary.json`、`worker-dashscope-real-summary.json`、生成图片与 US/UK TTS 文件。
-  - 待补：课程详情页展示真实 DashScope 图片和音频状态的 UI 截图。
+  - 已有：课程详情页展示真实 DashScope 图片和音频状态的 widget UI 截图 `lesson-detail-dashscope-media-screen.png`。
+  - 已有：iOS 模拟器完整 App shell 截图 `ios-simulator-app-shell-lesson-detail-dashscope-media-screen.png` 和摘要 `ios-simulator-app-shell-summary.json`。
+  - 复现步骤：`docs/harness/provider-readiness-runbook.md`。
 - HN-017 speaking evidence：`dist/harness/HN-017/`
   - 已有：`speaking-attempt-upload.json`、`speaking-attempt-scored.json`、`speaking-worker.log`、`api-worker-summary.json`、`real-device-install-summary.json`、`real-device-apps.json`、`real-device-lock-state.json`、`real-device-processes.json`。
-  - 待补：`speaking-result-screen.png`、`real-device-speaking-summary.json`。
+  - 已有：`dashscope-speech-smoke-summary.json`、`dashscope-speech-smoke-result.json`、`dashscope-worker-smoke-summary.json`、`dashscope-worker-smoke-attempt.json`、`public-uploads-tunnel-smoke-summary.json`、`public-uploads-tunnel-smoke-result.json` 和 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL` worker URL 改写回归。
+  - 已有：iOS 模拟器完整 App shell 评分结果截图 `ios-simulator-app-shell-speaking-result-screen.jpg` 和摘要 `ios-simulator-app-shell-speaking-summary.json`。
+  - 已有：物理手机 `Chaucer` speaking 上传与 DashScope scored 回写证据 `real-device-speaking-summary.json`、`real-device-speaking-attempt.json`、`real-device-speaking-worker.log`、`real-device-speaking-api.log`。
+  - 已有：物理手机 iPhone Mirroring 结果页截图 `real-device-speaking-result-screen.png` 和裁剪版 `real-device-speaking-result-screen-cropped.png`。
+- HN-018 reports evidence：`dist/harness/HN-018/`
+  - 已有：`weekly-report.json`、`summary.json`、`reports-screen.png`。
+  - 已有：iOS 模拟器完整 App shell 截图 `ios-simulator-app-shell-reports-screen.png` 和摘要 `ios-simulator-app-shell-summary.json`。
 
 ## 当前结论
 

@@ -6,7 +6,7 @@ Flutter 客户端，覆盖家长登录、资料上传、AI 校对、课程详情
 
 - `Splash -> Login -> Phone Bind -> Home` 会话主链
 - `资料库 -> 上传 -> AI 校对 -> 课程详情` 讲义主链
-- `复习 -> 口语陪练 -> 亲子陪练 -> 报告模式`
+- `复习 -> 口语陪练 -> 亲子陪练 -> 独立报告页`
 - 资料左滑删除
 - 学习资产媒体状态展示与主发音切换
 - 口语陪练录音、上传、评分轮询和结果页展示
@@ -32,6 +32,6 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 
 ## 当前限制
 
-- speaking 页已支持真实录音上传和异步 stub 评分结果展示；真实语音评分 provider 仍未实现，真机录音上传证据仍需补齐到 `dist/harness/HN-017/`。
-- `/reports` 当前复用 `ReviewTasksScreen(reportMode: true)`，还不是独立复杂报告模块。
+- speaking 页已支持真实录音上传、异步评分轮询和结果展示；当前正式 provider 为 DashScope ASR + Qwen 评分，真机验收仍需使用公网可访问音频 URL 补齐证据到 `dist/harness/HN-017/`。
+- `/reports` 已是独立报告页，展示周报统计、讲义汇总、每个学习资产的掌握度、复习表现、口语表现和推荐动作。
 - MVP 主链截图证据已补齐；真实媒体 provider 的 readiness 证据仍在 `docs/harness/` 和 `dist/harness/HN-016*/` 继续补充。

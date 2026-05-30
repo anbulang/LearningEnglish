@@ -34,6 +34,7 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import MaterialStatus, SpeakingAttemptStatus
+from app.services.speaking_assessment import SpeechAssessmentResult
 from workers_app.celery_app import celery_app
 from workers_app.tasks import score_speaking_attempt
 
@@ -79,6 +80,41 @@ def test_score_speaking_attempt_skips_duplicate_transcribing_delivery() -> None:
         assert attempt.status == SpeakingAttemptStatus.transcribing.value
         report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == "child_test"))
         assert report is None
+
+
+def test_score_speaking_attempt_uses_public_audio_base_url(monkeypatch) -> None:
+    _configure_storage_env()
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    _seed_speaking_attempt()
+    os.environ["SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL"] = "https://public.example.com/learning-english"
+    get_settings.cache_clear()
+    captured: dict[str, str] = {}
+
+    class CapturingProvider:
+        def assess(self, *, audio_path, audio_url, target_text, prompt_text, attempt_id, accent):
+            captured["audio_url"] = audio_url
+            return SpeechAssessmentResult(
+                transcript=target_text,
+                overall_score=90,
+                pronunciation_score=0.9,
+                accuracy_score=90,
+                fluency_score=90,
+                completeness_score=90,
+                feedback="读得清楚。",
+                provider="captured",
+            )
+
+    monkeypatch.setattr("workers_app.tasks.build_speech_assessment_provider", lambda: CapturingProvider())
+
+    result = score_speaking_attempt("attempt_test")
+
+    assert result == {"attempt_id": "attempt_test", "status": "scored"}
+    assert (
+        captured["audio_url"]
+        == "https://public.example.com/learning-english/uploads/speaking_attempt/attempt_test/input.m4a"
+    )
+    _configure_storage_env()
 
 
 def _seed_speaking_attempt(*, status: str = SpeakingAttemptStatus.recording_uploaded.value) -> None:
@@ -156,4 +192,5 @@ def _seed_speaking_attempt(*, status: str = SpeakingAttemptStatus.recording_uplo
 def _configure_storage_env() -> None:
     os.environ["LOCAL_STORAGE_PATH"] = f"{_TEST_ROOT}/uploads"
     os.environ["SPEECH_PROVIDER"] = "stub"
+    os.environ.pop("SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL", None)
     get_settings.cache_clear()

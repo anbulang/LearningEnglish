@@ -10,6 +10,7 @@ import '../../features/materials/presentation/material_review_screen.dart';
 import '../../features/materials/presentation/materials_library_screen.dart';
 import '../../features/materials/presentation/scan_upload_screen.dart';
 import '../../features/profiles/presentation/profile_screen.dart';
+import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/review/presentation/review_runner_screen.dart';
 import '../../features/review/presentation/review_tasks_screen.dart';
 import '../../features/session/data/session_controller.dart';
@@ -116,7 +117,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/reports',
-            builder: (context, state) => const ReviewTasksScreen(reportMode: true),
+            builder: (context, state) => const ReportsScreen(),
           ),
           GoRoute(
             path: '/profile',

@@ -228,20 +228,22 @@ class SpeechAssessmentProvider(Protocol):
 - `raw_result`
 
 Provider 模式：
-- `SPEECH_PROVIDER=stub`：本地默认，确定性返回结果，保证 API/worker/mobile 测试可跑。
-- `SPEECH_PROVIDER=aliyun`：真实语音评测 provider，使用阿里云智能科教内容生成语音评测能力。
+- `SPEECH_PROVIDER=dashscope`：当前本地示例和 Docker Compose 默认路径，使用 DashScope ASR + Qwen JSON 评分。
+- `SPEECH_PROVIDER=stub`：仅用于确定性 API/worker/mobile 自动化回归。
+- `SPEECH_PROVIDER=aliyun`：历史配置边界，签名请求适配未作为当前验收路径。
 
-Aliyun provider 配置：
+DashScope provider 配置：
 
 ```dotenv
-SPEECH_PROVIDER=stub
-SPEECH_ASSESSMENT_PROVIDER=aliyun
-SPEECH_ASSESSMENT_BASE_URL=
-SPEECH_ASSESSMENT_APP_KEY=
-SPEECH_ASSESSMENT_SECRET_KEY=
+SPEECH_PROVIDER=dashscope
+SPEECH_ASSESSMENT_PROVIDER=dashscope
+SPEECH_ASSESSMENT_BASE_URL=https://dashscope.aliyuncs.com/api/v1
+SPEECH_ASSESSMENT_ASR_MODEL=paraformer-v2
+SPEECH_ASSESSMENT_SCORING_MODEL=qwen-plus
 SPEECH_ASSESSMENT_TIMEOUT_SECONDS=120
 SPEECH_ASSESSMENT_HTTP_TRUST_ENV=false
 SPEECH_ASSESSMENT_DEFAULT_ACCENT=am
+SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL=<可公网访问 /uploads 的 HTTPS 根地址>
 ```
 
 说明：

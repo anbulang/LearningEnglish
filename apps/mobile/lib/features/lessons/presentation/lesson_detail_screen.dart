@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
@@ -63,10 +62,12 @@ class LessonDetailScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
                       Text('核心单词', style: AppTextStyles.sectionTitle),
-                      const SizedBox(width: AppSpacing.sm),
                       const StickerBadge(
                           label: '词卡包', color: AppColors.skyBlue),
                     ],
@@ -104,10 +105,12 @@ class LessonDetailScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
                       Text('重点句型', style: AppTextStyles.sectionTitle),
-                      const SizedBox(width: AppSpacing.sm),
                       const StickerBadge(
                           label: '跟读句型', color: AppColors.butterYellow),
                     ],
@@ -354,10 +357,12 @@ class _LearningAssetsCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               Text('核心学习资产', style: AppTextStyles.sectionTitle),
-              const SizedBox(width: AppSpacing.sm),
               const StickerBadge(label: '图文音', color: AppColors.mintLeaf),
             ],
           ),
@@ -543,30 +548,14 @@ class _GeneratedAssetImage extends StatelessWidget {
         asset.generatedImageUrl.isEmpty) {
       return _GeneratedImagePlaceholder(status: asset.generatedImageStatus);
     }
-    if (asset.generatedImageUrl.toLowerCase().endsWith('.svg')) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadii.input),
-        child: SvgPicture.network(
-          asset.generatedImageUrl,
-          width: 88,
-          height: 88,
-          fit: BoxFit.cover,
-          placeholderBuilder: (context) =>
-              _GeneratedImagePlaceholder(status: asset.generatedImageStatus),
-          errorBuilder: (context, error, stackTrace) =>
-              const _GeneratedImagePlaceholder(status: 'failed'),
-        ),
-      );
-    }
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.input),
-      child: Image.network(
-        asset.generatedImageUrl,
+      child: RemoteAssetImage(
+        url: asset.generatedImageUrl,
         width: 88,
         height: 88,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            const _GeneratedImagePlaceholder(status: 'failed'),
+        errorIcon: Icons.image_not_supported_outlined,
       ),
     );
   }
