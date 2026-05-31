@@ -26,7 +26,7 @@ LearningEnglish 是一个面向早期英语学习家庭的内测 MVP。家长拍
 | 讲义导入 | 支持移动端拍照/相册上传，后端保存原始图片和解析任务 |
 | AI 校对 | 默认使用阿里云百炼 / DashScope Qwen；测试环境显式切到 stub |
 | 复习闭环 | `KnowledgePack`、`ReviewTask`、`PracticeSession`、`WeeklyReport` 已串联 |
-| 口语评分 | 移动端录音上传、音频存储、DashScope ASR + Qwen 评分、逐词反馈和结果页已接通；真机验收需提供公网可拉取的录音 URL |
+| 口语评分 | 移动端录音上传、音频存储、DashScope ASR + Qwen 评分、逐词反馈和结果页已接通；`dist/harness/HN-017/` 已保留真机证据，复跑时仍需提供公网可拉取的录音 URL |
 | 移动端 | Flutter 自适应手机/平板页面结构，含登录、资料库、校对、课程、复习、报告 |
 | 工程验收 | `make` 入口和 Harness evidence 目录已固定，便于反复回归 |
 
@@ -243,11 +243,14 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 文档 |
 | --- | --- |
-| 项目进度与 ToDo | [`docs/project/2026-05-27-status-and-todo.md`](docs/project/2026-05-27-status-and-todo.md) |
+| 项目进度与 ToDo | [`docs/project/2026-05-31-status-and-todo.md`](docs/project/2026-05-31-status-and-todo.md) |
 | 系统总览 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
 | 移动端架构 | [`docs/architecture/mobile-architecture.md`](docs/architecture/mobile-architecture.md) |
+| Harness 文档索引 | [`docs/harness/README.md`](docs/harness/README.md) |
+| 真机回归 Runbook | [`docs/harness/device-regression-runbook.md`](docs/harness/device-regression-runbook.md) |
+| Evidence 归档策略 | [`docs/harness/evidence-archive-policy.md`](docs/harness/evidence-archive-policy.md) |
 | MVP readiness | [`docs/harness/mvp-readiness-checklist.md`](docs/harness/mvp-readiness-checklist.md) |
 | 上传识别链路 | [`docs/harness/upload-recognition-loop.md`](docs/harness/upload-recognition-loop.md) |
 | 非技术试点指南 | [`docs/harness/non-technical-pilot-guide.md`](docs/harness/non-technical-pilot-guide.md) |

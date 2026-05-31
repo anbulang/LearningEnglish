@@ -1,12 +1,12 @@
 # HN-017 口语评分 Readiness 摘要
 
-更新时间：2026-05-27
+更新时间：2026-05-31
 
 ## 当前结论
 
 `HN-017` 的代码链路已经落地：孩子录音上传、音频 storage、异步 worker、DashScope ASR、Qwen 评分、结果页展示和周报回填都已有自动化或 Harness 证据。
 
-2026-05-27 已补齐物理手机 `Chaucer` 发起的 speaking attempt：真机从 `192.168.2.12` 访问局域网 API，完成 `POST /v1/speaking-attempts`，本地 watcher 调用 DashScope ASR + Qwen 后把 `attempt_b0e110c126d1` 写回 `scored`，并通过 iPhone Mirroring 保存了真机结果页截图。
+物理手机 `Chaucer` 发起的 speaking attempt 已补齐：真机从 `192.168.2.12` 访问局域网 API，完成 `POST /v1/speaking-attempts`，本地 watcher 调用 DashScope ASR + Qwen 后把 `attempt_b0e110c126d1` 写回 `scored`，并通过 iPhone Mirroring 保存了真机结果页截图。
 
 ## 已验证内容
 

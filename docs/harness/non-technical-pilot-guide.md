@@ -2,7 +2,7 @@
 
 适用对象：内部测试同学、产品同学、需要完整体验 MVP 主链的非开发人员。
 
-当前版本说明：本文已按 2026-05-27 仓库现状更新，重点反映 AI 校对页自动轮询、DashScope 真实媒体 provider、DashScope ASR + Qwen 口语评分，以及 HN-017 仍缺物理手机录音提交截图的 readiness 边界。
+当前版本说明：本文已按 2026-05-30 仓库现状更新，重点反映 AI 校对页自动轮询、DashScope 真实媒体 provider、DashScope ASR + Qwen 口语评分，以及 HN-017 真机 evidence 已入库后的当前交付边界。
 
 ## 1. 你会体验到什么
 这次试用的目标是验证一条完整链路：
@@ -226,14 +226,14 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 如果可以，请附上截图。
 
 ## 7. 当前交付状态
-截至 2026-05-27，自动化主链和 iOS IPA 导出已通过：
+截至 2026-05-30，自动化主链和 iOS IPA 导出已通过：
 
 - API：登录、绑定、创建孩子、上传、进入 AI 校对
 - 移动端：上传成功后跳转 AI 校对页，AI 校对确认后跳转课程详情
 - Harness：`HARNESS_RESET=1 make harness-mvp-readiness` 可以完成到测试和模拟器构建阶段
 - iOS：`make mobile-ios-ipa` 已成功导出 `dist/ios/export/learning_english_mobile.ipa`
 - 真机：`Chaucer` 已验证可以安装并启动 `com.anbulang.learningenglish`
-- speaking：stub 评分闭环、API multipart 上传、worker 日志、attempt JSON、DashScope 真实 provider smoke、真实 worker smoke、公网音频 URL 改写、公网 `/uploads` 隧道 smoke 和 iOS 模拟器 App shell 结果页截图证据已存在；仍待物理手机录音提交和结果页截图
+- speaking：stub 评分闭环、API multipart 上传、worker 日志、attempt JSON、DashScope 真实 provider smoke、真实 worker smoke、公网音频 URL 改写、公网 `/uploads` 隧道 smoke、iOS 模拟器 App shell 结果页截图、物理手机 speaking 上传/真实评分回写和真机结果页截图证据已存在
 - 媒体 provider：DashScope 直连、worker/storage 回填、课程详情 widget 截图和 iOS 模拟器完整 App shell 截图证据已存在
 
 尚未完全满足“任意非开发设备直接安装”的条件：

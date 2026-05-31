@@ -190,8 +190,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `HN-011` timeout 失败在移动端显示中文重试说明。
 - [x] `HN-012` Profile 真机包已重新安装；真实手机已补齐上传识别日志和 job/material JSON 证据。
 - [x] `HN-013` API 和移动端已支持图片级记录；真机证据随 `HN-012` 补齐。
-- [x] `HN-014` 讲义学习资产自动生成：API/worker/mock media 自动化和 job/material JSON 摘录已补齐；AI 校对页和课程详情截图可在下一次真机/模拟器回归时补充。
-- [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除和自动化 Harness 日志已补齐；人工截图可在下一次真机/模拟器回归时补充。
+- [x] `HN-014` 讲义学习资产自动生成：API/worker/mock media 自动化、job/material JSON 摘录、AI 校对页截图和课程详情截图已补齐。
+- [x] `HN-015` 课程资料左滑删除：API、worker、Flutter 左滑删除、自动化 Harness 日志和人工截图已补齐。
 - [x] `HN-016` 真实媒体生成 Provider：默认已切到 DashScope 真实配图与 US/UK TTS，课程详情 widget 和 iOS 模拟器 App shell 截图证据已补齐；OpenAI 路径仍保留但不作为当前默认验收路径。
 - [x] `HN-016A` DashScope 国内媒体 Provider：DashScope 直连 provider smoke、worker/storage 回填、课程详情 widget UI 截图、iOS 模拟器完整 App shell 截图和自动化回归已通过。
 - [x] `HN-017` 孩子录音上传与 AI 语音评分：录音上传、音频 storage、worker stub 评分、DashScope ASR + Qwen 评分 provider、真实 provider smoke、真实 worker smoke、公网 `/uploads` 隧道 smoke、结果页、自动化测试、公网音频 URL 改写配置、iOS 模拟器 App shell 结果页截图、物理手机 speaking 上传/真实评分回写和真机结果页截图已完成。
@@ -238,8 +238,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 
 ## 当前结论
 
-- HN-001 到 HN-015 的核心代码链路已经落地，当前仓库具备“上传 -> AI 校对 -> 课程详情 -> 复习/报告”的可回归主链。
-- 当前最大剩余缺口不在主链功能本身，而在真实媒体 provider、Android 交付链、截图证据补齐和更稳定的环境自动化。
+- HN-001 到 HN-018 的核心代码链路已经落地，当前仓库具备“上传 -> AI 校对 -> 课程详情 -> 复习 / 口语评分 -> 报告”的可回归主链。
+- 当前最大剩余缺口不在主链功能本身，而在 Android 交付链、文档真相源治理、evidence 索引和更稳定的环境自动化。
 
 本轮自动化验证：
 - `services/api/.venv/bin/python -m pytest services/api/tests -q`：`68 passed`
@@ -258,3 +258,16 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `infra/env/local.example.env` 已补齐 Doubao provider 和 `AI_HTTP_TRUST_ENV` 示例配置。
 - [x] `docs/project/README.md` 已说明状态文档、文章草稿和素材目录边界。
 - [x] 人工截图证据已补齐：AI 校对、课程详情、学习资产和删除确认截图。
+
+2026-05-30 文档治理补充：
+- [x] 项目状态快照已切到 `docs/project/2026-05-31-status-and-todo.md`。
+- [x] README 与 `docs/project/README.md` 已同步最新状态快照链接。
+- [x] `docs/harness/README.md` 已补齐 `HN-*` 证据索引和真相源边界说明。
+- [x] `HN-017` readiness 摘要与上传识别链路文档已去掉过时“待补真机证据”语气，统一为当前仓库事实。
+
+2026-05-31 HN-019 治理补充：
+- [x] `docs/project/2026-05-31-status-and-todo.md` 已替换前一版状态快照。
+- [x] `docs/harness/device-regression-runbook.md` 已说明 R0/R1/R2/R3 回归边界。
+- [x] `docs/harness/evidence-archive-policy.md` 已说明证据保留、脱敏和替代规则。
+- [x] `scripts/harness/generate_evidence_index.py` 与 `make harness-evidence-index` 已提供统一索引入口。
+- [x] `HN-017` 既有真机 speaking evidence 保持已闭环状态，复跑时按现有 `dist/harness/HN-017/real-device-*` 命名续证，不重新标为待补。
