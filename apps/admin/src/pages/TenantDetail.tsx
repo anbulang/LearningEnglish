@@ -7,6 +7,7 @@ import type {
   MaterialStatus,
   MediaStatus,
   ModuleKey,
+  AdminTenantDetailData,
   ProviderPolicy,
   Tenant,
   TenantModuleSetting,
@@ -27,6 +28,7 @@ interface TenantDetailProps {
   materials: AdminMaterial[];
   policies: ProviderPolicy[];
   moduleSettings: TenantModuleSetting[];
+  tenantDetailData?: AdminTenantDetailData | null;
   isAllTenantPreview?: boolean;
   dataMode?: "mock" | "live";
   onToggleTenantModule?: (input: TenantModuleToggleInput) => Promise<void>;
@@ -39,11 +41,13 @@ export function TenantDetail({
   materials,
   policies,
   moduleSettings,
+  tenantDetailData,
   isAllTenantPreview = false,
   dataMode = "mock",
   onToggleTenantModule
 }: TenantDetailProps) {
-  const tenant = tenants.find((item) => item.id === tenantId);
+  const detailData = tenantDetailData?.tenant.id === tenantId ? tenantDetailData : null;
+  const tenant = detailData?.tenant ?? tenants.find((item) => item.id === tenantId);
   const copy = language === "zh" ? zhCopy : enCopy;
   const [moduleReason, setModuleReason] = useState("");
   const [moduleMessage, setModuleMessage] = useState("");
@@ -61,11 +65,17 @@ export function TenantDetail({
   }
 
   const selectedTenant = tenant;
-  const tenantMaterials = materials.filter((material) => material.tenantId === selectedTenant.id);
-  const policy = getEffectiveProviderPolicy(policies, selectedTenant.id, selectedTenant.tier);
+  const tenantMaterials = detailData ? detailData.materials : materials.filter((material) => material.tenantId === selectedTenant.id);
+  const policy = detailData?.providerPolicy.tenantId
+    ? detailData.providerPolicy
+    : getEffectiveProviderPolicy(policies, selectedTenant.id, selectedTenant.tier);
   const failedJobs = tenantMaterials.filter((item) => item.jobStatus === "failed" || item.materialStatus === "failed").length;
   const processingMedia = tenantMaterials.filter((item) => item.mediaStatus === "pending" || item.mediaStatus === "processing").length;
-  const moduleRows = buildModules(policy, failedJobs, selectedTenant, moduleSettings, language);
+  const effectiveModuleSettings = detailData?.moduleSettings.length ? detailData.moduleSettings : moduleSettings;
+  const moduleRows = buildModules(policy, failedJobs, selectedTenant, effectiveModuleSettings, language);
+  const childrenCount = numberFromRecord(detailData?.summary, "children", selectedTenant.children);
+  const materialsCount = numberFromRecord(detailData?.summary, "materials", tenantMaterials.length);
+  const failedMaterialsCount = numberFromRecord(detailData?.summary, "failed_materials", failedJobs);
 
   async function handleModuleToggle(module: ModuleRow) {
     if (!onToggleTenantModule || !moduleReason.trim()) {
@@ -130,9 +140,9 @@ export function TenantDetail({
 
       <section className="metric-row span-7" aria-label={copy.metrics}>
         <MetricCard label={copy.parents} value={selectedTenant.activeParents.toLocaleString()} detail={copy.parentsDetail} />
-        <MetricCard label={copy.children} value={selectedTenant.children.toLocaleString()} detail={copy.childrenDetail} />
-        <MetricCard label={copy.materialsMetric} value={tenantMaterials.length} detail={copy.materialsDetail} />
-        <MetricCard label={copy.failedJobs} value={failedJobs} detail={copy.failedJobsDetail} />
+        <MetricCard label={copy.children} value={childrenCount.toLocaleString()} detail={copy.childrenDetail} />
+        <MetricCard label={copy.materialsMetric} value={materialsCount} detail={copy.materialsDetail} />
+        <MetricCard label={copy.failedJobs} value={failedMaterialsCount} detail={copy.failedJobsDetail} />
       </section>
 
       <section className="surface span-5">
@@ -207,6 +217,58 @@ export function TenantDetail({
         </div>
         {moduleMessage && <p className="action-message">{moduleMessage}</p>}
       </section>
+
+      {detailData?.children.length ? (
+        <section className="surface wide table-panel">
+          <div className="section-title">
+            <h2>{copy.childrenProfiles}</h2>
+            <StatusChip tone="neutral">{detailData.children.length}</StatusChip>
+          </div>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>{copy.child}</th>
+                  <th>{copy.level}</th>
+                  <th>{copy.learningGoal}</th>
+                  <th>{copy.reviewMinutes}</th>
+                  <th>{copy.speakingAttempts}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailData.children.map((child) => (
+                  <tr key={child.id}>
+                    <td>
+                      <strong className="table-title">{child.name}</strong>
+                      <small>
+                        {child.age} {copy.yearsOld}
+                      </small>
+                    </td>
+                    <td>{child.level}</td>
+                    <td>{child.learningGoal || copy.noDetail}</td>
+                    <td>{child.preferredReviewDurationMinutes}</td>
+                    <td>{child.speakingAttempts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {detailData ? (
+        <section className="surface wide">
+          <div className="section-title">
+            <h2>{copy.tenantSignals}</h2>
+            <StatusChip tone={riskTone(detailData.riskSummary)}>{stringFromRecord(detailData.riskSummary, "risk_level", copy.noDetail)}</StatusChip>
+          </div>
+          <div className="signal-grid">
+            <RecordPanel title={copy.weeklyReports} record={detailData.weeklyReports} emptyLabel={copy.noDetail} />
+            <RecordPanel title={copy.speakingAttempts} record={detailData.speakingAttempts} emptyLabel={copy.noDetail} />
+            <RecordPanel title={copy.riskSummary} record={detailData.riskSummary} emptyLabel={copy.noDetail} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="surface wide table-panel">
         <div className="section-title">
@@ -370,6 +432,99 @@ function getMediaStatusTone(status: MediaStatus): "success" | "warning" | "dange
   return "warning";
 }
 
+function RecordPanel({ title, record, emptyLabel }: { title: string; record: Record<string, unknown>; emptyLabel: string }) {
+  const rows = recordRows(record);
+  return (
+    <div className="signal-panel">
+      <h3>{title}</h3>
+      {rows.length ? (
+        <dl className="detail-list compact">
+          {rows.map((row) => (
+            <div key={row.key} className="record-row">
+              <dt>{row.key}</dt>
+              <dd>
+                <RecordValue value={row.value} emptyLabel={emptyLabel} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p>{emptyLabel}</p>
+      )}
+    </div>
+  );
+}
+
+function RecordValue({ value, emptyLabel }: { value: unknown; emptyLabel: string }) {
+  if (Array.isArray(value)) {
+    return value.length ? (
+      <span className="value-stack">
+        {value.map((item, index) => (
+          <span key={`${String(item)}-${index}`}>{formatRecordValue(item, emptyLabel)}</span>
+        ))}
+      </span>
+    ) : (
+      <>{emptyLabel}</>
+    );
+  }
+  return <>{formatRecordValue(value, emptyLabel)}</>;
+}
+
+function recordRows(record: Record<string, unknown>): Array<{ key: string; value: unknown }> {
+  return Object.entries(record).flatMap(([key, value]) => {
+    if ((key === "aggregate" || key === "by_status") && isRecord(value)) {
+      return Object.entries(value).map(([childKey, childValue]) => ({ key: childKey, value: childValue }));
+    }
+    if (Array.isArray(value) && value.every(isRecord)) {
+      return [{ key, value: value.map((item) => stringFromRecord(item, "id", JSON.stringify(item))) }];
+    }
+    return [{ key, value }];
+  });
+}
+
+function formatRecordValue(value: unknown, emptyLabel: string): string {
+  if (typeof value === "string") {
+    return value || emptyLabel;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (isRecord(value)) {
+    return Object.entries(value)
+      .map(([key, item]) => `${key}: ${formatRecordValue(item, emptyLabel)}`)
+      .join(" / ");
+  }
+  return emptyLabel;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function numberFromRecord(record: Record<string, unknown> | undefined, key: string, fallback: number): number {
+  const value = record?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function stringFromRecord(record: Record<string, unknown>, key: string, fallback: string): string {
+  const value = record[key];
+  return typeof value === "string" && value ? value : fallback;
+}
+
+function riskTone(record: Record<string, unknown>): "success" | "warning" | "danger" | "neutral" {
+  const riskLevel = stringFromRecord(record, "risk_level", "");
+  if (riskLevel === "high") {
+    return "danger";
+  }
+  if (riskLevel === "medium") {
+    return "warning";
+  }
+  if (riskLevel === "low") {
+    return "success";
+  }
+  return "neutral";
+}
+
 const zhCopy = {
   title: "租户详情",
   subtitle: "查看租户身份、配额使用、模块访问、Provider 策略和内容材料状态。",
@@ -410,6 +565,15 @@ const zhCopy = {
   mediaProcessing: "Media processing",
   allClear: "All clear",
   materials: "Tenant materials",
+  childrenProfiles: "孩子档案",
+  tenantSignals: "租户信号",
+  weeklyReports: "周报",
+  speakingAttempts: "口语练习",
+  riskSummary: "风险摘要",
+  level: "级别",
+  learningGoal: "学习目标",
+  reviewMinutes: "复习分钟",
+  noDetail: "-",
   material: "Material",
   child: "Child",
   parent: "Parent",
@@ -460,6 +624,15 @@ const enCopy = {
   mediaProcessing: "Media processing",
   allClear: "All clear",
   materials: "Tenant materials",
+  childrenProfiles: "Children profiles",
+  tenantSignals: "Tenant signals",
+  weeklyReports: "Weekly reports",
+  speakingAttempts: "Speaking attempts",
+  riskSummary: "Risk summary",
+  level: "Level",
+  learningGoal: "Learning goal",
+  reviewMinutes: "Review minutes",
+  noDetail: "-",
   material: "Material",
   child: "Child",
   parent: "Parent",

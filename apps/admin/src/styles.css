@@ -629,6 +629,7 @@ td small {
 }
 
 .filter-bar select,
+.filter-bar input,
 .audit-reason textarea,
 .provider-form select,
 .provider-form input,
@@ -638,6 +639,10 @@ td small {
   color: var(--cocoa-ink);
   background: var(--paper-white);
   padding: 9px 12px;
+}
+
+.audit-filter-bar {
+  margin: 16px 0;
 }
 
 .primary-button {
@@ -808,6 +813,36 @@ td small {
   color: var(--forest-mint);
   font-size: 13px;
   font-weight: 800;
+}
+
+.signal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.signal-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--outline-warm);
+  border-radius: 8px;
+  background: #fffaf7;
+}
+
+.signal-panel h3 {
+  margin: 0;
+  color: var(--cocoa-ink);
+  font-size: 15px;
+}
+
+.record-row {
+  display: contents;
+}
+
+.value-stack {
+  display: grid;
+  gap: 4px;
 }
 
 .action-drawer-backdrop {

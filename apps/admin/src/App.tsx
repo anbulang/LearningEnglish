@@ -2,9 +2,13 @@ import { useEffect, useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
 import {
   archiveAdminMaterial,
+  endAdminImpersonationSession,
   loadAdminAccess,
+  loadAdminAuditEvents,
   loadAdminDashboard,
+  loadAdminImpersonationSessions,
   loadAdminOperations,
+  loadAdminTenantDetail,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
   startAdminImpersonationSession,
@@ -13,10 +17,17 @@ import {
   type AdminDashboardData
 } from "./domain/adminApi";
 import { mockMaterials, mockModuleSettings, mockOperationsData, mockProviderPolicies, mockTenants } from "./domain/mockData";
-import type { AdminOperationsData, Language, TenantScope } from "./domain/types";
+import type {
+  AdminAuditEventsData,
+  AdminImpersonationSessionsData,
+  AdminOperationsData,
+  AdminTenantDetailData,
+  Language,
+  TenantScope
+} from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
-import { AuditAccess } from "./pages/AuditAccess";
+import { AuditAccess, type AuditEventFilters } from "./pages/AuditAccess";
 import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
@@ -47,6 +58,9 @@ export function App() {
     moduleSettings: mockModuleSettings
   });
   const [operationsData, setOperationsData] = useState<AdminOperationsData>(mockOperationsData);
+  const [tenantDetailData, setTenantDetailData] = useState<AdminTenantDetailData | null>(null);
+  const [auditEventsPage, setAuditEventsPage] = useState<AdminAuditEventsData | null>(null);
+  const [impersonationSessions, setImpersonationSessions] = useState<AdminImpersonationSessionsData | null>(null);
   const [accessData, setAccessData] = useState<AdminAccessData | null>(null);
   const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
   const t = createTranslator(language);
@@ -121,6 +135,83 @@ export function App() {
       isCancelled = true;
     };
   }, [tenantScope]);
+
+  useEffect(() => {
+    setTenantDetailData(null);
+    if (activePage !== "tenants" || !selectedTenantId) {
+      return;
+    }
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      try {
+        const detail = await loadAdminTenantDetail({
+          apiBaseUrl,
+          adminToken,
+          tenantScope,
+          tenantId: selectedTenantId
+        });
+        if (!isCancelled) {
+          setTenantDetailData(detail);
+        }
+      } catch {
+        if (!isCancelled) {
+          setTenantDetailData(null);
+        }
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, selectedTenantId, tenantScope]);
+
+  useEffect(() => {
+    setAuditEventsPage(null);
+    setImpersonationSessions(null);
+    if (activePage !== "audit") {
+      return;
+    }
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      try {
+        const [auditPage, sessions] = await Promise.all([
+          loadAdminAuditEvents({
+            apiBaseUrl,
+            adminToken,
+            tenantScope,
+            limit: 25
+          }),
+          loadAdminImpersonationSessions({
+            apiBaseUrl,
+            adminToken,
+            tenantScope,
+            status: "all"
+          })
+        ]);
+        if (!isCancelled) {
+          setAuditEventsPage(auditPage);
+          setImpersonationSessions(sessions);
+        }
+      } catch {
+        if (!isCancelled) {
+          setAuditEventsPage(null);
+          setImpersonationSessions(null);
+        }
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, tenantScope]);
 
   async function handleArchiveMaterial(materialId: string, reason: string) {
     const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
@@ -247,6 +338,29 @@ export function App() {
     );
   }
 
+  async function handleLoadAuditEvents(filters: AuditEventFilters) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin audit API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await loadAdminAuditEvents({
+      apiBaseUrl,
+      adminToken,
+      tenantScope: filters.tenantScope,
+      actorId: filters.actorId,
+      action: filters.action,
+      resourceType: filters.resourceType,
+      resourceId: filters.resourceId,
+      riskLevel: filters.riskLevel,
+      result: filters.result,
+      cursor: filters.cursor,
+      limit: 25
+    });
+    setAuditEventsPage(result);
+    return result;
+  }
+
   async function handleStartImpersonation(input: { tenantId: string; targetParentId: string; reason: string }) {
     const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
     if (!apiBaseUrl || typeof fetch === "undefined") {
@@ -269,6 +383,64 @@ export function App() {
           }
         : current
     );
+    setImpersonationSessions((current) =>
+      current
+        ? {
+            ...current,
+            items: [
+              result.impersonationSession,
+              ...current.items.filter((session) => session.id !== result.impersonationSession.id)
+            ],
+            auditEvent: result.auditEvent
+          }
+        : current
+    );
+  }
+
+  async function handleEndImpersonationSession(sessionId: string, reason: string) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin impersonation API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await endAdminImpersonationSession({
+      apiBaseUrl,
+      adminToken,
+      tenantScope,
+      sessionId,
+      reason
+    });
+    setImpersonationSessions((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((session) => {
+              if (session.id !== result.impersonationSession.id) {
+                return session;
+              }
+              return result.actionResult.status === "noop" ? session : result.impersonationSession;
+            }),
+            auditEvent: result.auditEvent
+          }
+        : current
+    );
+    setAccessData((current) =>
+      current
+        ? {
+            ...current,
+            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+          }
+        : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: [result.auditEvent, ...current.items.filter((event) => event.id !== result.auditEvent.id)]
+          }
+        : current
+    );
+    return result;
   }
 
   return (
@@ -299,6 +471,7 @@ export function App() {
           materials={dashboardData.materials}
           policies={dashboardData.providerPolicies}
           moduleSettings={dashboardData.moduleSettings}
+          tenantDetailData={tenantDetailData}
           isAllTenantPreview={tenantScope === "all"}
           dataMode={dataMode}
           onToggleTenantModule={dataMode === "live" ? handleToggleTenantModule : undefined}
@@ -321,7 +494,11 @@ export function App() {
           accessData={accessData}
           dataMode={dataMode}
           tenants={dashboardData.tenants}
+          auditEventsPage={auditEventsPage}
+          impersonationSessions={impersonationSessions}
+          onLoadAuditEvents={dataMode === "live" ? handleLoadAuditEvents : undefined}
           onStartImpersonation={dataMode === "live" ? handleStartImpersonation : undefined}
+          onEndImpersonationSession={dataMode === "live" ? handleEndImpersonationSession : undefined}
         />
       )}
       {activePage === "providers" && (

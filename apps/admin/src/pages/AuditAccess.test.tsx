@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { AdminAccessData } from "../domain/adminApi";
-import { mockTenants } from "../domain/mockData";
+import { mockAuditEventsPage, mockImpersonationSessions, mockTenants } from "../domain/mockData";
 import { AuditAccess } from "./AuditAccess";
 
 const accessData: AdminAccessData = {
@@ -78,5 +78,94 @@ describe("AuditAccess", () => {
       reason: "Support is reproducing parent-reported upload issue."
     });
     expect(await screen.findByText("Supervised session started.")).toBeInTheDocument();
+  });
+
+  it("loads audit events with filters and cursor pagination", async () => {
+    const onLoadAuditEvents = vi.fn().mockResolvedValue(mockAuditEventsPage);
+    render(
+      <AuditAccess
+        language="en"
+        accessData={accessData}
+        dataMode="live"
+        tenants={mockTenants}
+        auditEventsPage={mockAuditEventsPage}
+        onLoadAuditEvents={onLoadAuditEvents}
+      />
+    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Tenant filter"), "tenant_sunny_kids");
+    await userEvent.type(screen.getByLabelText("Actor filter"), "admin_001");
+    await userEvent.type(screen.getByLabelText("Action filter"), "admin.material_job.retry");
+    await userEvent.type(screen.getByLabelText("Resource type filter"), "material_parse_job");
+    await userEvent.type(screen.getByLabelText("Resource ID filter"), "job_animals_parse");
+    await userEvent.selectOptions(screen.getByLabelText("Risk filter"), "high");
+    await userEvent.selectOptions(screen.getByLabelText("Result filter"), "success");
+    await userEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    expect(onLoadAuditEvents).toHaveBeenCalledWith({
+      tenantScope: "tenant_sunny_kids",
+      actorId: "admin_001",
+      action: "admin.material_job.retry",
+      resourceType: "material_parse_job",
+      resourceId: "job_animals_parse",
+      riskLevel: "high",
+      result: "success"
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Load next page" }));
+
+    expect(onLoadAuditEvents).toHaveBeenLastCalledWith({
+      tenantScope: "tenant_sunny_kids",
+      actorId: "admin_001",
+      action: "admin.material_job.retry",
+      resourceType: "material_parse_job",
+      resourceId: "job_animals_parse",
+      riskLevel: "high",
+      result: "success",
+      cursor: mockAuditEventsPage.nextCursor
+    });
+  });
+
+  it("lists impersonation sessions and requires a reason before ending one", async () => {
+    const onEndImpersonationSession = vi.fn().mockResolvedValue({
+      requiredPermission: "admin.impersonation.end",
+      impersonationSession: mockImpersonationSessions.items[1],
+      actionResult: {
+        action: "end_impersonation_session",
+        status: "noop",
+        resourceType: "admin_impersonation_session",
+        resourceId: "imp_mock_ended",
+        tenantId: "tenant_maple_pilot",
+        message: "Session was already ended."
+      },
+      auditEvent: mockAuditEventsPage.items[0]
+    });
+    render(
+      <AuditAccess
+        language="en"
+        accessData={{
+          ...accessData,
+          permissions: [...accessData.permissions, "admin.impersonation.start", "admin.impersonation.end"]
+        }}
+        dataMode="live"
+        tenants={mockTenants}
+        impersonationSessions={mockImpersonationSessions}
+        onEndImpersonationSession={onEndImpersonationSession}
+      />
+    );
+
+    expect(screen.getByText("imp_mock_active")).toBeInTheDocument();
+    expect(screen.getByText("imp_mock_ended")).toBeInTheDocument();
+    expect(screen.getByText("2026-05-24T09:18:00+00:00")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "End session imp_mock_ended" }));
+    expect(screen.getByText("End reason is required.")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("End session reason"), "Support handoff complete.");
+    await userEvent.click(screen.getByRole("button", { name: "End session imp_mock_ended" }));
+
+    expect(onEndImpersonationSession).toHaveBeenCalledWith("imp_mock_ended", "Support handoff complete.");
+    expect(await screen.findByText("noop: Session was already ended.")).toBeInTheDocument();
+    expect(screen.getByText("2026-05-24T09:18:00+00:00")).toBeInTheDocument();
   });
 });
