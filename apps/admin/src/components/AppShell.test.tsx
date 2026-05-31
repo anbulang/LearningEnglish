@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
@@ -599,6 +599,43 @@ describe("AppShell", () => {
       trace_id: "req_module",
       created_at: "2026-05-25T10:10:00+00:00"
     };
+    const tenantDetailPayload = {
+      required_permission: "admin.tenant.read",
+      tenant: {
+        ...dashboardPayload.tenants[0],
+        display_name: "微信家长live",
+        updated_at: "2026-05-25T10:05:00+00:00"
+      },
+      summary: {
+        children: 1,
+        materials: 0,
+        failed_materials: 0
+      },
+      children: [
+        {
+          id: "child_live",
+          name: "Mia Wang",
+          age: 6,
+          level: "starter",
+          learning_goal: "Read short phonics stories",
+          preferred_review_duration_minutes: 12,
+          parent_notes: "",
+          latest_weekly_report_id: "report_live",
+          speaking_attempts: 1
+        }
+      ],
+      materials: [],
+      provider_policy: dashboardPayload.provider_policies[0],
+      module_settings: dashboardPayload.module_settings,
+      weekly_reports: {},
+      speaking_attempts: {},
+      risk_summary: {},
+      audit_event: moduleEvent,
+      access_context: {
+        current_admin: accessPayload.current_admin,
+        recent_audit_events: []
+      }
+    };
     const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
       const url = String(input);
       if (url.includes("/v1/admin/tenants/parent_live/modules/speaking_score")) {
@@ -616,6 +653,12 @@ describe("AppShell", () => {
           })
         };
       }
+      if (url.includes("/v1/admin/tenants/parent_live?")) {
+        return {
+          ok: true,
+          json: async () => tenantDetailPayload
+        };
+      }
       return {
         ok: true,
         json: async () => (url.includes("/v1/admin/access") ? accessPayload : dashboardPayload)
@@ -627,6 +670,7 @@ describe("AppShell", () => {
 
     expect(await screen.findByText("真实 API")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "租户管理" }));
+    expect(await screen.findByText("Read short phonics stories")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("模块变更原因"), "Pilot asked to pause speaking score.");
     await userEvent.click(screen.getByRole("button", { name: "禁用 口语评分" }));
 
@@ -690,6 +734,30 @@ describe("AppShell", () => {
       permissions: ["admin.dashboard.read", "admin.impersonation.start", "admin.audit.read"],
       audit_events: []
     };
+    const emptyAuditEventsPayload = {
+      items: [],
+      next_cursor: ""
+    };
+    const emptyImpersonationSessionsPayload = {
+      required_permission: "admin.impersonation.read",
+      tenant_scope: "all",
+      status: "all",
+      items: [],
+      audit_event: {
+        id: "audit_impersonation_read",
+        actor_id: "admin_local",
+        actor_role: "Platform Owner",
+        tenant_scope: "all",
+        action: "admin.impersonation.read",
+        resource_type: "admin_impersonation_session",
+        resource_id: "sessions",
+        risk_level: "low",
+        result: "success",
+        reason: "",
+        trace_id: "req_impersonation_read",
+        created_at: "2026-05-25T10:10:00+00:00"
+      }
+    };
     const impersonationEvent = {
       id: "audit_impersonation",
       actor_id: "admin_local",
@@ -704,9 +772,15 @@ describe("AppShell", () => {
       trace_id: "req_impersonation",
       created_at: "2026-05-25T10:11:00+00:00"
     };
-    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
       const url = String(input);
-      if (url.includes("/v1/admin/impersonation-sessions")) {
+      if (url.includes("/v1/admin/impersonation-sessions?") && init?.method !== "POST") {
+        return {
+          ok: true,
+          json: async () => emptyImpersonationSessionsPayload
+        };
+      }
+      if (url.includes("/v1/admin/impersonation-sessions?")) {
         return {
           ok: true,
           json: async () => ({
@@ -725,6 +799,12 @@ describe("AppShell", () => {
           })
         };
       }
+      if (url.includes("/v1/admin/audit-events")) {
+        return {
+          ok: true,
+          json: async () => emptyAuditEventsPayload
+        };
+      }
       return {
         ok: true,
         json: async () => (url.includes("/v1/admin/access") ? accessPayload : dashboardPayload)
@@ -736,12 +816,19 @@ describe("AppShell", () => {
 
     expect(await screen.findByText("真实 API")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "审计与权限" }));
+    await waitFor(() =>
+      expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/audit-events?tenant_scope=all&limit=25", {
+        headers: { "X-Admin-Token": "local-admin-token" }
+      })
+    );
     await userEvent.type(screen.getByLabelText("代入原因"), "Support is reproducing parent-reported upload issue.");
     await userEvent.click(screen.getByRole("button", { name: "启动受监督会话" }));
 
     expect(await screen.findByText("受监督会话已启动。")).toBeInTheDocument();
     expect(screen.getAllByText("admin.impersonation.start").length).toBeGreaterThan(0);
-    expect(screen.getByText("Support is reproducing parent-reported upload issue.")).toBeInTheDocument();
+    const auditLogSection = screen.getByRole("heading", { name: "审计日志" }).closest("section");
+    expect(auditLogSection).not.toBeNull();
+    expect(within(auditLogSection as HTMLElement).getByText("Support is reproducing parent-reported upload issue.")).toBeInTheDocument();
     expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/impersonation-sessions?tenant_scope=all", {
       method: "POST",
       headers: {

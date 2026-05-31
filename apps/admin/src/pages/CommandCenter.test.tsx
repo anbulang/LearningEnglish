@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockMaterials, mockOperationsData, mockTenants } from "../domain/mockData";
 import { CommandCenter } from "./CommandCenter";
 
@@ -99,5 +99,25 @@ describe("CommandCenter", () => {
     const dialog = screen.getByRole("dialog", { name: "Action review" });
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText("material_parse_job")).toBeInTheDocument();
+  });
+
+  it("submits a backend operations issue action with the audit reason", async () => {
+    const onSubmitIssueAction = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CommandCenter
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        operationsData={mockOperationsData}
+        onSubmitIssueAction={onSubmitIssueAction}
+      />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Open action for Parse failed" }));
+    await userEvent.type(screen.getByLabelText("Audit reason"), "OCR provider recovered.");
+    await userEvent.click(screen.getByRole("button", { name: "Submit action" }));
+
+    expect(onSubmitIssueAction).toHaveBeenCalledWith(mockOperationsData.issues[0], "OCR provider recovered.");
   });
 });

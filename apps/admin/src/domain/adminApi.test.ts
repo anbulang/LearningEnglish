@@ -160,8 +160,7 @@ const operationsPayload = {
   audit_event: accessPayload.audit_events[0],
   access_context: {
     current_admin: accessPayload.current_admin,
-    permissions: accessPayload.permissions,
-    audit_events: accessPayload.audit_events
+    recent_audit_events: accessPayload.audit_events
   }
 };
 
@@ -212,8 +211,7 @@ const tenantDetailPayload = {
   audit_event: accessPayload.audit_events[0],
   access_context: {
     current_admin: accessPayload.current_admin,
-    permissions: accessPayload.permissions,
-    audit_events: accessPayload.audit_events
+    recent_audit_events: accessPayload.audit_events
   }
 };
 
@@ -634,6 +632,7 @@ describe("admin API client", () => {
     expect(result.providerPolicy.tenantId).toBe("global");
     expect(result.riskSummary.risk_level).toBe("high");
     expect(result.accessContext?.currentAdmin.id).toBe("admin_local");
+    expect(result.accessContext?.recentAuditEvents[0].id).toBe("audit_1");
   });
 
   it("loads admin audit events with filters and maps next cursor", async () => {

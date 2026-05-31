@@ -18,9 +18,11 @@ import {
 } from "./domain/adminApi";
 import { mockMaterials, mockModuleSettings, mockOperationsData, mockProviderPolicies, mockTenants } from "./domain/mockData";
 import type {
+  AdminAuditEvent,
   AdminAuditEventsData,
   AdminImpersonationSessionsData,
   AdminOperationsData,
+  AdminOperationsIssue,
   AdminTenantDetailData,
   Language,
   TenantScope
@@ -46,6 +48,10 @@ const pageTitles: Record<PageKey, MessageKey> = {
   audit: "page.auditAccess.title",
   developer: "page.developerApi.title"
 };
+
+function prependAuditEvent(events: AdminAuditEvent[], auditEvent: AdminAuditEvent): AdminAuditEvent[] {
+  return [auditEvent, ...events.filter((event) => event.id !== auditEvent.id)];
+}
 
 export function App() {
   const [language, setLanguage] = useState<Language>("zh");
@@ -234,7 +240,15 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
+          }
+        : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
           }
         : current
     );
@@ -261,10 +275,30 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
           }
         : current
     );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
+          }
+        : current
+    );
+  }
+
+  async function handleSubmitOperationIssueAction(issue: AdminOperationsIssue, reason: string) {
+    if (issue.recommendedAction === "retry_material_job" && issue.relatedResource.type === "material_parse_job") {
+      await handleRetryMaterialJob(issue.relatedResource.id, reason);
+      return;
+    }
+    if (issue.recommendedAction === "archive_material") {
+      await handleArchiveMaterial(issue.relatedResource.materialId ?? issue.relatedResource.id, reason);
+      return;
+    }
+    throw new Error(`Unsupported admin operation action: ${issue.recommendedAction}`);
   }
 
   async function handleOverrideProviderPolicy(input: ProviderPolicyOverrideInput) {
@@ -297,7 +331,15 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
+          }
+        : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
           }
         : current
     );
@@ -328,11 +370,36 @@ export function App() {
         result.moduleSetting
       ]
     }));
+    setTenantDetailData((current) =>
+      current && current.tenant.id === result.moduleSetting.tenantId
+        ? {
+            ...current,
+            moduleSettings: [
+              ...current.moduleSettings.filter(
+                (setting) =>
+                  !(
+                    setting.tenantId === result.moduleSetting.tenantId &&
+                    setting.moduleKey === result.moduleSetting.moduleKey
+                  )
+              ),
+              result.moduleSetting
+            ]
+          }
+        : current
+    );
     setAccessData((current) =>
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
+          }
+        : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
           }
         : current
     );
@@ -379,7 +446,15 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
+          }
+        : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
           }
         : current
     );
@@ -428,7 +503,7 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
           }
         : current
     );
@@ -436,7 +511,7 @@ export function App() {
       current
         ? {
             ...current,
-            items: [result.auditEvent, ...current.items.filter((event) => event.id !== result.auditEvent.id)]
+            items: prependAuditEvent(current.items, result.auditEvent)
           }
         : current
     );
@@ -461,6 +536,7 @@ export function App() {
           tenants={dashboardData.tenants}
           materials={dashboardData.materials}
           operationsData={operationsData}
+          onSubmitIssueAction={dataMode === "live" ? handleSubmitOperationIssueAction : undefined}
         />
       )}
       {activePage === "tenants" && (

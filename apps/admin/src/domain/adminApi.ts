@@ -147,6 +147,11 @@ type AdminAccessPayload = {
   audit_events: Array<Record<string, unknown>>;
 };
 
+type AdminTenantAccessContextPayload = {
+  current_admin?: Record<string, unknown>;
+  recent_audit_events?: Array<Record<string, unknown>>;
+};
+
 type AdminArchiveMaterialPayload = {
   required_permission: unknown;
   material: Record<string, unknown>;
@@ -197,7 +202,7 @@ type AdminTenantDetailPayload = {
   speaking_attempts?: Record<string, unknown>;
   risk_summary?: Record<string, unknown>;
   audit_event?: Record<string, unknown>;
-  access_context?: AdminAccessPayload;
+  access_context?: AdminTenantAccessContextPayload;
 };
 
 type AdminAuditEventsPayload = {
@@ -542,7 +547,7 @@ export function normalizeAdminTenantDetailPayload(payload: AdminTenantDetailPayl
     speakingAttempts: recordValue(payload.speaking_attempts),
     riskSummary: recordValue(payload.risk_summary),
     ...(payload.audit_event ? { auditEvent: normalizeAdminAuditEventPayload(payload.audit_event) } : {}),
-    ...(payload.access_context ? { accessContext: normalizeAdminAccessPayload(payload.access_context) } : {})
+    ...(payload.access_context ? { accessContext: normalizeAdminTenantAccessContextPayload(payload.access_context) } : {})
   };
 }
 
@@ -578,15 +583,28 @@ export function normalizeEndAdminImpersonationSessionPayload(
 
 export function normalizeAdminAccessPayload(payload: AdminAccessPayload): AdminAccessData {
   return {
-    currentAdmin: {
-      id: stringValue(payload.current_admin.id),
-      displayName: stringValue(payload.current_admin.display_name),
-      email: stringValue(payload.current_admin.email),
-      role: stringValue(payload.current_admin.role),
-      status: stringValue(payload.current_admin.status)
-    },
+    currentAdmin: normalizeAdminAccessUserPayload(payload.current_admin),
     permissions: payload.permissions.map((item) => stringValue(item)).filter(Boolean),
     auditEvents: payload.audit_events.map((event) => normalizeAdminAuditEventPayload(event))
+  };
+}
+
+function normalizeAdminTenantAccessContextPayload(
+  payload: AdminTenantAccessContextPayload
+): AdminTenantDetailData["accessContext"] {
+  return {
+    currentAdmin: normalizeAdminAccessUserPayload(recordValue(payload.current_admin)),
+    recentAuditEvents: (payload.recent_audit_events ?? []).map((event) => normalizeAdminAuditEventPayload(event))
+  };
+}
+
+function normalizeAdminAccessUserPayload(payload: Record<string, unknown>): AdminAccessUser {
+  return {
+    id: stringValue(payload.id),
+    displayName: stringValue(payload.display_name),
+    email: stringValue(payload.email),
+    role: stringValue(payload.role),
+    status: stringValue(payload.status)
   };
 }
 

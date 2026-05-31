@@ -206,8 +206,7 @@ export interface AdminTenantDetailData {
   auditEvent?: AdminAuditEvent;
   accessContext?: {
     currentAdmin: AdminAccessUser;
-    permissions: string[];
-    auditEvents: AdminAuditEvent[];
+    recentAuditEvents: AdminAuditEvent[];
   };
 }
 

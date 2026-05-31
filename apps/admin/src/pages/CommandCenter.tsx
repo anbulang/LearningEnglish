@@ -10,6 +10,7 @@ interface CommandCenterProps {
   tenants: Tenant[];
   materials: AdminMaterial[];
   operationsData?: AdminOperationsData;
+  onSubmitIssueAction?: (issue: AdminOperationsIssue, reason: string) => void | Promise<void>;
 }
 
 type FunnelItem = {
@@ -17,8 +18,16 @@ type FunnelItem = {
   label: string;
 };
 
-export function CommandCenter({ language, tenantScope, tenants, materials, operationsData }: CommandCenterProps) {
+export function CommandCenter({
+  language,
+  tenantScope,
+  tenants,
+  materials,
+  operationsData,
+  onSubmitIssueAction
+}: CommandCenterProps) {
   const [selectedIssue, setSelectedIssue] = useState<AdminOperationsIssue | null>(null);
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
   const scopedMaterials = getMaterialsForScope(materials, tenantScope);
   const scopedTenants = tenantScope === "all" ? tenants : tenants.filter((tenant) => tenant.id === tenantScope);
   const counts = getLifecycleCounts(scopedMaterials);
@@ -176,13 +185,27 @@ export function CommandCenter({ language, tenantScope, tenants, materials, opera
           language={language}
           issue={selectedIssue}
           isOpen={true}
-          isSubmitting={false}
+          isSubmitting={isSubmittingIssue}
           onClose={() => setSelectedIssue(null)}
-          onSubmit={() => setSelectedIssue(null)}
+          onSubmit={(reason) => void handleSubmitIssueAction(selectedIssue, reason)}
         />
       )}
     </div>
   );
+
+  async function handleSubmitIssueAction(issue: AdminOperationsIssue, reason: string) {
+    if (!onSubmitIssueAction) {
+      setSelectedIssue(null);
+      return;
+    }
+    setIsSubmittingIssue(true);
+    try {
+      await onSubmitIssueAction(issue, reason);
+      setSelectedIssue(null);
+    } finally {
+      setIsSubmittingIssue(false);
+    }
+  }
 }
 
 function hasProviderIncident(material: AdminMaterial): boolean {
