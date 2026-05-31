@@ -9,21 +9,7 @@ from typing import Any, Protocol
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
 
-
-LOCAL_ADMIN_PERMISSIONS = [
-    "admin.dashboard.read",
-    "admin.operations.read",
-    "admin.tenant.read",
-    "admin.material.read",
-    "admin.material.archive",
-    "admin.material.retry",
-    "admin.tenant.module.toggle",
-    "admin.provider.override",
-    "admin.impersonation.start",
-    "admin.impersonation.read",
-    "admin.impersonation.end",
-    "admin.audit.read",
-]
+from app.services.admin_permissions import ADMIN_PERMISSIONS
 
 
 class AdminSettings(Protocol):
@@ -101,5 +87,5 @@ def _local_admin_actor() -> AdminActor:
         email="admin@learningenglish.local",
         role="Platform Owner",
         status="active",
-        permissions=list(LOCAL_ADMIN_PERMISSIONS),
+        permissions=list(ADMIN_PERMISSIONS),
     )

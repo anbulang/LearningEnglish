@@ -30,24 +30,34 @@ from app.db.models import (
 )
 from app.models.contracts import JobStatus, MaterialStatus, MediaGenerationStatus, SpeakingAttemptStatus
 from app.services.admin_identity import AdminActor, resolve_admin_actor
+from app.services.admin_permissions import (
+    ADMIN_AUDIT_READ,
+    ADMIN_DASHBOARD_READ,
+    ADMIN_IMPERSONATION_END,
+    ADMIN_IMPERSONATION_READ,
+    ADMIN_IMPERSONATION_START,
+    ADMIN_MATERIAL_ARCHIVE,
+    ADMIN_MATERIAL_RETRY,
+    ADMIN_OPERATIONS_READ,
+    ADMIN_PROVIDER_OVERRIDE,
+    ADMIN_TENANT_MODULE_TOGGLE,
+    ADMIN_TENANT_READ,
+    has_permission,
+    require_permission,
+)
+from app.services.admin_scope import (
+    audit_scope_filter as _audit_scope_filter,
+    ensure_admin_tenant_scope as _ensure_admin_tenant_scope,
+    ensure_tenant_in_scope,
+    get_tenant_or_404,
+    impersonation_session_scope_filter as _impersonation_session_scope_filter,
+    tenant_child_scope_filter as _tenant_child_scope_filter,
+    tenant_module_setting_scope_filter as _tenant_module_setting_scope_filter,
+    tenant_provider_policy_scope_filter as _tenant_provider_policy_scope_filter,
+)
 from app.services.job_queue import enqueue_material_job
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-ADMIN_PERMISSIONS = [
-    "admin.dashboard.read",
-    "admin.operations.read",
-    "admin.tenant.read",
-    "admin.material.read",
-    "admin.material.archive",
-    "admin.material.retry",
-    "admin.tenant.module.toggle",
-    "admin.provider.override",
-    "admin.impersonation.start",
-    "admin.impersonation.read",
-    "admin.impersonation.end",
-    "admin.audit.read",
-]
 
 AI_PROVIDERS = {"stub", "doubao"}
 MEDIA_PROVIDERS = {"mock", "real"}
@@ -112,8 +122,7 @@ def get_admin_dashboard(
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
-    if "admin.dashboard.read" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.dashboard.read permission")
+    require_permission(actor, ADMIN_DASHBOARD_READ)
 
     _ensure_admin_user(db, actor)
     tenants = db.scalars(select(ParentAccountModel).order_by(ParentAccountModel.created_at.asc())).all()
@@ -228,8 +237,7 @@ def get_admin_access(
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
-    if "admin.audit.read" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.audit.read permission")
+    require_permission(actor, ADMIN_AUDIT_READ)
 
     _ensure_admin_user(db, actor)
     events = db.scalars(
@@ -264,8 +272,7 @@ def list_admin_audit_events(
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
-    if "admin.audit.read" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.audit.read permission")
+    require_permission(actor, ADMIN_AUDIT_READ)
 
     page_size = _audit_page_limit(limit)
     stmt = select(AdminAuditEventModel).where(_audit_scope_filter(tenant_scope))
@@ -309,15 +316,8 @@ def get_admin_tenant_detail(
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
-    if "admin.tenant.read" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.tenant.read permission")
-
-    normalized_tenant_id = tenant_id.strip()
-    if tenant_scope != "all" and tenant_scope != normalized_tenant_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
-    tenant = db.get(ParentAccountModel, normalized_tenant_id)
-    if tenant is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    require_permission(actor, ADMIN_TENANT_READ)
+    tenant = get_tenant_or_404(db, tenant_scope, tenant_id)
 
     _ensure_admin_user(db, actor)
     children = db.scalars(
@@ -377,7 +377,7 @@ def get_admin_tenant_detail(
         trace_id=_trace_id(request),
     )
     recent_audit_events: list[AdminAuditEventModel] = []
-    if "admin.audit.read" in actor.permissions:
+    if has_permission(actor, ADMIN_AUDIT_READ):
         recent_audit_events = db.scalars(
             select(AdminAuditEventModel)
             .where(_audit_scope_filter(tenant.id))
@@ -418,8 +418,7 @@ def archive_admin_material(
     reason = payload.reason.strip()
     if not reason:
         raise HTTPException(status_code=422, detail="Archive reason is required")
-    if "admin.material.archive" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.material.archive permission")
+    require_permission(actor, ADMIN_MATERIAL_ARCHIVE)
 
     _ensure_admin_user(db, actor)
     row = db.execute(
@@ -431,8 +430,7 @@ def archive_admin_material(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found")
     material, child, parent = row
-    if tenant_scope != "all" and parent.id != tenant_scope:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material not found in tenant scope")
+    ensure_tenant_in_scope(tenant_scope, parent.id, detail="Material not found in tenant scope")
 
     material.status = MaterialStatus.archived.value
     db.add(material)
@@ -478,8 +476,7 @@ def retry_admin_material_job(
     reason = payload.reason.strip()
     if not reason:
         raise HTTPException(status_code=422, detail="Retry reason is required")
-    if "admin.material.retry" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.material.retry permission")
+    require_permission(actor, ADMIN_MATERIAL_RETRY)
 
     _ensure_admin_user(db, actor)
     row = db.execute(
@@ -492,8 +489,7 @@ def retry_admin_material_job(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material job not found")
     job, material, child, parent = row
-    if tenant_scope != "all" and parent.id != tenant_scope:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material job not found in tenant scope")
+    ensure_tenant_in_scope(tenant_scope, parent.id, detail="Material job not found in tenant scope")
     if material.status == MaterialStatus.archived.value:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Archived material cannot be retried")
 
@@ -557,15 +553,13 @@ def override_admin_provider_policy(
     reason = payload.reason.strip()
     if not reason:
         raise HTTPException(status_code=422, detail="Provider policy override reason is required")
-    if "admin.provider.override" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.provider.override permission")
+    require_permission(actor, ADMIN_PROVIDER_OVERRIDE)
 
     tenant_id = payload.tenant_id.strip()
     tenant = db.get(ParentAccountModel, tenant_id)
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
-    if tenant_scope != "all" and tenant.id != tenant_scope:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found in tenant scope")
+    ensure_tenant_in_scope(tenant_scope, tenant.id, detail="Tenant not found in tenant scope")
     ai_provider = payload.ai_provider.strip().lower()
     media_provider = payload.media_provider.strip().lower()
     fallback_mode = payload.fallback_mode.strip().lower()
@@ -624,8 +618,7 @@ def toggle_admin_tenant_module(
     reason = payload.reason.strip()
     if not reason:
         raise HTTPException(status_code=422, detail="Module toggle reason is required")
-    if "admin.tenant.module.toggle" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.tenant.module.toggle permission")
+    require_permission(actor, ADMIN_TENANT_MODULE_TOGGLE)
 
     normalized_module_key = module_key.strip().lower()
     if normalized_module_key not in MODULE_KEYS:
@@ -633,8 +626,7 @@ def toggle_admin_tenant_module(
     tenant = db.get(ParentAccountModel, tenant_id.strip())
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
-    if tenant_scope != "all" and tenant.id != tenant_scope:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found in tenant scope")
+    ensure_tenant_in_scope(tenant_scope, tenant.id, detail="Tenant not found in tenant scope")
 
     _ensure_admin_user(db, actor)
     setting = db.scalar(
@@ -679,8 +671,7 @@ def list_admin_impersonation_sessions(
     actor: AdminActor = Depends(require_admin_token),
     db: Session = Depends(get_db),
 ) -> dict:
-    if "admin.impersonation.read" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.impersonation.read permission")
+    require_permission(actor, ADMIN_IMPERSONATION_READ)
 
     _ensure_admin_tenant_scope(db, tenant_scope)
     normalized_status = session_status.strip().lower()
@@ -737,14 +728,12 @@ def start_admin_impersonation_session(
     reason = payload.reason.strip()
     if not reason:
         raise HTTPException(status_code=422, detail="Impersonation reason is required")
-    if "admin.impersonation.start" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.impersonation.start permission")
+    require_permission(actor, ADMIN_IMPERSONATION_START)
 
     tenant = db.get(ParentAccountModel, payload.tenant_id.strip())
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
-    if tenant_scope != "all" and tenant.id != tenant_scope:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    ensure_tenant_in_scope(tenant_scope, tenant.id, detail="Tenant not found")
     target_parent = db.get(ParentAccountModel, payload.target_parent_id.strip())
     if target_parent is None or target_parent.id != tenant.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target parent not found in tenant scope")
@@ -796,8 +785,7 @@ def end_admin_impersonation_session(
     reason = payload.reason.strip()
     if not reason:
         raise HTTPException(status_code=422, detail="Impersonation end reason is required")
-    if "admin.impersonation.end" not in actor.permissions:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing admin.impersonation.end permission")
+    require_permission(actor, ADMIN_IMPERSONATION_END)
     _ensure_admin_tenant_scope(db, tenant_scope)
 
     _ensure_admin_user(db, actor)
@@ -849,12 +837,6 @@ def end_admin_impersonation_session(
     }
 
 
-def _audit_scope_filter(tenant_scope: str):
-    if tenant_scope == "all":
-        return AdminAuditEventModel.tenant_scope != ""
-    return AdminAuditEventModel.tenant_scope.in_(["all", tenant_scope])
-
-
 def _audit_page_limit(raw_limit: str) -> int:
     try:
         page_size = int(raw_limit)
@@ -864,22 +846,14 @@ def _audit_page_limit(raw_limit: str) -> int:
 
 
 def _operations_read_permission(actor: AdminActor) -> str:
-    if "admin.operations.read" in actor.permissions:
-        return "admin.operations.read"
-    if "admin.dashboard.read" in actor.permissions:
-        return "admin.dashboard.read"
+    if has_permission(actor, ADMIN_OPERATIONS_READ):
+        return ADMIN_OPERATIONS_READ
+    if has_permission(actor, ADMIN_DASHBOARD_READ):
+        return ADMIN_DASHBOARD_READ
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Missing admin.operations.read or admin.dashboard.read permission",
     )
-
-
-def _ensure_admin_tenant_scope(db: Session, tenant_scope: str) -> None:
-    if tenant_scope == "all":
-        return
-    tenant_count = db.scalar(select(func.count(ParentAccountModel.id)).where(ParentAccountModel.id == tenant_scope))
-    if not tenant_count:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant scope not found")
 
 
 def _operations_tenant_count(db: Session, tenant_scope: str) -> int:
@@ -887,30 +861,6 @@ def _operations_tenant_count(db: Session, tenant_scope: str) -> int:
         value = db.scalar(select(func.count(ParentAccountModel.id)))
         return int(value or 0)
     return 1
-
-
-def _tenant_child_scope_filter(tenant_scope: str):
-    if tenant_scope == "all":
-        return ChildProfileModel.parent_account_id != ""
-    return ChildProfileModel.parent_account_id == tenant_scope
-
-
-def _tenant_provider_policy_scope_filter(tenant_scope: str):
-    if tenant_scope == "all":
-        return TenantProviderPolicyModel.tenant_id != ""
-    return TenantProviderPolicyModel.tenant_id == tenant_scope
-
-
-def _tenant_module_setting_scope_filter(tenant_scope: str):
-    if tenant_scope == "all":
-        return TenantModuleSettingModel.tenant_id != ""
-    return TenantModuleSettingModel.tenant_id == tenant_scope
-
-
-def _impersonation_session_scope_filter(tenant_scope: str):
-    if tenant_scope == "all":
-        return AdminImpersonationSessionModel.tenant_id != ""
-    return AdminImpersonationSessionModel.tenant_id == tenant_scope
 
 
 def _impersonation_session_parent_map(
