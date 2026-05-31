@@ -1650,6 +1650,7 @@ def test_admin_audit_events_filter_by_scope_fields_and_paginate_after_cursor(api
     _seed_audit_event(audit_id="audit_task2_007", tenant_scope="tenant_task2_b", created_at=created_at)
     _seed_audit_event(audit_id="audit_task2_008", resource_type="tenant_provider_policy", created_at=created_at)
     _seed_audit_event(audit_id="audit_task2_009", risk_level="low", created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_010", resource_id="material_task2_other", created_at=created_at)
 
     first_page = api_client.get(
         "/v1/admin/audit-events",
@@ -1657,6 +1658,7 @@ def test_admin_audit_events_filter_by_scope_fields_and_paginate_after_cursor(api
             "tenant_scope": "tenant_task2_a",
             "action": "admin.material.archive",
             "resource_type": "course_material",
+            "resource_id": "material_task2",
             "risk_level": "high",
             "result": "success",
             "actor_id": "admin_ops",
@@ -1677,6 +1679,7 @@ def test_admin_audit_events_filter_by_scope_fields_and_paginate_after_cursor(api
             "tenant_scope": "tenant_task2_a",
             "action": "admin.material.archive",
             "resource_type": "course_material",
+            "resource_id": "material_task2",
             "risk_level": "high",
             "result": "success",
             "actor_id": "admin_ops",

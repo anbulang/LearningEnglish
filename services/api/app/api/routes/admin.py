@@ -7,7 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import and_, delete, func, or_, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -29,6 +29,12 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus, MediaGenerationStatus, SpeakingAttemptStatus
+from app.services.admin_audit import (
+    AdminAuditFilters,
+    record_admin_audit_event as _record_audit_event,
+    search_admin_audit_events,
+    serialize_admin_audit_event as _audit_event_payload,
+)
 from app.services.admin_identity import AdminActor, resolve_admin_actor
 from app.services.admin_permissions import (
     ADMIN_AUDIT_READ,
@@ -264,6 +270,7 @@ def list_admin_audit_events(
     tenant_scope: str = Query(..., min_length=1),
     action: str = "",
     resource_type: str = "",
+    resource_id: str = "",
     risk_level: str = "",
     result: str = "",
     actor_id: str = "",
@@ -274,38 +281,21 @@ def list_admin_audit_events(
 ) -> dict:
     require_permission(actor, ADMIN_AUDIT_READ)
 
-    page_size = _audit_page_limit(limit)
-    stmt = select(AdminAuditEventModel).where(_audit_scope_filter(tenant_scope))
-    if action:
-        stmt = stmt.where(AdminAuditEventModel.action == action)
-    if resource_type:
-        stmt = stmt.where(AdminAuditEventModel.resource_type == resource_type)
-    if risk_level:
-        stmt = stmt.where(AdminAuditEventModel.risk_level == risk_level)
-    if result:
-        stmt = stmt.where(AdminAuditEventModel.result == result)
-    if actor_id:
-        stmt = stmt.where(AdminAuditEventModel.actor_id == actor_id)
-    if cursor:
-        cursor_event = db.scalars(stmt.where(AdminAuditEventModel.id == cursor).limit(1)).first()
-        if cursor_event is None:
-            return {"items": [], "next_cursor": ""}
-        stmt = stmt.where(
-            or_(
-                AdminAuditEventModel.created_at < cursor_event.created_at,
-                and_(
-                    AdminAuditEventModel.created_at == cursor_event.created_at,
-                    AdminAuditEventModel.id < cursor_event.id,
-                ),
-            )
-        )
-
-    events = db.scalars(
-        stmt.order_by(AdminAuditEventModel.created_at.desc(), AdminAuditEventModel.id.desc()).limit(page_size + 1)
-    ).all()
-    page = events[:page_size]
-    next_cursor = page[-1].id if len(events) > page_size and page else ""
-    return {"items": [_audit_event_payload(event) for event in page], "next_cursor": next_cursor}
+    payload = search_admin_audit_events(
+        db,
+        tenant_scope=tenant_scope,
+        filters=AdminAuditFilters(
+            action=action or None,
+            resource_type=resource_type or None,
+            resource_id=resource_id or None,
+            risk_level=risk_level or None,
+            result=result or None,
+            actor_id=actor_id or None,
+            limit=limit,
+            cursor=cursor or None,
+        ),
+    )
+    return {"items": payload["items"], "next_cursor": payload["next_cursor"]}
 
 
 @router.get("/tenants/{tenant_id}")
@@ -835,14 +825,6 @@ def end_admin_impersonation_session(
         ),
         "audit_event": _audit_event_payload(audit_event),
     }
-
-
-def _audit_page_limit(raw_limit: str) -> int:
-    try:
-        page_size = int(raw_limit)
-    except (TypeError, ValueError):
-        page_size = 50
-    return max(1, min(page_size, 100))
 
 
 def _operations_read_permission(actor: AdminActor) -> str:
@@ -1426,55 +1408,6 @@ def _ensure_admin_user(db: Session, actor: AdminActor) -> None:
         user.permissions = actor.permissions
     db.add(user)
     db.commit()
-
-
-def _record_audit_event(
-    db: Session,
-    *,
-    actor: AdminActor,
-    tenant_scope: str,
-    action: str,
-    resource_type: str,
-    resource_id: str,
-    risk_level: str,
-    result: str,
-    trace_id: str,
-    reason: str = "",
-) -> AdminAuditEventModel:
-    event = AdminAuditEventModel(
-        actor_id=actor.id,
-        actor_role=actor.role,
-        tenant_scope=tenant_scope,
-        action=action,
-        resource_type=resource_type,
-        resource_id=resource_id,
-        risk_level=risk_level,
-        result=result,
-        reason=reason,
-        trace_id=trace_id,
-        content_json={},
-    )
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return event
-
-
-def _audit_event_payload(event: AdminAuditEventModel) -> dict:
-    return {
-        "id": event.id,
-        "actor_id": event.actor_id,
-        "actor_role": event.actor_role,
-        "tenant_scope": event.tenant_scope,
-        "action": event.action,
-        "resource_type": event.resource_type,
-        "resource_id": event.resource_id,
-        "risk_level": event.risk_level,
-        "result": event.result,
-        "reason": event.reason,
-        "trace_id": event.trace_id,
-        "created_at": _iso(event.created_at),
-    }
 
 
 def _trace_id(request: Request) -> str:
