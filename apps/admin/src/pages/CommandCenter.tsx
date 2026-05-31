@@ -24,7 +24,10 @@ export function CommandCenter({ language, tenantScope, tenants, materials, opera
   const counts = getLifecycleCounts(scopedMaterials);
   const tenantRows = getTenantHealthRows(scopedTenants, scopedMaterials).slice(0, 4);
   const riskRows = scopedMaterials.filter(isBlockedMaterial);
-  const operationIssues = operationsData?.issues ?? [];
+  const operationsDataMatchesScope = operationsData?.tenantScope === tenantScope;
+  const operationIssues = (operationsData?.issues ?? []).filter(
+    (issue) => tenantScope === "all" || issue.relatedResource.tenantId === tenantScope
+  );
   const usesOperationIssues = operationIssues.length > 0;
   const providerIncidents = scopedMaterials.filter(hasProviderIncident).length;
   const copy = language === "zh" ? zhCopy : enCopy;
@@ -55,7 +58,11 @@ export function CommandCenter({ language, tenantScope, tenants, materials, opera
         />
         <MetricCard
           label={copy.mediaFailures}
-          value={usesOperationIssues ? numberFromRecord(operationsData?.summary, "media_failures") : scopedMaterials.filter((material) => material.mediaStatus === "failed").length}
+          value={
+            usesOperationIssues && operationsDataMatchesScope
+              ? numberFromRecord(operationsData?.summary, "media_failures")
+              : scopedMaterials.filter((material) => material.mediaStatus === "failed").length
+          }
           detail={copy.mediaFailuresDetail}
         />
         <MetricCard label={copy.providerIncidents} value={providerIncidents} detail={copy.providerIncidentDetail} />

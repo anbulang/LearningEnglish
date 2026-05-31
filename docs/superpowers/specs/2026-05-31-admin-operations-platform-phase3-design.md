@@ -355,3 +355,37 @@ Phase 3 完成后，后续可以选择：
 2. Worker control plane：真实 worker heartbeat、queue depth、broker introspection。
 3. Admin UI production hardening：URL state、saved filters、bulk actions、audit export。
 4. Data model evolution：把 learning assets 拆成独立表，降低 JSON 聚合复杂度。
+
+## 实现状态：2026-05-31
+
+已实现 service modules：
+
+- `app.services.admin_identity`
+- `app.services.admin_permissions`
+- `app.services.admin_scope`
+- `app.services.admin_audit`
+- `app.services.admin_read_models`
+- `app.services.admin_operations`
+- `app.services.admin_actions`
+
+已实现 UI 接入：
+
+- Command Center 消费 `/v1/admin/operations` 的 `issues`、severity、recommended action 和 related resource，并提供 action drawer。
+- Tenant Detail 消费 `/v1/admin/tenants/{tenant_id}` 的 children、materials、weekly reports、speaking attempts、module settings 和 risk summary。
+- Audit & Access 消费 `/v1/admin/audit-events` filters / cursor pagination，并展示 impersonation sessions 和 audited end flow。
+
+已运行或本阶段必须保持通过的验证命令：
+
+```bash
+make api-test
+cd apps/admin && npm test
+cd apps/admin && npm run build
+git diff --check
+```
+
+仍延期到后续阶段的 production items：
+
+- SSO / magic link、DB-backed admin session、token rotation。
+- DB-backed role mutation、permission mutation 和细粒度 role management UI。
+- 真实 worker broker introspection、queue depth、worker heartbeat。
+- Saved filters、bulk actions、audit export 和 URL state。
