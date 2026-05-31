@@ -1,8 +1,17 @@
 import type {
   AdminAccessUser,
+  AdminActionResult,
   AdminAuditEvent,
+  AdminAuditEventsData,
   AdminImpersonationSession,
+  AdminImpersonationSessionsData,
   AdminMaterial,
+  AdminOperationsData,
+  AdminOperationsIssue,
+  AdminTenantChild,
+  AdminTenantDetailData,
+  AdminTenantDetailTenant,
+  EndAdminImpersonationSessionResult,
   JobStatus,
   MediaStatus,
   ModuleKey,
@@ -28,18 +37,21 @@ export interface AdminAccessData {
 export interface AdminArchiveMaterialResult {
   requiredPermission: string;
   material: AdminMaterial;
+  actionResult?: AdminActionResult;
   auditEvent: AdminAuditEvent;
 }
 
 export interface AdminProviderPolicyOverrideResult {
   requiredPermission: string;
   providerPolicy: ProviderPolicy;
+  actionResult?: AdminActionResult;
   auditEvent: AdminAuditEvent;
 }
 
 export interface AdminTenantModuleToggleResult {
   requiredPermission: string;
   moduleSetting: TenantModuleSetting;
+  actionResult?: AdminActionResult;
   auditEvent: AdminAuditEvent;
 }
 
@@ -49,25 +61,31 @@ export interface AdminImpersonationSessionResult {
   auditEvent: AdminAuditEvent;
 }
 
-interface LoadAdminDashboardOptions {
+export interface AdminApiOptions {
   apiBaseUrl: string;
   adminToken: string;
   fetchImpl?: typeof fetch;
 }
 
-interface ArchiveAdminMaterialOptions extends LoadAdminDashboardOptions {
+type LoadAdminDashboardOptions = AdminApiOptions;
+
+interface AdminTenantScopedOptions extends AdminApiOptions {
+  tenantScope: string;
+}
+
+interface ArchiveAdminMaterialOptions extends AdminTenantScopedOptions {
   tenantScope: string;
   materialId: string;
   reason: string;
 }
 
-interface RetryAdminMaterialJobOptions extends LoadAdminDashboardOptions {
+interface RetryAdminMaterialJobOptions extends AdminTenantScopedOptions {
   tenantScope: string;
   jobId: string;
   reason: string;
 }
 
-interface OverrideAdminProviderPolicyOptions extends LoadAdminDashboardOptions {
+interface OverrideAdminProviderPolicyOptions extends AdminTenantScopedOptions {
   tenantScope: string;
   tenantId: string;
   aiProvider: ProviderPolicy["aiProvider"];
@@ -77,7 +95,7 @@ interface OverrideAdminProviderPolicyOptions extends LoadAdminDashboardOptions {
   reason: string;
 }
 
-interface ToggleAdminTenantModuleOptions extends LoadAdminDashboardOptions {
+interface ToggleAdminTenantModuleOptions extends AdminTenantScopedOptions {
   tenantScope: string;
   tenantId: string;
   moduleKey: ModuleKey;
@@ -85,10 +103,34 @@ interface ToggleAdminTenantModuleOptions extends LoadAdminDashboardOptions {
   reason: string;
 }
 
-interface StartAdminImpersonationSessionOptions extends LoadAdminDashboardOptions {
+interface StartAdminImpersonationSessionOptions extends AdminTenantScopedOptions {
   tenantScope: string;
   tenantId: string;
   targetParentId: string;
+  reason: string;
+}
+
+interface AdminTenantDetailOptions extends AdminTenantScopedOptions {
+  tenantId: string;
+}
+
+export interface AdminAuditEventsOptions extends AdminTenantScopedOptions {
+  action?: string;
+  resourceType?: string;
+  resourceId?: string;
+  riskLevel?: string;
+  result?: string;
+  actorId?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+interface AdminImpersonationSessionsOptions extends AdminTenantScopedOptions {
+  status?: "active" | "ended" | "all";
+}
+
+interface EndAdminImpersonationSessionOptions extends AdminTenantScopedOptions {
+  sessionId: string;
   reason: string;
 }
 
@@ -108,24 +150,73 @@ type AdminAccessPayload = {
 type AdminArchiveMaterialPayload = {
   required_permission: unknown;
   material: Record<string, unknown>;
+  action_result?: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 };
 
 type AdminProviderPolicyOverridePayload = {
   required_permission: unknown;
   provider_policy: Record<string, unknown>;
+  action_result?: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 };
 
 type AdminTenantModuleTogglePayload = {
   required_permission: unknown;
   module_setting: Record<string, unknown>;
+  action_result?: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 };
 
 type AdminImpersonationSessionPayload = {
   required_permission: unknown;
   impersonation_session: Record<string, unknown>;
+  audit_event: Record<string, unknown>;
+};
+
+type AdminOperationsPayload = {
+  tenant_scope: unknown;
+  summary: Record<string, unknown>;
+  material_parse_jobs: Record<string, unknown>;
+  media_generation: Record<string, unknown>;
+  speaking_attempts: Record<string, unknown>;
+  provider_configuration: Record<string, unknown>;
+  module_toggle_coverage: Record<string, unknown>;
+  issues?: Array<Record<string, unknown>>;
+};
+
+type AdminTenantDetailPayload = {
+  required_permission: unknown;
+  tenant: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  children?: Array<Record<string, unknown>>;
+  materials?: Array<Record<string, unknown>>;
+  provider_policy?: Record<string, unknown>;
+  module_settings?: Array<Record<string, unknown>>;
+  weekly_reports?: Record<string, unknown>;
+  speaking_attempts?: Record<string, unknown>;
+  risk_summary?: Record<string, unknown>;
+  audit_event?: Record<string, unknown>;
+  access_context?: AdminAccessPayload;
+};
+
+type AdminAuditEventsPayload = {
+  items?: Array<Record<string, unknown>>;
+  next_cursor?: unknown;
+};
+
+type AdminImpersonationSessionsPayload = {
+  required_permission: unknown;
+  tenant_scope: unknown;
+  status: unknown;
+  items?: Array<Record<string, unknown>>;
+  audit_event: Record<string, unknown>;
+};
+
+type EndAdminImpersonationSessionPayload = {
+  required_permission: unknown;
+  impersonation_session: Record<string, unknown>;
+  action_result: Record<string, unknown>;
   audit_event: Record<string, unknown>;
 };
 
@@ -151,6 +242,99 @@ export async function loadAdminAccess(options: LoadAdminDashboardOptions): Promi
     throw new Error(`Admin access request failed: ${response.status}`);
   }
   return normalizeAdminAccessPayload((await response.json()) as AdminAccessPayload);
+}
+
+export async function loadAdminOperations(options: AdminTenantScopedOptions): Promise<AdminOperationsData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    `${apiBaseUrl}/v1/admin/operations?tenant_scope=${encodeURIComponent(options.tenantScope)}`,
+    {
+      headers: { "X-Admin-Token": options.adminToken }
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Admin operations request failed: ${response.status}`);
+  }
+  return normalizeAdminOperationsPayload((await response.json()) as AdminOperationsPayload);
+}
+
+export async function loadAdminTenantDetail(options: AdminTenantDetailOptions): Promise<AdminTenantDetailData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    `${apiBaseUrl}/v1/admin/tenants/${encodeURIComponent(options.tenantId)}?tenant_scope=${encodeURIComponent(options.tenantScope)}`,
+    {
+      headers: { "X-Admin-Token": options.adminToken }
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Admin tenant detail request failed: ${response.status}`);
+  }
+  return normalizeAdminTenantDetailPayload((await response.json()) as AdminTenantDetailPayload);
+}
+
+export async function loadAdminAuditEvents(options: AdminAuditEventsOptions): Promise<AdminAuditEventsData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const params = new URLSearchParams();
+  params.set("tenant_scope", options.tenantScope);
+  appendOptionalParam(params, "action", options.action);
+  appendOptionalParam(params, "resource_type", options.resourceType);
+  appendOptionalParam(params, "resource_id", options.resourceId);
+  appendOptionalParam(params, "risk_level", options.riskLevel);
+  appendOptionalParam(params, "result", options.result);
+  appendOptionalParam(params, "actor_id", options.actorId);
+  if (options.limit !== undefined) {
+    params.set("limit", String(options.limit));
+  }
+  appendOptionalParam(params, "cursor", options.cursor);
+  const response = await fetchImpl(`${apiBaseUrl}/v1/admin/audit-events?${params.toString()}`, {
+    headers: { "X-Admin-Token": options.adminToken }
+  });
+  if (!response.ok) {
+    throw new Error(`Admin audit events request failed: ${response.status}`);
+  }
+  return normalizeAdminAuditEventsPayload((await response.json()) as AdminAuditEventsPayload);
+}
+
+export async function loadAdminImpersonationSessions(
+  options: AdminImpersonationSessionsOptions
+): Promise<AdminImpersonationSessionsData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const params = new URLSearchParams();
+  params.set("tenant_scope", options.tenantScope);
+  params.set("status", options.status ?? "active");
+  const response = await fetchImpl(`${apiBaseUrl}/v1/admin/impersonation-sessions?${params.toString()}`, {
+    headers: { "X-Admin-Token": options.adminToken }
+  });
+  if (!response.ok) {
+    throw new Error(`Admin impersonation sessions request failed: ${response.status}`);
+  }
+  return normalizeAdminImpersonationSessionsPayload((await response.json()) as AdminImpersonationSessionsPayload);
+}
+
+export async function endAdminImpersonationSession(
+  options: EndAdminImpersonationSessionOptions
+): Promise<EndAdminImpersonationSessionResult> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    `${apiBaseUrl}/v1/admin/impersonation-sessions/${encodeURIComponent(options.sessionId)}/end?tenant_scope=${encodeURIComponent(options.tenantScope)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": options.adminToken
+      },
+      body: JSON.stringify({ reason: options.reason })
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Admin impersonation session end request failed: ${response.status}`);
+  }
+  return normalizeEndAdminImpersonationSessionPayload((await response.json()) as EndAdminImpersonationSessionPayload);
 }
 
 export async function archiveAdminMaterial(options: ArchiveAdminMaterialOptions): Promise<AdminArchiveMaterialResult> {
@@ -291,9 +475,11 @@ export function normalizeAdminDashboardPayload(payload: AdminDashboardPayload): 
 }
 
 export function normalizeAdminArchiveMaterialPayload(payload: AdminArchiveMaterialPayload): AdminArchiveMaterialResult {
+  const actionResult = optionalActionResult(payload.action_result);
   return {
     requiredPermission: stringValue(payload.required_permission),
     material: normalizeAdminMaterialPayload(payload.material),
+    ...(actionResult ? { actionResult } : {}),
     auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
@@ -301,17 +487,21 @@ export function normalizeAdminArchiveMaterialPayload(payload: AdminArchiveMateri
 export function normalizeAdminProviderPolicyOverridePayload(
   payload: AdminProviderPolicyOverridePayload
 ): AdminProviderPolicyOverrideResult {
+  const actionResult = optionalActionResult(payload.action_result);
   return {
     requiredPermission: stringValue(payload.required_permission),
     providerPolicy: normalizeProviderPolicyPayload(payload.provider_policy),
+    ...(actionResult ? { actionResult } : {}),
     auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
 
 export function normalizeAdminTenantModuleTogglePayload(payload: AdminTenantModuleTogglePayload): AdminTenantModuleToggleResult {
+  const actionResult = optionalActionResult(payload.action_result);
   return {
     requiredPermission: stringValue(payload.required_permission),
     moduleSetting: normalizeTenantModuleSettingPayload(payload.module_setting),
+    ...(actionResult ? { actionResult } : {}),
     auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
@@ -322,6 +512,66 @@ export function normalizeAdminImpersonationSessionPayload(
   return {
     requiredPermission: stringValue(payload.required_permission),
     impersonationSession: normalizeAdminImpersonationSession(payload.impersonation_session),
+    auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
+  };
+}
+
+export function normalizeAdminOperationsPayload(payload: AdminOperationsPayload): AdminOperationsData {
+  return {
+    tenantScope: stringValue(payload.tenant_scope),
+    summary: recordValue(payload.summary),
+    materialParseJobs: recordValue(payload.material_parse_jobs),
+    mediaGeneration: recordValue(payload.media_generation),
+    speakingAttempts: recordValue(payload.speaking_attempts),
+    providerConfiguration: recordValue(payload.provider_configuration),
+    moduleToggleCoverage: recordValue(payload.module_toggle_coverage),
+    issues: (payload.issues ?? []).map((issue) => normalizeAdminOperationsIssuePayload(issue))
+  };
+}
+
+export function normalizeAdminTenantDetailPayload(payload: AdminTenantDetailPayload): AdminTenantDetailData {
+  return {
+    requiredPermission: stringValue(payload.required_permission),
+    tenant: normalizeAdminTenantDetailTenant(payload.tenant),
+    summary: recordValue(payload.summary),
+    children: (payload.children ?? []).map((child) => normalizeAdminTenantChildPayload(child)),
+    materials: (payload.materials ?? []).map((material) => normalizeAdminMaterialPayload(material)),
+    providerPolicy: normalizeProviderPolicyPayload(payload.provider_policy ?? {}),
+    moduleSettings: (payload.module_settings ?? []).map((setting) => normalizeTenantModuleSettingPayload(setting)),
+    weeklyReports: recordValue(payload.weekly_reports),
+    speakingAttempts: recordValue(payload.speaking_attempts),
+    riskSummary: recordValue(payload.risk_summary),
+    ...(payload.audit_event ? { auditEvent: normalizeAdminAuditEventPayload(payload.audit_event) } : {}),
+    ...(payload.access_context ? { accessContext: normalizeAdminAccessPayload(payload.access_context) } : {})
+  };
+}
+
+export function normalizeAdminAuditEventsPayload(payload: AdminAuditEventsPayload): AdminAuditEventsData {
+  return {
+    items: (payload.items ?? []).map((event) => normalizeAdminAuditEventPayload(event)),
+    nextCursor: stringValue(payload.next_cursor)
+  };
+}
+
+export function normalizeAdminImpersonationSessionsPayload(
+  payload: AdminImpersonationSessionsPayload
+): AdminImpersonationSessionsData {
+  return {
+    requiredPermission: stringValue(payload.required_permission),
+    tenantScope: stringValue(payload.tenant_scope),
+    status: stringValue(payload.status) as AdminImpersonationSessionsData["status"],
+    items: (payload.items ?? []).map((session) => normalizeAdminImpersonationSession(session)),
+    auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
+  };
+}
+
+export function normalizeEndAdminImpersonationSessionPayload(
+  payload: EndAdminImpersonationSessionPayload
+): EndAdminImpersonationSessionResult {
+  return {
+    requiredPermission: stringValue(payload.required_permission),
+    impersonationSession: normalizeAdminImpersonationSession(payload.impersonation_session),
+    actionResult: normalizeAdminActionResultPayload(payload.action_result),
     auditEvent: normalizeAdminAuditEventPayload(payload.audit_event)
   };
 }
@@ -368,6 +618,62 @@ function normalizeAdminMaterialPayload(material: Record<string, unknown>): Admin
   };
 }
 
+function normalizeAdminOperationsIssuePayload(issue: Record<string, unknown>): AdminOperationsIssue {
+  const relatedResource = recordValue(issue.related_resource);
+  return {
+    id: stringValue(issue.id),
+    severity: stringValue(issue.severity) as AdminOperationsIssue["severity"],
+    statusLabel: stringValue(issue.status_label),
+    reason: stringValue(issue.reason),
+    recommendedAction: stringValue(issue.recommended_action),
+    requiredPermission: optionalStringValue(issue.required_permission),
+    relatedResource: {
+      type: stringValue(relatedResource.type),
+      id: stringValue(relatedResource.id),
+      tenantId: optionalStringValue(relatedResource.tenant_id),
+      materialId: optionalStringValue(relatedResource.material_id),
+      childId: optionalStringValue(relatedResource.child_id)
+    },
+    source: stringValue(issue.source) as AdminOperationsIssue["source"]
+  };
+}
+
+function normalizeAdminTenantDetailTenant(tenant: Record<string, unknown>): AdminTenantDetailTenant {
+  return {
+    id: stringValue(tenant.id),
+    name: stringValue(tenant.name),
+    tenantType: stringValue(tenant.tenant_type) as Tenant["tenantType"],
+    status: stringValue(tenant.status) as Tenant["status"],
+    region: stringValue(tenant.region),
+    ownerContact: stringValue(tenant.owner_contact) || stringValue(tenant.phone_number),
+    tier: stringValue(tenant.tier),
+    createdAt: stringValue(tenant.created_at),
+    activeParents: numberValue(tenant.active_parents),
+    children: numberValue(tenant.children),
+    displayName: stringValue(tenant.display_name),
+    avatarUrl: stringValue(tenant.avatar_url),
+    phoneNumber: stringValue(tenant.phone_number),
+    phoneVerifiedAt: stringValue(tenant.phone_verified_at),
+    wechatUnionId: stringValue(tenant.wechat_union_id),
+    wechatOpenId: stringValue(tenant.wechat_open_id),
+    updatedAt: stringValue(tenant.updated_at)
+  };
+}
+
+function normalizeAdminTenantChildPayload(child: Record<string, unknown>): AdminTenantChild {
+  return {
+    id: stringValue(child.id),
+    name: stringValue(child.name),
+    age: numberValue(child.age),
+    level: stringValue(child.level),
+    learningGoal: stringValue(child.learning_goal),
+    preferredReviewDurationMinutes: numberValue(child.preferred_review_duration_minutes),
+    parentNotes: stringValue(child.parent_notes),
+    latestWeeklyReportId: stringValue(child.latest_weekly_report_id),
+    speakingAttempts: numberValue(child.speaking_attempts)
+  };
+}
+
 function normalizeAdminAuditEventPayload(event: Record<string, unknown>): AdminAuditEvent {
   return {
     id: stringValue(event.id),
@@ -406,8 +712,27 @@ function normalizeAdminImpersonationSession(session: Record<string, unknown>): A
     status: stringValue(session.status) as AdminImpersonationSession["status"],
     reason: stringValue(session.reason),
     expiresAt: stringValue(session.expires_at),
-    createdAt: stringValue(session.created_at)
+    createdAt: stringValue(session.created_at),
+    endedAt: stringValue(session.ended_at),
+    updatedAt: stringValue(session.updated_at),
+    tenantDisplayName: stringValue(session.tenant_display_name),
+    targetParentDisplayName: stringValue(session.target_parent_display_name)
   };
+}
+
+function normalizeAdminActionResultPayload(payload: Record<string, unknown>): AdminActionResult {
+  return {
+    action: stringValue(payload.action),
+    status: stringValue(payload.status) as AdminActionResult["status"],
+    resourceType: stringValue(payload.resource_type),
+    resourceId: stringValue(payload.resource_id),
+    tenantId: stringValue(payload.tenant_id),
+    message: stringValue(payload.message)
+  };
+}
+
+function optionalActionResult(payload: Record<string, unknown> | undefined): AdminActionResult | undefined {
+  return payload ? normalizeAdminActionResultPayload(payload) : undefined;
 }
 
 function normalizeTenantModuleSettingPayload(setting: Record<string, unknown>): TenantModuleSetting {
@@ -435,6 +760,16 @@ function booleanValue(value: unknown): boolean {
   return typeof value === "boolean" ? value : false;
 }
 
+function recordValue(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
 function arrayValue(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object") : [];
+}
+
+function appendOptionalParam(params: URLSearchParams, key: string, value: string | undefined): void {
+  if (value) {
+    params.set(key, value);
+  }
 }
