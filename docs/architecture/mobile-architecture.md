@@ -90,7 +90,7 @@
 - 没有本地 `Drift` 缓存层。
 - 没有 PIN child mode。
 - `/reports` 已拆成独立 `ReportsScreen`，但多周趋势和更强的报告解释层还比较轻。
-- speaking 流程已完成录音、上传、轮询、DashScope ASR + Qwen 真实评分结果展示；readiness 缺口主要是物理手机录音提交与结果页截图证据。
+- speaking 流程已完成录音、上传、轮询、DashScope ASR + Qwen 真实评分结果展示；当前仓库已保留真机录音提交、worker 回写与结果页截图 evidence，后续主要是复跑时继续保证公网音频 URL 和证据归档一致性。
 
 ## 可靠性关注点
 

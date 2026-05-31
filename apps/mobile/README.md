@@ -32,6 +32,6 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 
 ## 当前限制
 
-- speaking 页已支持真实录音上传、异步评分轮询和结果展示；当前正式 provider 为 DashScope ASR + Qwen 评分，真机验收仍需使用公网可访问音频 URL 补齐证据到 `dist/harness/HN-017/`。
+- speaking 页已支持真实录音上传、异步评分轮询和结果展示；当前正式 provider 为 DashScope ASR + Qwen 评分，`dist/harness/HN-017/` 已有真机 evidence；如果重新验收，仍需提供公网可访问音频 URL。
 - `/reports` 已是独立报告页，展示周报统计、讲义汇总、每个学习资产的掌握度、复习表现、口语表现和推荐动作。
 - MVP 主链截图证据已补齐；真实媒体 provider 的 readiness 证据仍在 `docs/harness/` 和 `dist/harness/HN-016*/` 继续补充。

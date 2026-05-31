@@ -6,11 +6,11 @@
 
 这份文档保留了问题来源、需求拆解和 Harness 验收要求。需要注意：HN-008 到 HN-015 当前已经基本落地，下面的“当时现状”主要用于解释为什么会产生这批需求，不代表仓库此刻仍停留在那个阶段。
 
-当前仍未收口的部分主要有三类：
+当前仍未完全收口的部分主要有三类：
 
-- `HN-016` / `HN-016A` DashScope 真实媒体 provider、worker/storage 回填、课程详情 widget 截图和 iOS 模拟器完整 App shell 截图证据已补。
-- `HN-017` 已完成录音上传、音频 storage、异步评分、结果页、DashScope ASR + Qwen 真实 provider、真实 provider smoke、真实 worker smoke、公网音频 URL 改写、cloudflared 临时公网 `/uploads` 拉取验证、iOS 模拟器 App shell 评分结果页截图、物理手机 speaking 上传、DashScope scored 回写和物理手机结果页截图。
+- Android 交付链仍受本机 Flutter / Android SDK 环境阻塞，`make mobile-apk` 还没有形成可复查产物。
 - Doubao、OpenAI、DashScope 真依赖在部分网络环境下仍可能受代理继承影响；如果 shell 已配置 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 但 API / worker 仍无法访问外网，需要额外设置 `AI_HTTP_TRUST_ENV=true` 或 `MEDIA_HTTP_TRUST_ENV=true`。
+- 文档与 evidence 目录已经比较完整，但还缺一个统一索引来说明每个 `HN-*` 目录的关键文件与复查入口。
 
 ## 触发问题时的旧现状
 
@@ -31,6 +31,16 @@
 - `failed`、`needs_review`、`ready`、`archived` 的状态收敛已经体现在 API、Flutter 路由和 Harness 文档中。
 - HN-012 到 HN-018 都已经有代码和证据落点；HN-017 的物理手机结果页截图已补齐。
 - 真实 provider 的最短复现步骤见 `docs/harness/provider-readiness-runbook.md`。
+
+### HN-019：真机回归与 evidence 治理
+
+HN-019 不改变上传识别主链，也不新增上传、AI 校对、课程详情或报告页的业务要求；它只收敛真机回归、provider 运行和 `dist/harness/` 证据归档方式，让既有主链可以被复查。
+
+执行入口：
+
+- `docs/harness/device-regression-runbook.md`
+- `docs/harness/provider-readiness-runbook.md`
+- `docs/harness/evidence-archive-policy.md`
 
 ## 真机问题记录
 
@@ -188,7 +198,11 @@
 - `dist/harness/HN-012/` 保存截图或日志。
 
 **Harness：**
-- 自动化：`flutter build ios --profile --dart-define=API_BASE_URL=http://<mac-ip>:8000/v1`
+- 自动化：
+  ```bash
+  MAC_IP=192.168.2.15
+  flutter build ios --profile --dart-define=API_BASE_URL="http://${MAC_IP}:8000/v1"
+  ```
 - 人工：真机操作截图和 API 日志摘录。
 
 **证据位置：**
@@ -380,7 +394,7 @@
   - `dist/harness/HN-016A/worker-storage/generated/media/material_dashscope_real/asset_rabbit/`
 - 课程详情 widget UI 截图和 iOS 模拟器完整 App shell 截图已补齐，可作为 `HN-016A` readiness 证据。
 
-**当前代码状态（2026-05-27）：**
+**当前代码状态：**
 - `MEDIA_PROVIDER` 默认已从 mock 切到 `real`，图片与 TTS 默认 provider 均为 DashScope。
 - DashScope TTS 请求会按 US / UK 发音分别加入儿童跟读场景的发音指令。
 - 自动化回归已覆盖 DashScope 图片、TTS、worker/storage 回填；课程详情 widget 和 iOS 模拟器 App shell 证据已补齐。
@@ -395,7 +409,7 @@
 
 **目标：** 孩子围绕讲义核心词句录音后，系统保存音频、异步转写评分，并在结果页和周报中展示反馈。
 
-**当前状态：** 已完成录音上传、音频 storage、worker 异步评分、结果页轮询、stub 回归路径和 DashScope ASR + Qwen 真实 provider 代码实现。2026-05-25 已完成真机安装启动和局域网 API 连通验证，并补齐 API multipart 上传、音频 storage、worker stub 评分和 scored attempt JSON 证据。2026-05-27 补齐 DashScope ASR 任务创建、轮询、转写结果下载、Qwen JSON 评分、本地/内网音频 URL 拒绝测试，并使用阿里官方公开 sample audio 跑通真实 provider smoke。2026-05-27 继续补齐 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL`，让真机 App 继续使用局域网 API，同时 worker 可把录音 object key 改写成公网 `/uploads/{object_key}` 给 DashScope ASR；同日已用公网 sample audio 跑通真实 worker -> DashScope -> scored attempt -> 周报回填 smoke，并用 cloudflared 临时 HTTPS 隧道验证 DashScope 能从本项目 `/uploads/{object_key}` 拉取音频。2026-05-27 已补 iOS 模拟器完整 App shell 评分结果页截图，展示 DashScope worker-smoke 的转写、总分、维度分、逐词反馈和建议。2026-05-27 已补物理手机 `Chaucer` speaking 上传、DashScope scored 回写和 iPhone Mirroring 结果页截图：真机从 `192.168.2.12` 访问局域网 API，创建 `attempt_b0e110c126d1`，watcher 调用 DashScope 后写回 `scored`。
+**当前状态：** 已完成录音上传、音频 storage、worker 异步评分、结果页轮询、stub 回归路径和 DashScope ASR + Qwen 真实 provider 代码实现。真机安装启动、局域网 API 连通、API multipart 上传、音频 storage、worker stub 评分和 scored attempt JSON 证据已存在。DashScope ASR 任务创建、轮询、转写结果下载、Qwen JSON 评分、本地/内网音频 URL 拒绝测试、阿里官方公开 sample audio 真实 provider smoke、公网 `/uploads/{object_key}` worker URL 改写、真实 worker -> DashScope -> scored attempt -> 周报回填 smoke、cloudflared 临时 HTTPS 隧道拉取验证、iOS 模拟器完整 App shell 评分结果页截图均已补齐。物理手机 `Chaucer` speaking 上传、DashScope scored 回写和 iPhone Mirroring 结果页截图也已补齐：真机从 `192.168.2.12` 访问局域网 API，创建 `attempt_b0e110c126d1`，watcher 调用 DashScope 后写回 `scored`。
 
 **范围内：**
 - 移动端 speaking 页支持录音、重录、上传、处理中、评分成功和失败重试。
