@@ -1020,7 +1020,7 @@ def test_admin_impersonation_session_end_ends_active_session_and_records_audit(a
 
     assert response.status_code == 200
     payload = response.json()
-    assert set(payload.keys()) == {"required_permission", "impersonation_session", "audit_event"}
+    assert set(payload.keys()) == {"required_permission", "impersonation_session", "action_result", "audit_event"}
     assert payload["required_permission"] == "admin.impersonation.end"
     session = payload["impersonation_session"]
     assert session["id"] == fixture["active_newer_id"]
@@ -1030,6 +1030,14 @@ def test_admin_impersonation_session_end_ends_active_session_and_records_audit(a
     assert session["ended_at"]
     assert session["updated_at"]
     assert session["tenant_display_name"] == "task5_end_active Tenant A"
+    assert payload["action_result"] == {
+        "action": "end_impersonation_session",
+        "status": "success",
+        "resource_type": "admin_impersonation_session",
+        "resource_id": fixture["active_newer_id"],
+        "tenant_id": fixture["tenant_a_id"],
+        "message": "Impersonation session ended.",
+    }
     audit_event = payload["audit_event"]
     assert audit_event["action"] == "admin.impersonation.end"
     assert audit_event["resource_type"] == "admin_impersonation_session"
@@ -1104,6 +1112,14 @@ def test_admin_impersonation_session_end_is_idempotent_and_preserves_ended_at(ap
     payload = response.json()
     assert payload["impersonation_session"]["status"] == "ended"
     assert payload["impersonation_session"]["ended_at"] == "2026-05-28T19:14:00+00:00"
+    assert payload["action_result"] == {
+        "action": "end_impersonation_session",
+        "status": "noop",
+        "resource_type": "admin_impersonation_session",
+        "resource_id": fixture["ended_id"],
+        "tenant_id": fixture["tenant_a_id"],
+        "message": "Impersonation session already ended.",
+    }
     assert payload["audit_event"]["action"] == "admin.impersonation.end.already_ended"
     assert payload["audit_event"]["risk_level"] == "medium"
     assert payload["audit_event"]["result"] == "noop"

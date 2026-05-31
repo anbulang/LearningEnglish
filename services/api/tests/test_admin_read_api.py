@@ -202,6 +202,14 @@ def test_admin_archive_material_updates_status_and_records_audit_event(api_clien
     assert payload["material"]["id"] == material_id
     assert payload["material"]["job_id"] == job_id
     assert payload["material"]["material_status"] == "archived"
+    assert payload["action_result"] == {
+        "action": "archive_material",
+        "status": "success",
+        "resource_type": "course_material",
+        "resource_id": material_id,
+        "tenant_id": payload["material"]["tenant_id"],
+        "message": "Material archived.",
+    }
     audit_event = payload["audit_event"]
     assert audit_event["action"] == "admin.material.archive"
     assert audit_event["resource_type"] == "course_material"
@@ -275,6 +283,14 @@ def test_admin_retry_material_job_resets_state_and_records_audit_event(api_clien
     assert payload["material"]["material_status"] == "processing"
     assert payload["material"]["job_status"] == "processing"
     assert payload["material"]["warnings"] == []
+    assert payload["action_result"] == {
+        "action": "retry_material_job",
+        "status": "success",
+        "resource_type": "material_parse_job",
+        "resource_id": job_id,
+        "tenant_id": payload["material"]["tenant_id"],
+        "message": "Material parse job queued for retry.",
+    }
     audit_event = payload["audit_event"]
     assert audit_event["action"] == "admin.material_job.retry"
     assert audit_event["resource_type"] == "material_parse_job"
@@ -338,6 +354,14 @@ def test_admin_retry_material_job_records_failed_audit_when_enqueue_fails(api_cl
     assert payload["material"]["material_status"] == "failed"
     assert payload["material"]["job_status"] == "failed"
     assert "redis unavailable" in payload["material"]["warnings"][0]
+    assert payload["action_result"] == {
+        "action": "retry_material_job",
+        "status": "failed",
+        "resource_type": "material_parse_job",
+        "resource_id": job_id,
+        "tenant_id": payload["material"]["tenant_id"],
+        "message": "Material retry enqueue failed.",
+    }
     audit_event = payload["audit_event"]
     assert audit_event["action"] == "admin.material_job.retry"
     assert audit_event["resource_id"] == job_id
@@ -421,6 +445,14 @@ def test_admin_provider_policy_override_updates_dashboard_and_records_audit_even
         "monthly_guardrail": 500,
         "source": "tenant_override",
     }
+    assert payload["action_result"] == {
+        "action": "override_provider_policy",
+        "status": "success",
+        "resource_type": "tenant_provider_policy",
+        "resource_id": tenant_id,
+        "tenant_id": tenant_id,
+        "message": "Provider policy override applied.",
+    }
     audit_event = payload["audit_event"]
     assert audit_event["action"] == "admin.provider_policy.override"
     assert audit_event["resource_type"] == "tenant_provider_policy"
@@ -493,6 +525,14 @@ def test_admin_tenant_module_toggle_updates_dashboard_and_records_audit_event(ap
         "module_key": "speaking_score",
         "enabled": False,
         "source": "tenant_override",
+    }
+    assert payload["action_result"] == {
+        "action": "toggle_tenant_module",
+        "status": "success",
+        "resource_type": "tenant_module_setting",
+        "resource_id": f"{tenant_id}:speaking_score",
+        "tenant_id": tenant_id,
+        "message": "Tenant module setting updated.",
     }
     audit_event = payload["audit_event"]
     assert audit_event["action"] == "admin.tenant_module.toggle"

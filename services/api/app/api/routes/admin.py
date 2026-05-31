@@ -35,6 +35,7 @@ from app.services.admin_audit import (
     search_admin_audit_events,
     serialize_admin_audit_event as _audit_event_payload,
 )
+from app.services.admin_actions import build_action_result
 from app.services.admin_identity import AdminActor, resolve_admin_actor
 from app.services.admin_permissions import (
     ADMIN_AUDIT_READ,
@@ -329,6 +330,14 @@ def archive_admin_material(
     return {
         "required_permission": "admin.material.archive",
         "material": _admin_material_payload(material, child, parent, job),
+        "action_result": build_action_result(
+            action="archive_material",
+            status="success",
+            resource_type="course_material",
+            resource_id=material.id,
+            tenant_id=parent.id,
+            message="Material archived.",
+        ),
         "audit_event": _audit_event_payload(audit_event),
     }
 
@@ -403,6 +412,14 @@ def retry_admin_material_job(
     response_payload = {
         "required_permission": "admin.material.retry",
         "material": _admin_material_payload(material, child, parent, job),
+        "action_result": build_action_result(
+            action="retry_material_job",
+            status="failed" if enqueue_error else "success",
+            resource_type="material_parse_job",
+            resource_id=job.id,
+            tenant_id=parent.id,
+            message="Material retry enqueue failed." if enqueue_error else "Material parse job queued for retry.",
+        ),
         "audit_event": _audit_event_payload(audit_event),
     }
     if enqueue_error:
@@ -470,6 +487,14 @@ def override_admin_provider_policy(
     return {
         "required_permission": "admin.provider.override",
         "provider_policy": _tenant_provider_policy_payload(policy),
+        "action_result": build_action_result(
+            action="override_provider_policy",
+            status="success",
+            resource_type="tenant_provider_policy",
+            resource_id=tenant.id,
+            tenant_id=tenant.id,
+            message="Provider policy override applied.",
+        ),
         "audit_event": _audit_event_payload(audit_event),
     }
 
@@ -528,6 +553,14 @@ def toggle_admin_tenant_module(
     return {
         "required_permission": "admin.tenant.module.toggle",
         "module_setting": _tenant_module_setting_payload(setting),
+        "action_result": build_action_result(
+            action="toggle_tenant_module",
+            status="success",
+            resource_type="tenant_module_setting",
+            resource_id=f"{tenant.id}:{normalized_module_key}",
+            tenant_id=tenant.id,
+            message="Tenant module setting updated.",
+        ),
         "audit_event": _audit_event_payload(audit_event),
     }
 
@@ -701,6 +734,18 @@ def end_admin_impersonation_session(
             impersonation_session,
             tenant=parent_by_id.get(impersonation_session.tenant_id),
             target_parent=parent_by_id.get(impersonation_session.target_parent_id),
+        ),
+        "action_result": build_action_result(
+            action="end_impersonation_session",
+            status="noop" if already_ended else "success",
+            resource_type="admin_impersonation_session",
+            resource_id=impersonation_session.id,
+            tenant_id=impersonation_session.tenant_id,
+            message=(
+                "Impersonation session already ended."
+                if already_ended
+                else "Impersonation session ended."
+            ),
         ),
         "audit_event": _audit_event_payload(audit_event),
     }
