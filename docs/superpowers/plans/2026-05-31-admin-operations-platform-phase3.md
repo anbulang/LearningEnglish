@@ -1,116 +1,116 @@
-# Admin Operations Platform Phase 3 Implementation Plan
+# LearningEnglish Admin 运维平台 Phase 3 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给执行代理：** 必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 按任务执行本计划。执行过程中使用复选框（`- [ ]`）跟踪进度。
 
-**Goal:** Turn the LearningEnglish admin backend into a maintainable production-grade multi-tenant operations platform, then connect the Admin UI to the stable Phase 2/3 read models for operations, audit, tenant detail, and impersonation workflows.
+**目标：** 把 LearningEnglish admin 后端推进为可维护的生产级多租户运维平台，并让 Admin UI 接入稳定的 Phase 2/3 读模型，覆盖 operations、audit、tenant detail 和 impersonation 工作流。
 
-**Architecture:** Keep existing `/v1/admin/...` routes and Phase 2 response keys compatible, but move identity, permissions, tenant scope, audit, read-model, operations health, and action-result logic out of `services/api/app/api/routes/admin.py` into focused service modules. Admin UI consumes backend-provided operations vocabulary instead of deriving operational state from dashboard fixtures.
+**架构：** 保持现有 `/v1/admin/...` route 与 Phase 2 response key 兼容，但把 identity、permissions、tenant scope、audit、read model、operations health、action result 从 `services/api/app/api/routes/admin.py` 拆到聚焦的 service 模块。Admin UI 消费后端提供的 operations 词汇与 severity/status，不再从 dashboard fixture 里本地推断运维状态。
 
-**Tech Stack:** FastAPI, SQLAlchemy, Pydantic, pytest, React, TypeScript, Vite, Vitest, existing Admin UI theme and i18n.
+**技术栈：** FastAPI、SQLAlchemy、Pydantic、pytest、React、TypeScript、Vite、Vitest、现有 Admin UI 主题与 i18n。
 
 ---
 
-## Current Baseline
+## 当前基线
 
-- Branch: `codex/admin-operations-platform-phase3`.
-- Worktree: `/Users/chaucermini/.codex/worktrees/b7c3/LearningEnglish`.
-- Base: local `main` at `949925e`.
-- Phase 2 spec and backend are already merged into main.
-- `services/api/app/api/routes/admin.py` is the current admin route and helper concentration point.
-- `apps/admin` has live calls for dashboard/access and selected mutations, but does not yet use the Phase 2 `/operations`, `/tenants/{tenant_id}`, `/audit-events`, or impersonation list/end read models as first-class screens.
+- 分支：`codex/admin-operations-platform-phase3`。
+- 工作树：`/Users/chaucermini/.codex/worktrees/b7c3/LearningEnglish`。
+- 基线：本地 `main` 的 `949925e`。
+- Phase 2 spec 和 backend 已合入 main。
+- `services/api/app/api/routes/admin.py` 仍是 admin route 与 helper 的主要集中点。
+- `apps/admin` 已有 dashboard/access 与部分 mutation 的 live 调用，但还没有把 Phase 2 的 `/operations`、`/tenants/{tenant_id}`、`/audit-events`、impersonation list/end 作为一等页面数据源。
 
-## File Map
+## 文件地图
 
-### Backend Create
+### 后端新增文件
 
 - `services/api/app/services/admin_identity.py`
-  - Move `AdminActor`, `AdminCredential`, credential parsing, token hash, local fallback, and inactive credential rejection here.
+  - 放置 `AdminActor`、`AdminCredential`、credential JSON 解析、token hash、本地 token fallback、inactive credential 拒绝逻辑。
 - `services/api/app/services/admin_permissions.py`
-  - Move `ADMIN_PERMISSIONS`, permission constants, `require_permission`, and `require_any_permission` here.
+  - 放置 `ADMIN_PERMISSIONS`、permission 常量、`require_permission`、`require_any_permission`。
 - `services/api/app/services/admin_scope.py`
-  - Move tenant scope validation, scope filters, no-disclosure lookup helpers, and impersonation scope filters here.
+  - 放置 tenant scope 校验、scope filter、no-disclosure lookup helper、impersonation scope filter。
 - `services/api/app/services/admin_audit.py`
-  - Move audit write/search/cursor/resource timeline payload logic here.
+  - 放置 audit 写入、搜索、cursor pagination、resource timeline payload 逻辑。
 - `services/api/app/services/admin_read_models.py`
-  - Move dashboard and tenant detail read-model builders here.
+  - 放置 dashboard 与 tenant detail read-model builder。
 - `services/api/app/services/admin_operations.py`
-  - Move operations snapshot, severity calculation, recommended actions, provider readiness, and bounded latest-list logic here.
+  - 放置 operations snapshot、severity 计算、recommended action、provider readiness、有界 latest list 逻辑。
 - `services/api/app/services/admin_actions.py`
-  - Add a common action-result builder used by existing mutation routes.
+  - 放置现有 mutation route 共用的 action result builder。
 
-### Backend Modify
+### 后端修改文件
 
 - `services/api/app/api/routes/admin.py`
-  - Keep route registration and request models.
-  - Replace large helper bodies with service calls.
-  - Preserve existing URLs and response keys.
-  - Add enhanced `issues` section to `/operations`.
-  - Add `action_result` to mutation responses while retaining old resource keys.
+  - 保留 route 注册和 request model。
+  - 大块 helper body 改为调用 service。
+  - 保留现有 URL 和 response key。
+  - 给 `/operations` 增加增强版 `issues` section。
+  - 给 mutation response 增加 `action_result`，同时保留旧 resource key。
 - `services/api/app/services/__init__.py`
-  - Export nothing unless local package style already requires it; avoid import cycles.
+  - 除非本地 package 风格需要，否则不新增集中导出，避免 import cycle。
 - `services/api/README.md`
-  - Document Phase 3 service boundaries, operations read model, and mutation action result.
+  - 记录 Phase 3 service 边界、operations read model、mutation action result。
 - `docs/harness/mvp-readiness-checklist.md`
-  - Add Phase 3 verification note and commands.
+  - 增加 Phase 3 验证说明和命令。
 
-### Backend Tests
+### 后端测试文件
 
-- Create `services/api/tests/test_admin_identity_service.py`.
-- Create `services/api/tests/test_admin_permissions_service.py`.
-- Create `services/api/tests/test_admin_scope_service.py`.
-- Create `services/api/tests/test_admin_audit_service.py`.
-- Create `services/api/tests/test_admin_read_models_service.py`.
-- Create `services/api/tests/test_admin_operations_service.py`.
-- Modify `services/api/tests/test_admin_phase2_api.py`.
-  - Keep Phase 2 compatibility coverage.
-  - Add API contract assertions for `issues` and `action_result`.
+- 新增 `services/api/tests/test_admin_identity_service.py`。
+- 新增 `services/api/tests/test_admin_permissions_service.py`。
+- 新增 `services/api/tests/test_admin_scope_service.py`。
+- 新增 `services/api/tests/test_admin_audit_service.py`。
+- 新增 `services/api/tests/test_admin_read_models_service.py`。
+- 新增 `services/api/tests/test_admin_operations_service.py`。
+- 修改 `services/api/tests/test_admin_phase2_api.py`。
+  - 保留 Phase 2 兼容性覆盖。
+  - 增加 `issues` 与 `action_result` 的 API contract 断言。
 
-### Admin UI Modify
+### 后台 UI 修改文件
 
 - `apps/admin/src/domain/types.ts`
-  - Add Phase 2/3 API types for operations, issues, audit filters, tenant detail, impersonation end, and action result.
+  - 增加 Phase 2/3 API 类型：operations、issues、audit filters、tenant detail、impersonation end、action result。
 - `apps/admin/src/domain/adminApi.ts`
-  - Add API clients for operations, tenant detail, audit search, impersonation list/end.
-  - Normalize snake_case backend payloads into camelCase UI types.
+  - 增加 operations、tenant detail、audit search、impersonation list/end API client。
+  - 把后端 snake_case payload 归一化成 UI 侧 camelCase type。
 - `apps/admin/src/domain/adminApi.test.ts`
-  - Cover new API clients and normalization.
+  - 覆盖新增 API client 与 normalization。
 - `apps/admin/src/domain/mockData.ts`
-  - Add Phase 3 fixtures for operations issues, tenant detail, audit pagination, and impersonation sessions.
+  - 增加 Phase 3 fixture：operations issues、tenant detail、audit pagination、impersonation sessions。
 - `apps/admin/src/App.tsx`
-  - Load operations/access/tenant detail data when live API is configured.
-  - Pass operations and impersonation handlers into pages.
+  - live API 配置存在时加载 operations/access/tenant detail 数据。
+  - 把 operations 与 impersonation handler 传入页面。
 - `apps/admin/src/pages/CommandCenter.tsx`
-  - Use `/operations` data for operational health and issue rows.
-  - Keep mock fallback.
+  - 使用 `/operations` 数据展示 operational health 与 issue rows。
+  - 保留 mock fallback。
 - `apps/admin/src/pages/CommandCenter.test.tsx`
-  - Cover severity colors, issue rows, and recommended actions.
+  - 覆盖 severity 颜色、issue rows、recommended actions。
 - `apps/admin/src/pages/TenantDetail.tsx`
-  - Prefer tenant detail read model when available.
-  - Preserve current dashboard-derived fallback.
+  - 优先使用 tenant detail read model。
+  - 保留当前 dashboard-derived fallback。
 - `apps/admin/src/pages/TenantDetail.test.tsx`
-  - Cover tenant detail API shape and audit timeline rendering.
+  - 覆盖 tenant detail API shape 与 audit timeline 渲染。
 - `apps/admin/src/pages/AuditAccess.tsx`
-  - Add audit explorer filters, pagination surface, impersonation sessions list, and end action.
+  - 增加 audit explorer filters、pagination surface、impersonation sessions list、end action。
 - `apps/admin/src/pages/AuditAccess.test.tsx`
-  - Cover filters, list/end impersonation, and reason-required behavior.
-- Create `apps/admin/src/components/ActionDrawer.tsx`.
-  - Shared issue/action drawer with required reason and audit preview.
-- Create `apps/admin/src/components/ActionDrawer.test.tsx`.
-  - Cover open/close, disabled unavailable action, reason validation, and success rendering.
+  - 覆盖 filters、list/end impersonation、reason required。
+- 新增 `apps/admin/src/components/ActionDrawer.tsx`。
+  - 共用 issue/action drawer，包含 required reason 和 audit preview。
+- 新增 `apps/admin/src/components/ActionDrawer.test.tsx`。
+  - 覆盖 open/close、disabled unavailable action、reason validation、success rendering。
 
 ---
 
-## Task 1: Extract Admin Identity Service
+## 任务 1：抽取管理员身份服务
 
-**Files:**
-- Create `services/api/app/services/admin_identity.py`
-- Modify `services/api/app/api/routes/admin.py`
-- Create `services/api/tests/test_admin_identity_service.py`
-- Modify `services/api/tests/test_admin_phase2_api.py`
+**文件：**
+- 新增 `services/api/app/services/admin_identity.py`
+- 修改 `services/api/app/api/routes/admin.py`
+- 新增 `services/api/tests/test_admin_identity_service.py`
+- 修改 `services/api/tests/test_admin_phase2_api.py`
 
-- [ ] **Step 1: Write failing service tests**
+- [ ] **步骤 1：先写失败的 service 测试**
 
-Create `services/api/tests/test_admin_identity_service.py` with focused tests:
+新增 `services/api/tests/test_admin_identity_service.py`，覆盖 credential JSON、inactive credential、本地 token fallback 与 hash：
 
 ```python
 from __future__ import annotations
@@ -190,23 +190,23 @@ def test_admin_token_hash_is_sha256_hex() -> None:
     assert admin_token_hash("local-admin-token") == _hash("local-admin-token")
 ```
 
-- [ ] **Step 2: Run the failing test**
+- [ ] **步骤 2：运行失败测试**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_identity_service.py -q
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 ModuleNotFoundError: No module named 'app.services.admin_identity'
 ```
 
-- [ ] **Step 3: Implement `admin_identity.py`**
+- [ ] **步骤 3：实现 `admin_identity.py`**
 
-Create `services/api/app/services/admin_identity.py`:
+新增 `services/api/app/services/admin_identity.py`：
 
 ```python
 from __future__ import annotations
@@ -302,15 +302,15 @@ def _local_admin_actor() -> AdminActor:
     )
 ```
 
-Adjust if the current route already uses `BaseModel` versions of these structures and a dataclass would create too much conversion friction; keep the exported field names identical either way.
+如果当前 route 里的 `AdminActor` 已经是 Pydantic model，并且 dataclass 会导致转换成本过高，可以保留 Pydantic 版本；但导出的字段名必须保持一致。
 
-- [ ] **Step 4: Wire route dependency to the service**
+- [ ] **步骤 4：把 route dependency 接到 service**
 
-In `services/api/app/api/routes/admin.py`:
+在 `services/api/app/api/routes/admin.py` 中：
 
-- Remove local `AdminActor` and `AdminCredential` definitions after tests are migrated.
-- Import `AdminActor` and `resolve_admin_actor`.
-- Keep `require_admin_token()` in the route file as the FastAPI dependency:
+- 迁移测试后移除本地 `AdminActor` 和 `AdminCredential` 定义。
+- import `AdminActor` 和 `resolve_admin_actor`。
+- 保留 `require_admin_token()` 作为 FastAPI dependency：
 
 ```python
 def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> AdminActor:
@@ -322,25 +322,25 @@ def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> 
     return actor
 ```
 
-Preserve the existing inactive-token behavior if Phase 2 tests assert a more specific detail such as `Admin user is inactive`; if so, return a typed inactive resolution result from the service instead of flattening it to `None`.
+如果 Phase 2 测试要求 inactive token 返回更具体的 `Admin user is inactive`，service 应返回 typed resolution result，而不是把 inactive 简化成 `None`。
 
-- [ ] **Step 5: Verify compatibility**
+- [ ] **步骤 5：验证兼容性**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_identity_service.py tests/test_admin_phase2_api.py -q
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -350,19 +350,19 @@ git commit -m "refactor: extract admin identity service"
 
 ---
 
-## Task 2: Extract Permissions And Tenant Scope
+## 任务 2：抽取权限与租户范围服务
 
-**Files:**
-- Create `services/api/app/services/admin_permissions.py`
-- Create `services/api/app/services/admin_scope.py`
-- Modify `services/api/app/api/routes/admin.py`
-- Create `services/api/tests/test_admin_permissions_service.py`
-- Create `services/api/tests/test_admin_scope_service.py`
-- Modify `services/api/tests/test_admin_phase2_api.py`
+**文件：**
+- 新增 `services/api/app/services/admin_permissions.py`
+- 新增 `services/api/app/services/admin_scope.py`
+- 修改 `services/api/app/api/routes/admin.py`
+- 新增 `services/api/tests/test_admin_permissions_service.py`
+- 新增 `services/api/tests/test_admin_scope_service.py`
+- 修改 `services/api/tests/test_admin_phase2_api.py`
 
-- [ ] **Step 1: Write permission service tests**
+- [ ] **步骤 1：写 permission service 测试**
 
-Create `services/api/tests/test_admin_permissions_service.py`:
+新增 `services/api/tests/test_admin_permissions_service.py`：
 
 ```python
 from __future__ import annotations
@@ -406,9 +406,9 @@ def test_admin_permissions_include_phase_three_entries() -> None:
     assert "admin.impersonation.end" in ADMIN_PERMISSIONS
 ```
 
-- [ ] **Step 2: Write tenant scope service tests**
+- [ ] **步骤 2：写 tenant scope service 测试**
 
-Create `services/api/tests/test_admin_scope_service.py` with tests that use the same database factories/payload setup style already present in `test_admin_phase2_api.py`:
+新增 `services/api/tests/test_admin_scope_service.py`，先覆盖纯函数，再按 `test_admin_phase2_api.py` 的 fixture 风格补 DB 测试：
 
 ```python
 from __future__ import annotations
@@ -424,31 +424,31 @@ def test_normalize_tenant_scope_strips_whitespace() -> None:
     assert normalize_tenant_scope(" tenant_123 ") == "tenant_123"
 ```
 
-Add DB-backed tests after inspecting the existing test fixture names:
+DB 测试必须覆盖：
 
-- in-scope tenant returns the tenant row.
-- out-of-scope tenant raises `HTTPException(404, "Tenant not found")`.
-- `tenant_scope=all` can read any tenant only when the actor has the route's required read permission.
+- in-scope tenant 返回 tenant row。
+- out-of-scope tenant 抛出 `HTTPException(404, "Tenant not found")`。
+- `tenant_scope=all` 只在 actor 拥有对应 read permission 时可读。
 
-- [ ] **Step 3: Run the failing tests**
+- [ ] **步骤 3：运行失败测试**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_permissions_service.py tests/test_admin_scope_service.py -q
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 ModuleNotFoundError
 ```
 
-- [ ] **Step 4: Implement `admin_permissions.py`**
+- [ ] **步骤 4：实现 `admin_permissions.py`**
 
-Move the existing `ADMIN_PERMISSIONS` constant from `admin.py` into `services/api/app/services/admin_permissions.py`.
+把现有 `ADMIN_PERMISSIONS` 从 `admin.py` 移到 `services/api/app/services/admin_permissions.py`。
 
-Export:
+导出：
 
 ```python
 ADMIN_DASHBOARD_READ = "admin.dashboard.read"
@@ -463,7 +463,7 @@ ADMIN_IMPERSONATION_START = "admin.impersonation.start"
 ADMIN_IMPERSONATION_END = "admin.impersonation.end"
 ```
 
-Implement:
+实现：
 
 ```python
 def has_permission(actor: AdminActor, permission: str) -> bool:
@@ -482,11 +482,11 @@ def require_any_permission(actor: AdminActor, permissions: Sequence[str]) -> Non
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Missing one of {joined} permissions")
 ```
 
-- [ ] **Step 5: Implement `admin_scope.py`**
+- [ ] **步骤 5：实现 `admin_scope.py`**
 
-Move scope helpers from `admin.py` in small pieces. Start with pure helpers, then DB helpers.
+小步迁移 `admin.py` 里的 scope helper。先迁移纯 helper，再迁移 DB helper。
 
-Export:
+导出：
 
 ```python
 def normalize_tenant_scope(tenant_scope: str) -> str: ...
@@ -496,34 +496,34 @@ def ensure_admin_tenant_scope(session: Session, tenant_scope: str, tenant_id: st
 def get_tenant_or_404(session: Session, tenant_scope: str, tenant_id: str) -> Tenant: ...
 ```
 
-The no-disclosure rule must stay the same as Phase 2: if the tenant exists but is outside scope, return the same 404 detail as a missing tenant.
+no-disclosure 规则必须保持 Phase 2 行为：tenant 存在但超出 scope 时，返回与 tenant 不存在相同的 404 detail。
 
-- [ ] **Step 6: Wire routes to permission and scope services**
+- [ ] **步骤 6：把 route 接到 permission 和 scope service**
 
-In `admin.py`:
+在 `admin.py` 中：
 
-- Replace local permission helper calls with imports from `admin_permissions.py`.
-- Replace local scope filter helpers with imports from `admin_scope.py`.
-- Keep route signatures unchanged.
-- Keep error details unchanged; update tests if they reveal a real existing detail that differs from the plan text.
+- 用 `admin_permissions.py` 的 import 替换本地 permission helper。
+- 用 `admin_scope.py` 的 import 替换本地 scope filter helper。
+- route signature 不变。
+- error detail 不变；如果测试暴露现有 detail 与计划文字不同，以已有测试合同为准。
 
-- [ ] **Step 7: Verify focused and full admin tests**
+- [ ] **步骤 7：验证 focused 与 full admin 测试**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_permissions_service.py tests/test_admin_scope_service.py tests/test_admin_phase2_api.py tests/test_admin_read_api.py -q
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 ```
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -533,27 +533,27 @@ git commit -m "refactor: extract admin permissions and scope"
 
 ---
 
-## Task 3: Extract Audit Service And Resource Timeline
+## 任务 3：抽取审计服务与资源时间线
 
-**Files:**
-- Create `services/api/app/services/admin_audit.py`
-- Modify `services/api/app/api/routes/admin.py`
-- Create `services/api/tests/test_admin_audit_service.py`
-- Modify `services/api/tests/test_admin_phase2_api.py`
+**文件：**
+- 新增 `services/api/app/services/admin_audit.py`
+- 修改 `services/api/app/api/routes/admin.py`
+- 新增 `services/api/tests/test_admin_audit_service.py`
+- 修改 `services/api/tests/test_admin_phase2_api.py`
 
-- [ ] **Step 1: Write audit service tests**
+- [ ] **步骤 1：写 audit service 测试**
 
-Create `services/api/tests/test_admin_audit_service.py` using existing model factories or setup helpers from `test_admin_phase2_api.py`.
+新增 `services/api/tests/test_admin_audit_service.py`，使用 `test_admin_phase2_api.py` 中已有的 model factory 或 setup helper。
 
-Cover:
+覆盖：
 
-- `record_admin_audit_event()` persists actor, scope, action, resource, risk, result, reason, and trace id.
-- `search_admin_audit_events()` filters by `tenant_scope`.
-- `search_admin_audit_events()` filters by `resource_type` and `resource_id`.
-- cursor pagination returns stable `next_cursor`.
-- resource timeline returns newest-first bounded entries.
+- `record_admin_audit_event()` 持久化 actor、scope、action、resource、risk、result、reason、trace id。
+- `search_admin_audit_events()` 按 `tenant_scope` 过滤。
+- `search_admin_audit_events()` 按 `resource_type` 和 `resource_id` 过滤。
+- cursor pagination 返回稳定的 `next_cursor`。
+- resource timeline 返回 newest-first 的有界 entries。
 
-Expected assertion shape:
+关键断言形状：
 
 ```python
 payload = search_admin_audit_events(
@@ -568,25 +568,25 @@ assert payload["events"][0]["resource_id"] == "material_123"
 assert "next_cursor" in payload
 ```
 
-- [ ] **Step 2: Run the failing test**
+- [ ] **步骤 2：运行失败测试**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_audit_service.py -q
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 ModuleNotFoundError: No module named 'app.services.admin_audit'
 ```
 
-- [ ] **Step 3: Implement audit service**
+- [ ] **步骤 3：实现 audit service**
 
-Move audit helpers from `admin.py` into `admin_audit.py`.
+把 audit helper 从 `admin.py` 移到 `admin_audit.py`。
 
-Export:
+导出：
 
 ```python
 class AdminAuditFilters(BaseModel):
@@ -606,43 +606,43 @@ def search_admin_audit_events(session: Session, tenant_scope: str, filters: Admi
 def list_resource_timeline(session: Session, tenant_scope: str, resource_type: str, resource_id: str, limit: int = 10) -> list[dict[str, Any]]: ...
 ```
 
-Use existing DB model names and field names from `services/api/app/db/models.py`; do not invent new audit tables.
+使用 `services/api/app/db/models.py` 里已有 DB model 与字段名，不新增 audit table。
 
-- [ ] **Step 4: Update `/audit-events` route**
+- [ ] **步骤 4：更新 `/audit-events` route**
 
-In `admin.py`:
+在 `admin.py` 中：
 
-- Keep `GET /audit-events` route path and query params.
-- Construct `AdminAuditFilters` from query params.
-- Call `search_admin_audit_events`.
-- Record read audit with existing risk/result behavior.
-- Return the same Phase 2 key names.
+- 保持 `GET /audit-events` route path 和 query params。
+- 用 query params 构造 `AdminAuditFilters`。
+- 调用 `search_admin_audit_events`。
+- 保持现有 read audit 的 risk/result 行为。
+- 返回 Phase 2 已有 key。
 
-- [ ] **Step 5: Add API resource timeline assertions**
+- [ ] **步骤 5：增加 API resource timeline 断言**
 
-In `test_admin_phase2_api.py`, add or extend an audit endpoint test:
+在 `test_admin_phase2_api.py` 中扩展 audit endpoint 测试：
 
-- create two events for the same resource and one for a different resource.
-- call `/v1/admin/audit-events?tenant_scope=all&resource_type=course_material&resource_id=<id>`.
-- assert only matching resource events are returned.
+- 为同一 resource 创建两个 event，为另一个 resource 创建一个 event。
+- 调用 `/v1/admin/audit-events?tenant_scope=all&resource_type=course_material&resource_id=<id>`。
+- 断言只返回匹配 resource 的 event。
 
-- [ ] **Step 6: Verify**
+- [ ] **步骤 6：验证**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_audit_service.py tests/test_admin_phase2_api.py -q
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -652,46 +652,46 @@ git commit -m "refactor: extract admin audit service"
 
 ---
 
-## Task 4: Extract Read Models For Dashboard And Tenant Detail
+## 任务 4：抽取控制台与租户详情读模型
 
-**Files:**
-- Create `services/api/app/services/admin_read_models.py`
-- Modify `services/api/app/api/routes/admin.py`
-- Create `services/api/tests/test_admin_read_models_service.py`
-- Modify `services/api/tests/test_admin_phase2_api.py`
-- Modify `services/api/tests/test_admin_read_api.py`
+**文件：**
+- 新增 `services/api/app/services/admin_read_models.py`
+- 修改 `services/api/app/api/routes/admin.py`
+- 新增 `services/api/tests/test_admin_read_models_service.py`
+- 修改 `services/api/tests/test_admin_phase2_api.py`
+- 修改 `services/api/tests/test_admin_read_api.py`
 
-- [ ] **Step 1: Write read-model tests**
+- [ ] **步骤 1：写 read-model 测试**
 
-Create `services/api/tests/test_admin_read_models_service.py`.
+新增 `services/api/tests/test_admin_read_models_service.py`。
 
-Cover:
+覆盖：
 
-- dashboard payload includes tenants, materials, provider policies, module settings.
-- tenant detail includes children, materials, weekly reports, speaking attempts, module settings, and risk summary.
-- tenant detail respects tenant scope.
-- latest lists are bounded by existing constants.
-- payload uses the same key names as Phase 2 routes.
+- dashboard payload 包含 tenants、materials、provider policies、module settings。
+- tenant detail 包含 children、materials、weekly reports、speaking attempts、module settings、risk summary。
+- tenant detail 遵守 tenant scope。
+- latest lists 受现有常量限制。
+- payload 使用与 Phase 2 route 相同的 key。
 
-Use the existing route test setup helpers rather than duplicating large fixture construction.
+优先复用已有 route test setup helper，不复制大段 fixture construction。
 
-- [ ] **Step 2: Run failing tests**
+- [ ] **步骤 2：运行失败测试**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_read_models_service.py -q
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 ModuleNotFoundError: No module named 'app.services.admin_read_models'
 ```
 
-- [ ] **Step 3: Implement `admin_read_models.py`**
+- [ ] **步骤 3：实现 `admin_read_models.py`**
 
-Move payload builders from `admin.py`:
+迁移 `admin.py` 里的 payload builder：
 
 ```python
 def build_admin_dashboard(session: Session, tenant_scope: str) -> dict[str, Any]: ...
@@ -702,34 +702,34 @@ def serialize_provider_policy(...): ...
 def serialize_tenant_module_setting(...): ...
 ```
 
-Keep these functions free of `Header`, `Depends`, and route-specific `HTTPException` construction except no-disclosure helpers delegated to `admin_scope.py`.
+这些函数不能依赖 `Header`、`Depends` 或 route-specific `HTTPException`；no-disclosure 行为委托给 `admin_scope.py`。
 
-- [ ] **Step 4: Route migration**
+- [ ] **步骤 4：迁移 route**
 
-In `admin.py`:
+在 `admin.py` 中：
 
-- `/dashboard` calls `build_admin_dashboard`.
-- `/tenants/{tenant_id}` calls `build_admin_tenant_detail`.
-- Route still records read audit and enforces permissions.
-- Response keys and casing stay unchanged.
+- `/dashboard` 调用 `build_admin_dashboard`。
+- `/tenants/{tenant_id}` 调用 `build_admin_tenant_detail`。
+- route 继续负责 read audit 与 permission enforcement。
+- response key 和 casing 不变。
 
-- [ ] **Step 5: Verify compatibility**
+- [ ] **步骤 5：验证兼容性**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_read_models_service.py tests/test_admin_phase2_api.py tests/test_admin_read_api.py -q
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -739,28 +739,28 @@ git commit -m "refactor: extract admin read models"
 
 ---
 
-## Task 5: Extract Operations Service And Add Issues Contract
+## 任务 5：抽取运维服务并增加问题合同
 
-**Files:**
-- Create `services/api/app/services/admin_operations.py`
-- Modify `services/api/app/api/routes/admin.py`
-- Create `services/api/tests/test_admin_operations_service.py`
-- Modify `services/api/tests/test_admin_phase2_api.py`
+**文件：**
+- 新增 `services/api/app/services/admin_operations.py`
+- 修改 `services/api/app/api/routes/admin.py`
+- 新增 `services/api/tests/test_admin_operations_service.py`
+- 修改 `services/api/tests/test_admin_phase2_api.py`
 
-- [ ] **Step 1: Write operations service tests**
+- [ ] **步骤 1：写 operations service 测试**
 
-Create `services/api/tests/test_admin_operations_service.py`.
+新增 `services/api/tests/test_admin_operations_service.py`。
 
-Cover:
+覆盖：
 
-- no failures returns an empty `issues` list and `summary.severity == "ok"` if existing summary supports this key.
-- failed material parse job produces a `critical` issue with `recommended_action == "retry_material_job"`.
-- archived or ready materials do not produce retry issues.
-- stale processing job produces `warning` with `source == "database_snapshot"`.
-- provider policy with real media enabled appears in provider readiness.
-- bounded latest lists do not exceed existing limits.
+- 没有失败项时返回空 `issues`，并在现有 summary 支持时断言 `summary.severity == "ok"`。
+- failed material parse job 产生 `critical` issue，且 `recommended_action == "retry_material_job"`。
+- archived 或 ready material 不产生 retry issue。
+- stale processing job 产生 `warning`，且 `source == "database_snapshot"`。
+- real media 已启用的 provider policy 出现在 provider readiness。
+- bounded latest lists 不超过现有 limit。
 
-Expected issue assertion:
+关键断言：
 
 ```python
 payload = build_admin_operations(session, tenant_scope="all")
@@ -772,25 +772,25 @@ assert issue["required_permission"] == "admin.material.retry"
 assert issue["related_resource"]["tenant_id"] == "tenant_alpha"
 ```
 
-- [ ] **Step 2: Run failing tests**
+- [ ] **步骤 2：运行失败测试**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_operations_service.py -q
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 ModuleNotFoundError: No module named 'app.services.admin_operations'
 ```
 
-- [ ] **Step 3: Implement operations service**
+- [ ] **步骤 3：实现 operations service**
 
-Move Phase 2 operations helpers from `admin.py` into `admin_operations.py`.
+把 Phase 2 operations helper 从 `admin.py` 移到 `admin_operations.py`。
 
-Export:
+导出：
 
 ```python
 IssueSeverity = Literal["ok", "info", "warning", "critical"]
@@ -803,7 +803,7 @@ def classify_speaking_attempt_issue(...): ...
 def build_provider_readiness(...): ...
 ```
 
-Each issue must include:
+每个 issue 必须包含：
 
 ```python
 {
@@ -822,43 +822,43 @@ Each issue must include:
 }
 ```
 
-Do not claim worker or broker truth. Any worker-facing status derived from DB state must carry `source: "database_snapshot"`.
+不要伪装 worker 或 broker truth。所有从 DB 推导出来的 worker-facing status 都必须带 `source: "database_snapshot"`。
 
-- [ ] **Step 4: Update `/operations` route**
+- [ ] **步骤 4：更新 `/operations` route**
 
-In `admin.py`:
+在 `admin.py` 中：
 
-- `/operations` calls `build_admin_operations`.
-- Keep existing Phase 2 top-level keys.
-- Add `issues`.
-- Keep read audit.
+- `/operations` 调用 `build_admin_operations`。
+- 保留现有 Phase 2 top-level keys。
+- 新增 `issues`。
+- 保留 read audit。
 
-- [ ] **Step 5: Add API contract tests**
+- [ ] **步骤 5：增加 API contract 测试**
 
-In `test_admin_phase2_api.py`, add assertions:
+在 `test_admin_phase2_api.py` 中增加断言：
 
-- `GET /v1/admin/operations?tenant_scope=all` returns existing keys and `issues`.
-- every issue has `id`, `severity`, `status_label`, `reason`, `recommended_action`, `related_resource`, and `source`.
-- `required_permission` is present when action is executable.
-- tenant-scoped operations only show issues for that tenant.
+- `GET /v1/admin/operations?tenant_scope=all` 返回现有 key 和 `issues`。
+- 每个 issue 都有 `id`、`severity`、`status_label`、`reason`、`recommended_action`、`related_resource`、`source`。
+- action 可执行时存在 `required_permission`。
+- tenant-scoped operations 只显示该 tenant 的 issue。
 
-- [ ] **Step 6: Verify**
+- [ ] **步骤 6：验证**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_operations_service.py tests/test_admin_phase2_api.py -q
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -868,24 +868,24 @@ git commit -m "feat: add admin operations issues contract"
 
 ---
 
-## Task 6: Standardize Mutation Action Results
+## 任务 6：统一变更操作结果
 
-**Files:**
-- Create `services/api/app/services/admin_actions.py`
-- Modify `services/api/app/api/routes/admin.py`
-- Modify `services/api/tests/test_admin_phase2_api.py`
+**文件：**
+- 新增 `services/api/app/services/admin_actions.py`
+- 修改 `services/api/app/api/routes/admin.py`
+- 修改 `services/api/tests/test_admin_phase2_api.py`
 
-- [ ] **Step 1: Write API tests for action result**
+- [ ] **步骤 1：为 action result 写 API 测试**
 
-In `services/api/tests/test_admin_phase2_api.py`, extend existing mutation tests for:
+在 `services/api/tests/test_admin_phase2_api.py` 中扩展现有 mutation 测试：
 
-- material retry.
-- material archive.
-- provider policy override.
-- tenant module toggle.
-- impersonation end.
+- material retry。
+- material archive。
+- provider policy override。
+- tenant module toggle。
+- impersonation end。
 
-Each mutation response must include:
+每个 mutation response 必须包含：
 
 ```python
 assert payload["required_permission"] == "admin.material.retry"
@@ -900,25 +900,25 @@ assert payload["action_result"] == {
 assert payload["audit_event"]["resource_id"] == job_id
 ```
 
-Keep the old resource key assertions in the same tests, such as `payload["material"]`, `payload["provider_policy"]`, or `payload["module_setting"]`.
+同一个测试里保留旧 resource key 断言，例如 `payload["material"]`、`payload["provider_policy"]`、`payload["module_setting"]`。
 
-- [ ] **Step 2: Run failing mutation tests**
+- [ ] **步骤 2：运行失败的 mutation 测试**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_phase2_api.py -q
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 KeyError: 'action_result'
 ```
 
-- [ ] **Step 3: Implement `admin_actions.py`**
+- [ ] **步骤 3：实现 `admin_actions.py`**
 
-Create:
+新增：
 
 ```python
 from __future__ import annotations
@@ -957,9 +957,9 @@ def build_action_result(
     }
 ```
 
-- [ ] **Step 4: Add action result to mutation routes**
+- [ ] **步骤 4：给 mutation route 增加 action result**
 
-In `admin.py`, update each existing mutation response:
+在 `admin.py` 中更新每个现有 mutation response：
 
 - `POST /materials/{material_id}/archive`
   - `required_permission: "admin.material.archive"`
@@ -976,27 +976,27 @@ In `admin.py`, update each existing mutation response:
 - `POST /impersonation-sessions/{session_id}/end`
   - `required_permission: "admin.impersonation.end"`
   - `action_result.action: "end_impersonation_session"`
-  - already-ended behavior returns `status: "noop"` and does not overwrite the original `ended_at`.
+  - already-ended 行为返回 `status: "noop"`，并且不覆盖原始 `ended_at`。
 
-Keep existing top-level resource and `audit_event` keys.
+保留现有 top-level resource key 和 `audit_event` key。
 
-- [ ] **Step 5: Verify**
+- [ ] **步骤 5：验证**
 
-Run:
+执行：
 
 ```bash
 cd services/api && .venv/bin/pytest tests/test_admin_phase2_api.py -q
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -1006,43 +1006,43 @@ git commit -m "feat: standardize admin action results"
 
 ---
 
-## Task 7: Add Admin UI API Contracts And Fixtures
+## 任务 7：增加后台 UI API 合同与测试数据
 
-**Files:**
-- Modify `apps/admin/src/domain/types.ts`
-- Modify `apps/admin/src/domain/adminApi.ts`
-- Modify `apps/admin/src/domain/adminApi.test.ts`
-- Modify `apps/admin/src/domain/mockData.ts`
+**文件：**
+- 修改 `apps/admin/src/domain/types.ts`
+- 修改 `apps/admin/src/domain/adminApi.ts`
+- 修改 `apps/admin/src/domain/adminApi.test.ts`
+- 修改 `apps/admin/src/domain/mockData.ts`
 
-- [ ] **Step 1: Add failing API client tests**
+- [ ] **步骤 1：增加失败的 API client 测试**
 
-In `apps/admin/src/domain/adminApi.test.ts`, add tests for:
+在 `apps/admin/src/domain/adminApi.test.ts` 中增加测试：
 
-- `loadAdminOperations()` maps `issues` and existing operations sections.
-- `loadAdminTenantDetail()` maps nested tenant detail data.
-- `loadAdminAuditEvents()` forwards filters and maps `next_cursor`.
-- `loadAdminImpersonationSessions()` maps sessions.
-- `endAdminImpersonationSession()` sends `reason`, maps `action_result`, and returns `auditEvent`.
+- `loadAdminOperations()` 映射 `issues` 与现有 operations sections。
+- `loadAdminTenantDetail()` 映射 nested tenant detail data。
+- `loadAdminAuditEvents()` 透传 filters 并映射 `next_cursor`。
+- `loadAdminImpersonationSessions()` 映射 sessions。
+- `endAdminImpersonationSession()` 发送 `reason`，映射 `action_result` 并返回 `auditEvent`。
 
-Use mocked `global.fetch` following the existing test style.
+沿用现有测试风格 mock `global.fetch`。
 
-- [ ] **Step 2: Run failing UI tests**
+- [ ] **步骤 2：运行失败的 UI 测试**
 
-Run:
+执行：
 
 ```bash
 cd apps/admin && npm test -- adminApi.test.ts
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 ReferenceError or TypeError for missing exported API client
 ```
 
-- [ ] **Step 3: Add TypeScript domain types**
+- [ ] **步骤 3：增加 TypeScript domain types**
 
-In `apps/admin/src/domain/types.ts`, add:
+在 `apps/admin/src/domain/types.ts` 中增加：
 
 ```ts
 export type AdminSeverity = "ok" | "info" | "warning" | "critical";
@@ -1085,11 +1085,11 @@ export interface AdminOperationsData {
 }
 ```
 
-Use stricter nested types where the current backend response is already stable; keep `Record<string, unknown>` only for Phase 2 sections that are still broad aggregation maps.
+如果当前后端 response 已经足够稳定，可以把 `Record<string, unknown>` 细化为更严格的嵌套类型。
 
-- [ ] **Step 4: Implement API clients**
+- [ ] **步骤 4：实现 API clients**
 
-In `apps/admin/src/domain/adminApi.ts`, add:
+在 `apps/admin/src/domain/adminApi.ts` 中增加：
 
 ```ts
 export async function loadAdminOperations(options: AdminApiOptions): Promise<AdminOperationsData> { ... }
@@ -1099,41 +1099,41 @@ export async function loadAdminImpersonationSessions(options: AdminApiOptions): 
 export async function endAdminImpersonationSession(options: EndAdminImpersonationSessionOptions): Promise<EndAdminImpersonationSessionResult> { ... }
 ```
 
-Follow the existing `apiBaseUrl`, `adminToken`, and `tenantScope` option pattern. Add mapper helpers:
+继续沿用现有 `apiBaseUrl`、`adminToken`、`tenantScope` option pattern。增加 mapper helper：
 
 ```ts
 function mapActionResult(payload: AdminActionResultPayload): AdminActionResult { ... }
 function mapOperationsIssue(payload: AdminOperationsIssuePayload): AdminOperationsIssue { ... }
 ```
 
-- [ ] **Step 5: Add fixtures**
+- [ ] **步骤 5：增加 fixtures**
 
-In `mockData.ts`, export:
+在 `mockData.ts` 中导出：
 
-- `mockOperationsData`.
-- `mockTenantDetailData`.
-- `mockAuditEventsPage`.
-- `mockImpersonationSessions`.
+- `mockOperationsData`。
+- `mockTenantDetailData`。
+- `mockAuditEventsPage`。
+- `mockImpersonationSessions`。
 
-Use bilingual-friendly labels through page rendering, not fixture text that duplicates i18n strings.
+fixture 不要复制 i18n 文案；中英文标签通过页面渲染和 `messages.ts` 处理。
 
-- [ ] **Step 6: Verify**
+- [ ] **步骤 6：验证**
 
-Run:
+执行：
 
 ```bash
 cd apps/admin && npm test -- adminApi.test.ts
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -1143,106 +1143,111 @@ git commit -m "feat: add admin operations ui api contracts"
 
 ---
 
-## Task 8: Wire Command Center To Operations Read Model
+## 任务 8：把指挥中心接入运维读模型
 
-**Files:**
-- Modify `apps/admin/src/App.tsx`
-- Modify `apps/admin/src/pages/CommandCenter.tsx`
-- Modify `apps/admin/src/pages/CommandCenter.test.tsx`
-- Create `apps/admin/src/components/ActionDrawer.tsx`
-- Create `apps/admin/src/components/ActionDrawer.test.tsx`
-- Modify `apps/admin/src/i18n/messages.ts`
+**文件：**
+- 修改 `apps/admin/src/App.tsx`
+- 修改 `apps/admin/src/pages/CommandCenter.tsx`
+- 修改 `apps/admin/src/pages/CommandCenter.test.tsx`
+- 新增 `apps/admin/src/components/ActionDrawer.tsx`
+- 新增 `apps/admin/src/components/ActionDrawer.test.tsx`
+- 修改 `apps/admin/src/i18n/messages.ts`
 
-- [ ] **Step 1: Write page and drawer tests**
+- [ ] **步骤 1：写 page 与 drawer 测试**
 
-Add tests that prove:
+增加测试证明：
 
-- Command Center renders backend operation issues when `operationsData` is passed.
-- severity maps to existing status colors or stable class names.
-- clicking an issue opens `ActionDrawer`.
-- unavailable actions render disabled execution controls.
-- action drawer requires a reason before invoking an action.
-- Chinese and English labels render through existing i18n.
+- 传入 `operationsData` 时，Command Center 渲染后端 operations issue。
+- severity 映射到现有 status color 或稳定 class name。
+- 点击 issue 打开 `ActionDrawer`。
+- unavailable action 展示 disabled execution control。
+- action drawer 在没有 reason 时不会提交。
+- 中文和英文文案都通过现有 i18n 渲染。
 
-- [ ] **Step 2: Run failing tests**
+- [ ] **步骤 2：运行失败测试**
 
-Run:
+执行：
 
 ```bash
 cd apps/admin && npm test -- CommandCenter.test.tsx ActionDrawer.test.tsx
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 failed
 ```
 
-- [ ] **Step 3: Implement `ActionDrawer`**
+- [ ] **步骤 3：实现 `ActionDrawer`**
 
-Create `apps/admin/src/components/ActionDrawer.tsx`:
+新增 `apps/admin/src/components/ActionDrawer.tsx`。
 
-- props:
-  - `language`.
-  - `issue`.
-  - `isOpen`.
-  - `isSubmitting`.
-  - `onClose`.
-  - `onSubmit(reason)`.
-- local state:
-  - `reason`.
-  - validation error.
-- render:
-  - issue severity/status/reason.
-  - related resource.
-  - recommended action.
-  - audit preview containing action/resource/risk text.
-  - reason textarea.
-  - submit/cancel buttons.
+props：
 
-Do not add a separate visual theme; reuse `apps/admin/src/components/ui.tsx` and existing CSS tokens.
+- `language`。
+- `issue`。
+- `isOpen`。
+- `isSubmitting`。
+- `onClose`。
+- `onSubmit(reason)`。
 
-- [ ] **Step 4: Update Command Center**
+本地状态：
 
-In `CommandCenter.tsx`:
+- `reason`。
+- validation error。
 
-- Accept optional `operationsData`.
-- Render issue table from `operationsData.issues` when present.
-- Preserve existing dashboard-derived fallback for mock or API failure mode.
-- Use backend `severity` to select status color.
-- Use backend `recommendedAction`, not local guesses.
+渲染内容：
 
-- [ ] **Step 5: Load operations in `App.tsx`**
+- issue severity/status/reason。
+- related resource。
+- recommended action。
+- audit preview，包含 action/resource/risk 文案。
+- reason textarea。
+- submit/cancel buttons。
 
-In `App.tsx`:
+不要新增视觉主题；复用 `apps/admin/src/components/ui.tsx` 和现有 CSS token。
 
-- import `loadAdminOperations`.
-- add `operationsData` state initialized to `mockOperationsData`.
-- after dashboard/access live load succeeds, call operations endpoint with current `tenantScope`.
-- reload operations when `tenantScope` changes and live API is configured.
-- pass `operationsData` into `CommandCenter`.
+- [ ] **步骤 4：更新 Command Center**
 
-Avoid an infinite effect loop: use one bootstrap effect for dashboard/access and a separate effect keyed by `tenantScope` for operations.
+在 `CommandCenter.tsx` 中：
 
-- [ ] **Step 6: Verify**
+- 接收 optional `operationsData`。
+- 有 `operationsData.issues` 时用它渲染 issue table。
+- 保留 dashboard-derived fallback，支持 mock 或 API failure mode。
+- 用后端 `severity` 选择 status color。
+- 用后端 `recommendedAction`，不要在 UI 本地猜 action。
 
-Run:
+- [ ] **步骤 5：在 `App.tsx` 中加载 operations**
+
+在 `App.tsx` 中：
+
+- import `loadAdminOperations`。
+- 增加 `operationsData` state，初始值为 `mockOperationsData`。
+- dashboard/access live load 成功后，用当前 `tenantScope` 调 operations endpoint。
+- `tenantScope` 变化且 live API 已配置时重新加载 operations。
+- 把 `operationsData` 传给 `CommandCenter`。
+
+避免 effect 无限循环：dashboard/access bootstrap 用一个 effect，按 `tenantScope` 加载 operations 用另一个 effect。
+
+- [ ] **步骤 6：验证**
+
+执行：
 
 ```bash
 cd apps/admin && npm test -- CommandCenter.test.tsx ActionDrawer.test.tsx
 cd apps/admin && npm run build
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 vite build completes
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -1252,113 +1257,113 @@ git commit -m "feat: wire admin command center operations"
 
 ---
 
-## Task 9: Wire Tenant Detail, Audit Explorer, And Impersonation Sessions
+## 任务 9：接入租户详情、审计检索与代管会话
 
-**Files:**
-- Modify `apps/admin/src/App.tsx`
-- Modify `apps/admin/src/pages/TenantDetail.tsx`
-- Modify `apps/admin/src/pages/TenantDetail.test.tsx`
-- Modify `apps/admin/src/pages/AuditAccess.tsx`
-- Modify `apps/admin/src/pages/AuditAccess.test.tsx`
-- Modify `apps/admin/src/i18n/messages.ts`
+**文件：**
+- 修改 `apps/admin/src/App.tsx`
+- 修改 `apps/admin/src/pages/TenantDetail.tsx`
+- 修改 `apps/admin/src/pages/TenantDetail.test.tsx`
+- 修改 `apps/admin/src/pages/AuditAccess.tsx`
+- 修改 `apps/admin/src/pages/AuditAccess.test.tsx`
+- 修改 `apps/admin/src/i18n/messages.ts`
 
-- [ ] **Step 1: Write failing page tests**
+- [ ] **步骤 1：写失败的页面测试**
 
-Cover:
+覆盖：
 
-- Tenant Detail renders API tenant detail sections when passed.
-- Tenant Detail falls back to dashboard-derived data when API detail is absent.
-- Audit Explorer filters by tenant, actor, action, resource type, resource id, risk, and result.
-- Audit Explorer pagination uses `nextCursor`.
-- Impersonation sessions list active and ended sessions.
-- ending impersonation requires reason and calls the API handler.
-- already-ended `noop` result appears without changing the displayed original end time.
+- Tenant Detail 在传入 API tenant detail 时渲染对应 sections。
+- Tenant Detail 在 API detail 缺失时回退到 dashboard-derived data。
+- Audit Explorer 支持 tenant、actor、action、resource type、resource id、risk、result filters。
+- Audit Explorer pagination 使用 `nextCursor`。
+- Impersonation sessions 列出 active 和 ended sessions。
+- ending impersonation 必须输入 reason，并调用 API handler。
+- already-ended `noop` result 展示出来，但不改变原始 end time。
 
-- [ ] **Step 2: Run failing tests**
+- [ ] **步骤 2：运行失败测试**
 
-Run:
+执行：
 
 ```bash
 cd apps/admin && npm test -- TenantDetail.test.tsx AuditAccess.test.tsx
 ```
 
-Expected output before implementation:
+实现前预期输出：
 
 ```text
 failed
 ```
 
-- [ ] **Step 3: Load tenant detail in `App.tsx`**
+- [ ] **步骤 3：在 `App.tsx` 中加载 tenant detail**
 
-In `App.tsx`:
+在 `App.tsx` 中：
 
-- import `loadAdminTenantDetail`.
-- add `tenantDetailData` state.
-- when `activePage === "tenants"` and a selected tenant exists, load `/v1/admin/tenants/{tenant_id}`.
-- pass `tenantDetailData` into `TenantDetail`.
-- reset detail state when selected tenant changes.
+- import `loadAdminTenantDetail`。
+- 增加 `tenantDetailData` state。
+- 当 `activePage === "tenants"` 且存在 selected tenant 时，加载 `/v1/admin/tenants/{tenant_id}`。
+- 把 `tenantDetailData` 传给 `TenantDetail`。
+- selected tenant 变化时重置 detail state。
 
-- [ ] **Step 4: Update Tenant Detail page**
+- [ ] **步骤 4：更新 Tenant Detail 页面**
 
-In `TenantDetail.tsx`:
+在 `TenantDetail.tsx` 中：
 
-- prefer backend detail data for children/materials/weekly reports/speaking attempts/module settings/risk summary.
-- keep existing props and fallback behavior.
-- show embedded audit timeline only when audit data is passed by `App` or page state; do not silently fake audit rows.
+- 优先使用后端 detail data 展示 children/materials/weekly reports/speaking attempts/module settings/risk summary。
+- 保持现有 props 和 fallback 行为。
+- 只有 `App` 或 page state 传入 audit data 时才展示嵌入式 audit timeline，不伪造 audit rows。
 
-- [ ] **Step 5: Add Audit Explorer filters**
+- [ ] **步骤 5：增加 Audit Explorer filters**
 
-In `AuditAccess.tsx`:
+在 `AuditAccess.tsx` 中：
 
-- call new props for `onLoadAuditEvents(filters)`.
-- render filter controls using existing compact admin style.
-- show cursor pagination controls when `nextCursor` exists.
-- map risk/result to existing status styles.
+- 使用新的 `onLoadAuditEvents(filters)` prop。
+- 用现有紧凑 admin 风格渲染 filter controls。
+- `nextCursor` 存在时展示 cursor pagination controls。
+- risk/result 映射到现有 status styles。
 
-- [ ] **Step 6: Add impersonation list/end UI**
+- [ ] **步骤 6：增加 impersonation list/end UI**
 
-In `AuditAccess.tsx`:
+在 `AuditAccess.tsx` 中：
 
-- accept `impersonationSessions`.
-- display active/ended/expired status.
-- keep existing start impersonation flow.
-- add end flow with required reason.
-- call `onEndImpersonationSession(sessionId, reason)`.
-- display `actionResult.status` and `auditEvent` after success.
+- 接收 `impersonationSessions`。
+- 展示 active/ended/expired status。
+- 保留现有 start impersonation flow。
+- 增加 end flow，并要求 reason。
+- 调用 `onEndImpersonationSession(sessionId, reason)`。
+- 成功后展示 `actionResult.status` 和 `auditEvent`。
 
-- [ ] **Step 7: Wire API handlers in `App.tsx`**
+- [ ] **步骤 7：在 `App.tsx` 中接入 API handlers**
 
-Add live handlers:
+增加 live handlers：
 
-- `loadAdminAuditEvents`.
-- `loadAdminImpersonationSessions`.
-- `endAdminImpersonationSession`.
+- `loadAdminAuditEvents`。
+- `loadAdminImpersonationSessions`。
+- `endAdminImpersonationSession`。
 
-Update state after end:
+end 成功后的 state 更新：
 
-- replace the ended session with returned session payload if present.
-- prepend returned audit event to access/audit data.
-- preserve old session when result is `noop` and returned payload says no state changed.
+- 返回 session payload 时替换对应 session。
+- 把返回的 audit event prepend 到 access/audit data。
+- result 为 `noop` 且后端说明状态未变化时，保留原 session。
 
-- [ ] **Step 8: Verify**
+- [ ] **步骤 8：验证**
 
-Run:
+执行：
 
 ```bash
 cd apps/admin && npm test -- TenantDetail.test.tsx AuditAccess.test.tsx
 cd apps/admin && npm run build
 ```
 
-Expected output:
+预期输出：
 
 ```text
 passed
 vite build completes
 ```
 
-- [ ] **Step 9: Commit**
+- [ ] **步骤 9：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -1368,69 +1373,69 @@ git commit -m "feat: wire admin tenant audit impersonation views"
 
 ---
 
-## Task 10: Documentation And Full Verification
+## 任务 10：文档与完整验证
 
-**Files:**
-- Modify `services/api/README.md`
-- Modify `apps/admin/README.md` if it exists
-- Modify `docs/harness/mvp-readiness-checklist.md`
-- Modify `docs/superpowers/specs/2026-05-31-admin-operations-platform-phase3-design.md`
+**文件：**
+- 修改 `services/api/README.md`
+- 修改或新增 `apps/admin/README.md`
+- 修改 `docs/harness/mvp-readiness-checklist.md`
+- 修改 `docs/superpowers/specs/2026-05-31-admin-operations-platform-phase3-design.md`
 
-- [ ] **Step 1: Update backend documentation**
+- [ ] **步骤 1：更新后端文档**
 
-In `services/api/README.md`, document:
+在 `services/api/README.md` 中记录：
 
-- Phase 3 service modules and responsibilities.
-- `/v1/admin/operations` `issues` contract.
-- mutation `action_result` contract.
-- `source="database_snapshot"` limitation for worker-facing health.
-- verification command:
+- Phase 3 service module 与职责。
+- `/v1/admin/operations` 的 `issues` contract。
+- mutation `action_result` contract。
+- worker-facing health 的 `source="database_snapshot"` 限制。
+- 验证命令：
 
 ```bash
 make api-test
 ```
 
-- [ ] **Step 2: Update Admin UI documentation**
+- [ ] **步骤 2：更新 Admin UI 文档**
 
-If `apps/admin/README.md` exists, update it. If it does not exist, create it with:
+如果 `apps/admin/README.md` 已存在，就修改它；如果不存在，就新建并记录：
 
-- local environment variables:
-  - `VITE_ADMIN_API_BASE_URL`.
-  - `VITE_ADMIN_API_TOKEN`.
-- live fallback behavior.
-- supported Phase 3 screens:
-  - Command Center operations.
-  - Tenant Detail.
-  - Audit Explorer.
-  - Impersonation Sessions.
-- verification commands:
+- local environment variables：
+  - `VITE_ADMIN_API_BASE_URL`。
+  - `VITE_ADMIN_API_TOKEN`。
+- live fallback 行为。
+- Phase 3 已支持 screens：
+  - Command Center operations。
+  - Tenant Detail。
+  - Audit Explorer。
+  - Impersonation Sessions。
+- 验证命令：
 
 ```bash
 cd apps/admin && npm test
 cd apps/admin && npm run build
 ```
 
-- [ ] **Step 3: Update readiness checklist**
+- [ ] **步骤 3：更新 readiness checklist**
 
-In `docs/harness/mvp-readiness-checklist.md`, add a short Phase 3 admin evidence item:
+在 `docs/harness/mvp-readiness-checklist.md` 增加 Phase 3 admin evidence item：
 
-- backend service tests.
-- API compatibility.
-- Admin UI test/build.
-- explicit note that SSO, DB-backed role mutation, and worker broker introspection are still outside Phase 3.
+- backend service tests。
+- API compatibility。
+- Admin UI test/build。
+- 明确说明 SSO、DB-backed role mutation、worker broker introspection 仍不属于 Phase 3。
 
-- [ ] **Step 4: Update spec status**
+- [ ] **步骤 4：更新 spec 状态**
 
-At the bottom of `docs/superpowers/specs/2026-05-31-admin-operations-platform-phase3-design.md`, add an implementation status note with:
+在 `docs/superpowers/specs/2026-05-31-admin-operations-platform-phase3-design.md` 底部增加 implementation status note，包含：
 
-- implemented service modules.
-- implemented UI pages.
-- verification commands run.
-- remaining deferred production items from the non-goals.
+- 已实现 service modules。
+- 已实现 UI pages。
+- 已运行 verification commands。
+- non-goals 中延后的 production items。
 
-- [ ] **Step 5: Run full verification**
+- [ ] **步骤 5：运行完整验证**
 
-Run:
+执行：
 
 ```bash
 make api-test
@@ -1439,7 +1444,7 @@ cd apps/admin && npm run build
 git diff --check
 ```
 
-Expected output:
+预期输出：
 
 ```text
 make api-test completes successfully
@@ -1448,11 +1453,11 @@ vite build completes
 git diff --check prints no output
 ```
 
-If `services/api/.venv/bin/pytest` or `node_modules` is missing, run the repo's documented dependency setup command first. Do not mark verification complete until the actual test/build commands have run successfully in this worktree.
+如果 `services/api/.venv/bin/pytest` 或 `node_modules` 缺失，先运行仓库文档中的依赖安装命令。只有实际测试和 build 在当前工作树成功运行后，才可以标记验证完成。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
-Run:
+执行：
 
 ```bash
 git status --short
@@ -1462,30 +1467,30 @@ git commit -m "docs: document admin operations platform phase three"
 
 ---
 
-## Final Review Checklist
+## 最终复核清单
 
-- [ ] `services/api/app/api/routes/admin.py` is materially smaller or its local helper surface is materially reduced.
-- [ ] No existing `/v1/admin/...` route path is renamed.
-- [ ] Phase 2 response keys remain present.
-- [ ] `/v1/admin/operations` includes `issues`.
-- [ ] mutation responses include `required_permission`, `action_result`, and `audit_event`.
-- [ ] every mutation still requires reason, exact permission, tenant scope, and audit write.
-- [ ] no-disclosure 404 behavior remains covered by tests.
-- [ ] Admin UI keeps Chinese/English language switching.
-- [ ] Admin UI keeps the warm LearningEnglish theme and dense operations-table style.
-- [ ] Admin UI uses backend severity/status vocabulary instead of local issue guessing.
-- [ ] docs explicitly state that SSO, DB-backed role mutation, and real broker introspection are outside Phase 3.
-- [ ] `make api-test` passes.
-- [ ] `cd apps/admin && npm test` passes.
-- [ ] `cd apps/admin && npm run build` passes.
-- [ ] `git diff --check` passes.
+- [ ] `services/api/app/api/routes/admin.py` 明显瘦身，或本地 helper surface 明显减少。
+- [ ] 没有重命名现有 `/v1/admin/...` route path。
+- [ ] Phase 2 response keys 仍然存在。
+- [ ] `/v1/admin/operations` 包含 `issues`。
+- [ ] mutation response 包含 `required_permission`、`action_result`、`audit_event`。
+- [ ] 每个 mutation 仍要求 reason、exact permission、tenant scope、audit write。
+- [ ] no-disclosure 404 行为有测试覆盖。
+- [ ] Admin UI 保留中文/英文语言切换。
+- [ ] Admin UI 保留 LearningEnglish 温暖品牌识别与高密度运维表格风格。
+- [ ] Admin UI 使用后端 severity/status 词汇，不在本地猜 issue 状态。
+- [ ] 文档明确 SSO、DB-backed role mutation、真实 broker introspection 不属于 Phase 3。
+- [ ] `make api-test` 通过。
+- [ ] `cd apps/admin && npm test` 通过。
+- [ ] `cd apps/admin && npm run build` 通过。
+- [ ] `git diff --check` 通过。
 
-## Suggested Execution Order
+## 建议执行顺序
 
-1. Backend extraction first: Tasks 1 through 4.
-2. Operations and action contract: Tasks 5 and 6.
-3. Admin UI API contract: Task 7.
-4. Admin UI screen wiring: Tasks 8 and 9.
-5. Documentation and full verification: Task 10.
+1. 先做后端抽取：任务 1 到任务 4。
+2. 再做 operations 与 action contract：任务 5 和任务 6。
+3. 再做 Admin UI API contract：任务 7。
+4. 再做 Admin UI screen wiring：任务 8 和任务 9。
+5. 最后做文档与完整验证：任务 10。
 
-This order keeps each commit reviewable and prevents the UI from binding to temporary backend shapes.
+这个顺序能让每次提交都保持可审查，同时避免 UI 绑定临时后端 shape。
