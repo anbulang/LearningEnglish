@@ -4,6 +4,7 @@ import {
   archiveAdminMaterial,
   loadAdminAccess,
   loadAdminDashboard,
+  loadAdminOperations,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
   startAdminImpersonationSession,
@@ -11,8 +12,8 @@ import {
   type AdminAccessData,
   type AdminDashboardData
 } from "./domain/adminApi";
-import { mockMaterials, mockModuleSettings, mockProviderPolicies, mockTenants } from "./domain/mockData";
-import type { Language, TenantScope } from "./domain/types";
+import { mockMaterials, mockModuleSettings, mockOperationsData, mockProviderPolicies, mockTenants } from "./domain/mockData";
+import type { AdminOperationsData, Language, TenantScope } from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
 import { AuditAccess } from "./pages/AuditAccess";
@@ -45,6 +46,7 @@ export function App() {
     providerPolicies: mockProviderPolicies,
     moduleSettings: mockModuleSettings
   });
+  const [operationsData, setOperationsData] = useState<AdminOperationsData>(mockOperationsData);
   const [accessData, setAccessData] = useState<AdminAccessData | null>(null);
   const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
   const t = createTranslator(language);
@@ -90,6 +92,35 @@ export function App() {
       isCancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      setOperationsData(mockOperationsData);
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      try {
+        const operations = await loadAdminOperations({
+          apiBaseUrl,
+          adminToken,
+          tenantScope
+        });
+        if (!isCancelled) {
+          setOperationsData(operations);
+        }
+      } catch {
+        if (!isCancelled) {
+          setOperationsData(mockOperationsData);
+        }
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [tenantScope]);
 
   async function handleArchiveMaterial(materialId: string, reason: string) {
     const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
@@ -257,6 +288,7 @@ export function App() {
           tenantScope={tenantScope}
           tenants={dashboardData.tenants}
           materials={dashboardData.materials}
+          operationsData={operationsData}
         />
       )}
       {activePage === "tenants" && (

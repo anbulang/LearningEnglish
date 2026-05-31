@@ -1,7 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { mockMaterials, mockTenants } from "../domain/mockData";
+import { mockMaterials, mockOperationsData, mockTenants } from "../domain/mockData";
 import { CommandCenter } from "./CommandCenter";
 
 describe("CommandCenter", () => {
@@ -72,5 +73,31 @@ describe("CommandCenter", () => {
 
     expect(screen.queryByText("SLA Boundary 180")).not.toBeInTheDocument();
     expect(screen.getByText("SLA Boundary 181")).toBeInTheDocument();
+  });
+
+  it("renders backend operations issues and opens the action drawer", async () => {
+    render(
+      <CommandCenter
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        operationsData={mockOperationsData}
+      />
+    );
+
+    expect(screen.getByText("Parse failed")).toBeInTheDocument();
+    expect(screen.getByText("OCR request failed before draft assets were generated.")).toBeInTheDocument();
+    expect(screen.getByText("retry_material_job")).toBeInTheDocument();
+
+    const issueRow = screen.getByText("Parse failed").closest("tr");
+    expect(issueRow).not.toBeNull();
+    expect(within(issueRow as HTMLElement).getByText("critical")).toHaveClass("danger");
+
+    await userEvent.click(screen.getByRole("button", { name: "Open action for Parse failed" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Action review" });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("material_parse_job")).toBeInTheDocument();
   });
 });

@@ -810,6 +810,74 @@ td small {
   font-weight: 800;
 }
 
+.action-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(37 25 16 / 22%);
+}
+
+.action-drawer {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  width: min(460px, 100vw);
+  min-height: 100vh;
+  padding: 24px;
+  border-left: 1px solid var(--outline-warm);
+  background: var(--paper-white);
+  box-shadow: -18px 0 36px rgb(37 25 16 / 14%);
+}
+
+.audit-preview {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--outline-warm);
+  border-radius: 8px;
+  background: #fff7f2;
+}
+
+.audit-preview strong {
+  color: var(--cocoa-ink);
+}
+
+.audit-preview span {
+  color: var(--dust-brown);
+  overflow-wrap: anywhere;
+}
+
+.drawer-reason {
+  display: grid;
+  gap: 8px;
+  color: var(--cocoa-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.drawer-reason textarea {
+  min-height: 112px;
+  resize: vertical;
+  border: 1px solid var(--outline-warm);
+  border-radius: 8px;
+  color: var(--cocoa-ink);
+  background: var(--paper-white);
+  padding: 10px 12px;
+}
+
+.form-error {
+  margin: -6px 0 0;
+  color: var(--cocoa-coral);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.form-error.neutral {
+  color: var(--dust-brown);
+}
+
 .provider-form {
   display: grid;
   gap: 12px;
