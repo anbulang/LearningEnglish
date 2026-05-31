@@ -18,11 +18,16 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 - `GET /v1/admin/dashboard?tenant_scope=all`
 - `GET /v1/admin/access?tenant_scope=all`
+- `GET /v1/admin/audit-events?tenant_scope=all`
+- `GET /v1/admin/tenants/{tenant_id}?tenant_scope=all`
+- `GET /v1/admin/operations?tenant_scope=all`
 - `POST /v1/admin/material-jobs/{job_id}/retry?tenant_scope=all`
 - `POST /v1/admin/materials/{material_id}/archive?tenant_scope=all`
 - `POST /v1/admin/providers/policies?tenant_scope=all`
 - `POST /v1/admin/tenants/{tenant_id}/modules/{module_key}?tenant_scope=all`
+- `GET /v1/admin/impersonation-sessions?tenant_scope=all&status=active`
 - `POST /v1/admin/impersonation-sessions?tenant_scope=all`
+- `POST /v1/admin/impersonation-sessions/{session_id}/end?tenant_scope=all`
 - `GET/POST /v1/children`
 - `GET/POST /v1/materials`
 - `GET /v1/materials/{material_id}`
@@ -43,7 +48,37 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 ## 当前行为
 
-- Admin read API 需要 `X-Admin-Token`，默认本地 token 为 `local-admin-token`。`/v1/admin/dashboard` 只读聚合当前数据库中的家长、孩子、讲义和解析任务，`/v1/admin/access` 返回当前管理员、权限和最近审计事件；生产级 admin session、role mutation、permission mutation 后续补齐。
+- Admin API 需要 `X-Admin-Token`。本地和测试环境可以继续显式设置 `ADMIN_API_TOKEN=local-admin-token`，它会解析成 `admin_local`，并拥有 `ADMIN_PERMISSIONS` 的完整本地权限集合。
+- 生产化 admin token 建议使用 `ADMIN_API_CREDENTIALS_JSON`，不要把明文 token 写进仓库或日志。每个 credential 包含 `id`、`display_name`、`email`、`role`、`status`、`permissions` 和 `token_sha256`；后端用请求 token 的 SHA-256 与 `token_sha256` 做 constant-time compare。配置 JSON 后，actor 只拥有 credential 中列出的 exact permissions；`status != active` 返回 `403 Admin user is inactive`，没有任何 admin credential 时返回 `503 Admin API token is not configured`。
+
+  ```bash
+  python - <<'PY'
+  import getpass
+  import hashlib
+
+  raw_token = getpass.getpass("Admin token: ")
+  print(hashlib.sha256(raw_token.encode("utf-8")).hexdigest())
+  PY
+  ```
+
+  ```bash
+  export ADMIN_API_CREDENTIALS_JSON='[{"id":"admin_ops","display_name":"Ops Admin","email":"ops@example.com","role":"Operations","status":"active","permissions":["admin.dashboard.read","admin.audit.read","admin.operations.read","admin.impersonation.read","admin.impersonation.end"],"token_sha256":"<64-char-sha256>"}]'
+  ```
+
+- 当前 admin permission 边界：
+  - `admin.dashboard.read`：读取 `/v1/admin/dashboard`，并可作为 `/v1/admin/operations` 的兼容读权限。
+  - `admin.audit.read`：读取 `/v1/admin/access` 的最近审计记录，以及 `/v1/admin/audit-events` 独立审计查询。
+  - `admin.tenant.read`：读取 `/v1/admin/tenants/{tenant_id}` 租户详情。
+  - `admin.operations.read`：读取 `/v1/admin/operations` 运维快照；这是 Phase 2 新增权限。
+  - `admin.material.archive`、`admin.material.retry`、`admin.provider.override`、`admin.tenant.module.toggle`：受控 mutation，必须提供 `reason`，成功后写入 high-risk `AuditEvent`。
+  - `admin.impersonation.start`、`admin.impersonation.read`、`admin.impersonation.end`：受监督支持会话的 start/list/end 权限；`admin.impersonation.read` 和 `admin.impersonation.end` 是 Phase 2 新增权限。start/end 必须提供 `reason`，接口不返回 parent access token 或 refresh token。
+  - `admin.material.read` 保留在默认本地权限集合中；当前没有独立 endpoint 单独消费该权限。
+- `/v1/admin/dashboard` 只读聚合当前数据库中的家长、孩子、讲义和解析任务，`/v1/admin/access` 返回当前管理员、exact permissions 和最近审计事件；生产级 admin login、role mutation、permission mutation 后续补齐。
+- `GET /v1/admin/audit-events` 需要 `admin.audit.read`，支持 `tenant_scope`、`action`、`resource_type`、`risk_level`、`result`、`actor_id` 过滤；`limit` 会夹在 `1..100`，`cursor` 是上一页最后一条 audit id，排序为 `created_at desc, id desc`。`tenant_scope=all` 返回所有非空 scope，指定 tenant scope 时只返回 `all` 和该 tenant 的事件。
+- `GET /v1/admin/tenants/{tenant_id}` 需要 `admin.tenant.read`，返回单租户 read model：`tenant`、`summary`、`children`、`materials`、`provider_policy`、`module_settings`、`weekly_reports`、`speaking_attempts`、`risk_summary`、本次读操作 `audit_event` 和 `access_context`。如果 actor 同时有 `admin.audit.read`，`access_context.recent_audit_events` 会包含该租户近期审计；否则为空。
+- `GET /v1/admin/operations` 需要 `admin.operations.read` 或兼容的 `admin.dashboard.read`，返回 `summary`、`material_parse_jobs`、`media_generation`、`speaking_attempts`、`provider_configuration`、`module_toggle_coverage`、本次读操作 `audit_event` 和 `access_context`。运维 readiness 只从数据库状态和配置摘要推导，不做 Celery broker introspection；provider secret 只返回 `secret_presence` 布尔值，不返回 secret 明文。
+- `GET /v1/admin/impersonation-sessions` 需要 `admin.impersonation.read`，按 `tenant_scope` 和 `status=active|ended|all` 查询，最多返回 50 条，并写入 low-risk `admin.impersonation.read` audit event。`POST /v1/admin/impersonation-sessions/{session_id}/end` 需要 `admin.impersonation.end` 和 `reason`，active session 会被置为 `ended` 并写入 high-risk `admin.impersonation.end` audit event；重复结束已结束 session 会保留原 `ended_at` 并写入 `admin.impersonation.end.already_ended` noop audit event。
+- Tenant scope 遵循 no-disclosure 规则：指定 `tenant_scope` 时，只允许访问该 tenant 的详情、材料、操作快照和 impersonation session；越权或不存在的单资源请求返回同类 404，不暴露其它 tenant 是否存在。
 - Admin material job retry 是受控 mutation：必须提供 `reason`，需要 `admin.material.retry` 权限，会把解析任务和材料重新置为 `processing`、重新排队识别任务，并写入 high-risk `AuditEvent`。
 - Admin material archive 是受控 mutation：必须提供 `reason`，需要 `admin.material.archive` 权限，会把材料置为 `archived`、清理用户可见衍生内容，并写入 high-risk `AuditEvent`。
 - Admin provider policy override 是受控 mutation：必须提供 `reason`，需要 `admin.provider.override` 权限，会写入租户级 `TenantProviderPolicy`，并写入 high-risk `AuditEvent`；接口只返回 provider key、fallback、guardrail 和 source，不返回 secret 明文。

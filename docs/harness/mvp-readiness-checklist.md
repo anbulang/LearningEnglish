@@ -43,6 +43,16 @@
 - [x] 移动端 AI 校对页对 `processing` job 持续自动轮询，直到进入 `needs_review`，且仍保留手动“刷新结果”兜底入口
 - [x] 首页和资料库对未完成资料统一进入 AI 校对页，不再提前进入课程详情
 
+### E. Admin 后端 Phase 2
+- [x] configured admin actors 已由 `ADMIN_API_CREDENTIALS_JSON`、SHA-256 `token_sha256`、`status` 和 exact `permissions` 覆盖；回归入口为 `services/api/tests/test_admin_auth_config.py` 和 `services/api/tests/test_admin_phase2_api.py`
+- [x] `admin.operations.read`、`admin.impersonation.read`、`admin.impersonation.end` 已进入默认本地 admin 权限集合，并在 Phase 2 API 测试中覆盖 allow/deny 边界；既有 mutation 权限仍要求 `reason` 和 high-risk audit
+- [x] `GET /v1/admin/audit-events` 已覆盖 tenant scope、`action`、`resource_type`、`risk_level`、`result`、`actor_id` 过滤，以及 `limit` 夹取和 cursor 分页
+- [x] `GET /v1/admin/tenants/{tenant_id}` 已覆盖单租户 read model、tenant scope no-disclosure、recent audit history 权限门控和 bounded latest lists
+- [x] `GET /v1/admin/operations` 已覆盖 material jobs、media generation、speaking attempts、provider runtime readiness、secret presence 布尔值和 tenant override bounded lists；当前不做 Celery broker introspection
+- [x] `GET /v1/admin/impersonation-sessions` 和 `POST /v1/admin/impersonation-sessions/{session_id}/end` 已覆盖 list/end/idempotent end、tenant scope no-disclosure 和 audit 记录
+- [ ] Admin UI 尚未接入 Phase 2 新读模型；`apps/admin` 当前仍主要调用 Phase 1 live endpoints：dashboard、access、material retry/archive、provider policy override、tenant module toggle、impersonation start
+- [ ] 完整 admin login/SSO、DB token rotation、role mutation 和 permission mutation 仍不是当前 Phase 2 能力
+
 ## 本次验收记录
 执行人：Codex
 验收时间：2026-04-29，iOS IPA 与真机补充验收：2026-05-01，AI 校对轮询真机补测：2026-05-22
@@ -236,6 +246,11 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `services/workers/.venv/bin/python -m pytest services/workers/tests -q`：`9 passed`
 - `cd apps/mobile && flutter test`：`35 passed`
 - `cd apps/mobile && flutter analyze`：`No issues found`
+
+2026-05-29 Admin Phase 2 文档收口验证：
+- `make api-test`：`191 passed`
+- `git diff --check`：无输出
+- owned docs/config secret scan：未发现 admin test token、provider test key 或 OpenAI-style secret 明文
 
 2026-05-23 P0 收口补充：
 - [x] 资料跳转规则已抽到 `material_navigation.dart`，首页和资料库共用同一套 ready / review 路由判断。
