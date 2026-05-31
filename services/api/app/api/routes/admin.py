@@ -51,11 +51,11 @@ from app.services.admin_permissions import (
     has_permission,
     require_permission,
 )
+from app.services.admin_read_models import build_admin_dashboard, build_admin_tenant_detail
 from app.services.admin_scope import (
     audit_scope_filter as _audit_scope_filter,
     ensure_admin_tenant_scope as _ensure_admin_tenant_scope,
     ensure_tenant_in_scope,
-    get_tenant_or_404,
     impersonation_session_scope_filter as _impersonation_session_scope_filter,
     tenant_child_scope_filter as _tenant_child_scope_filter,
     tenant_module_setting_scope_filter as _tenant_module_setting_scope_filter,
@@ -131,42 +131,7 @@ def get_admin_dashboard(
     require_permission(actor, ADMIN_DASHBOARD_READ)
 
     _ensure_admin_user(db, actor)
-    tenants = db.scalars(select(ParentAccountModel).order_by(ParentAccountModel.created_at.asc())).all()
-    tenant_ids = {tenant.id for tenant in tenants}
-    if tenant_scope != "all" and tenant_scope not in tenant_ids:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant scope not found")
-
-    scoped_tenants = tenants if tenant_scope == "all" else [tenant for tenant in tenants if tenant.id == tenant_scope]
-    scoped_tenant_ids = {tenant.id for tenant in scoped_tenants}
-    children = db.scalars(
-        select(ChildProfileModel).where(ChildProfileModel.parent_account_id.in_(scoped_tenant_ids or [""]))
-    ).all()
-    child_by_id = {child.id: child for child in children}
-    children_by_parent = _count_children_by_parent(children)
-    material_rows = db.execute(
-        select(CourseMaterialModel, ChildProfileModel, ParentAccountModel)
-        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
-        .join(ParentAccountModel, ParentAccountModel.id == ChildProfileModel.parent_account_id)
-        .where(ChildProfileModel.parent_account_id.in_(scoped_tenant_ids or [""]))
-        .order_by(CourseMaterialModel.updated_at.desc())
-    ).all()
-    material_ids = [row[0].id for row in material_rows]
-    jobs = db.scalars(select(MaterialParseJobModel).where(MaterialParseJobModel.material_id.in_(material_ids or [""]))).all()
-    job_by_material = {job.material_id: job for job in jobs}
-    materials = [
-        _admin_material_payload(material, child, parent, job_by_material.get(material.id))
-        for material, child, parent in material_rows
-    ]
-    policy_rows = db.scalars(
-        select(TenantProviderPolicyModel)
-        .where(TenantProviderPolicyModel.tenant_id.in_(scoped_tenant_ids or [""]))
-        .order_by(TenantProviderPolicyModel.updated_at.desc())
-    ).all()
-    module_rows = db.scalars(
-        select(TenantModuleSettingModel)
-        .where(TenantModuleSettingModel.tenant_id.in_(scoped_tenant_ids or [""]))
-        .order_by(TenantModuleSettingModel.updated_at.desc())
-    ).all()
+    dashboard = build_admin_dashboard(db, tenant_scope)
     _record_audit_event(
         db,
         actor=actor,
@@ -178,13 +143,7 @@ def get_admin_dashboard(
         result="success",
         trace_id=_trace_id(request),
     )
-
-    return {
-        "tenants": [_admin_tenant_payload(tenant, children_by_parent.get(tenant.id, 0), materials) for tenant in scoped_tenants],
-        "materials": materials,
-        "provider_policies": [_global_provider_policy(), *[_tenant_provider_policy_payload(policy) for policy in policy_rows]],
-        "module_settings": _module_settings_payload(scoped_tenants, module_rows),
-    }
+    return dashboard
 
 
 @router.get("/operations")
@@ -307,61 +266,17 @@ def get_admin_tenant_detail(
     db: Session = Depends(get_db),
 ) -> dict:
     require_permission(actor, ADMIN_TENANT_READ)
-    tenant = get_tenant_or_404(db, tenant_scope, tenant_id)
 
     _ensure_admin_user(db, actor)
-    children = db.scalars(
-        select(ChildProfileModel)
-        .where(ChildProfileModel.parent_account_id == tenant.id)
-        .order_by(ChildProfileModel.created_at.asc(), ChildProfileModel.id.asc())
-    ).all()
-    child_by_id = {child.id: child for child in children}
-    child_ids = [child.id for child in children]
-    material_counts = _tenant_material_status_counts(db, child_ids)
-    materials = _latest_tenant_materials(db, child_ids)
-    recent_material_ids = [material.id for material in materials]
-    jobs = db.scalars(
-        select(MaterialParseJobModel)
-        .where(MaterialParseJobModel.material_id.in_(recent_material_ids or [""]))
-        .order_by(MaterialParseJobModel.started_at.desc(), MaterialParseJobModel.id.desc())
-    ).all()
-    job_by_material = {job.material_id: job for job in jobs}
-    job_counts = _tenant_job_status_counts(db, tenant.id)
-    stale_processing_jobs = _tenant_stale_processing_job_count(db, tenant.id)
-    media_failure_count = _tenant_media_failure_count(db, tenant.id)
-    policy = db.scalar(select(TenantProviderPolicyModel).where(TenantProviderPolicyModel.tenant_id == tenant.id))
-    module_rows = db.scalars(
-        select(TenantModuleSettingModel)
-        .where(TenantModuleSettingModel.tenant_id == tenant.id)
-        .order_by(TenantModuleSettingModel.updated_at.desc())
-    ).all()
-    latest_reports = _latest_weekly_reports(db, child_ids)
-    weekly_report_aggregate = _weekly_report_aggregate(db, child_ids)
-    latest_report_by_child = _latest_report_by_child(db, child_ids)
-    latest_attempts = _latest_speaking_attempts(db, child_ids)
-    speaking_status_counts = _speaking_attempt_status_counts(db, child_ids)
-    speaking_average_score = _speaking_attempt_average_score(db, child_ids)
-    attempt_count_by_child = _speaking_attempt_counts_by_child(db, child_ids)
-
-    material_payloads = [
-        _admin_material_payload(material, child_by_id[material.child_id], tenant, job_by_material.get(material.id))
-        for material in materials
-        if material.child_id in child_by_id
-    ]
-    risk_summary = _tenant_risk_summary(
-        media_failure_count,
-        material_counts,
-        job_counts,
-        stale_processing_jobs,
-        speaking_status_counts,
-    )
+    detail = build_admin_tenant_detail(db, tenant_scope, tenant_id)
+    normalized_tenant_id = detail["tenant"]["id"]
     audit_event = _record_audit_event(
         db,
         actor=actor,
-        tenant_scope=tenant.id,
+        tenant_scope=normalized_tenant_id,
         action="admin.tenant.read",
         resource_type="tenant",
-        resource_id=tenant.id,
+        resource_id=normalized_tenant_id,
         risk_level="low",
         result="success",
         trace_id=_trace_id(request),
@@ -370,7 +285,7 @@ def get_admin_tenant_detail(
     if has_permission(actor, ADMIN_AUDIT_READ):
         recent_audit_events = db.scalars(
             select(AdminAuditEventModel)
-            .where(_audit_scope_filter(tenant.id))
+            .where(_audit_scope_filter(normalized_tenant_id))
             .order_by(AdminAuditEventModel.created_at.desc(), AdminAuditEventModel.id.desc())
             .limit(TENANT_DETAIL_LATEST_LIMIT)
         ).all()
@@ -378,19 +293,7 @@ def get_admin_tenant_detail(
             recent_audit_events = [audit_event, *recent_audit_events[: TENANT_DETAIL_LATEST_LIMIT - 1]]
 
     return {
-        "required_permission": "admin.tenant.read",
-        "tenant": _admin_tenant_detail_payload(tenant, risk_summary["risk_level"]),
-        "summary": _tenant_summary_payload(children, material_counts),
-        "children": [
-            _admin_child_payload(child, latest_report_by_child.get(child.id), attempt_count_by_child.get(child.id, 0))
-            for child in children
-        ],
-        "materials": material_payloads,
-        "provider_policy": _effective_tenant_provider_policy_payload(tenant.id, policy),
-        "module_settings": _module_settings_payload([tenant], module_rows),
-        "weekly_reports": _weekly_report_payload(latest_reports, weekly_report_aggregate),
-        "speaking_attempts": _speaking_attempt_payload(latest_attempts, speaking_status_counts, speaking_average_score),
-        "risk_summary": risk_summary,
+        **detail,
         "audit_event": _audit_event_payload(audit_event),
         "access_context": _access_context_payload(actor, recent_audit_events),
     }
