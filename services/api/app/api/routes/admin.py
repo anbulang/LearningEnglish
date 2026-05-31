@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
@@ -33,6 +29,7 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus, MediaGenerationStatus, SpeakingAttemptStatus
+from app.services.admin_identity import AdminActor, resolve_admin_actor
 from app.services.job_queue import enqueue_material_job
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -62,26 +59,6 @@ OPERATIONS_STALE_THRESHOLD_MINUTES = 30
 PROVIDER_OVERRIDE_SAMPLE_LIMIT = 5
 IMPERSONATION_SESSION_LATEST_LIMIT = 50
 IMPERSONATION_SESSION_STATUSES = {"active", "ended", "all"}
-
-
-@dataclass(frozen=True)
-class AdminActor:
-    id: str
-    display_name: str
-    email: str
-    role: str
-    status: str
-    permissions: list[str]
-
-
-class AdminCredential(BaseModel):
-    id: str
-    display_name: str
-    email: str
-    role: str
-    status: str = "active"
-    permissions: list[str] = []
-    token_sha256: str
 
 
 class AdminArchiveMaterialRequest(BaseModel):
@@ -120,59 +97,12 @@ def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> 
     if not x_admin_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing admin token")
     settings = get_settings()
-    actor = _resolve_admin_actor(settings, x_admin_token)
+    actor = resolve_admin_actor(settings, x_admin_token, include_inactive=True)
     if actor is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin token")
     if actor.status != "active":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin user is inactive")
     return actor
-
-
-def _resolve_admin_actor(settings, raw_token: str) -> Optional[AdminActor]:
-    credentials = _configured_admin_credentials(settings.admin_api_credentials_json)
-    if credentials is not None:
-        token_sha256 = _admin_token_hash(raw_token)
-        for credential in credentials:
-            credential_hash = credential.token_sha256.strip().lower()
-            if hmac.compare_digest(token_sha256, credential_hash):
-                return AdminActor(
-                    id=credential.id,
-                    display_name=credential.display_name,
-                    email=credential.email,
-                    role=credential.role,
-                    status=credential.status,
-                    permissions=credential.permissions,
-                )
-        return None
-
-    if not settings.admin_api_token:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Admin API token is not configured")
-    if not hmac.compare_digest(raw_token, settings.admin_api_token):
-        return None
-    return AdminActor(
-        id="admin_local",
-        display_name="Local Platform Admin",
-        email="admin@learningenglish.local",
-        role="Platform Owner",
-        status="active",
-        permissions=ADMIN_PERMISSIONS,
-    )
-
-
-def _configured_admin_credentials(credentials_json: str) -> Optional[list[AdminCredential]]:
-    if not credentials_json:
-        return None
-    try:
-        raw_credentials = json.loads(credentials_json)
-        if not isinstance(raw_credentials, list):
-            raise ValueError("admin credentials must be a list")
-        return [AdminCredential.model_validate(item) for item in raw_credentials]
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Admin credentials are invalid")
-
-
-def _admin_token_hash(raw_token: str) -> str:
-    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
 @router.get("/dashboard")
