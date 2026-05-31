@@ -593,7 +593,19 @@ def _image_prompt(asset: LearningAsset) -> str:
 
 
 def _pronunciation_text(asset: LearningAsset) -> str:
-    return asset.pronunciation_text.strip() or asset.text.strip()
+    candidate = asset.pronunciation_text.strip()
+    text = asset.text.strip()
+    if not candidate or _looks_like_phonetic_notation(candidate):
+        return text
+    return candidate
+
+
+def _looks_like_phonetic_notation(value: str) -> bool:
+    stripped = value.strip()
+    return len(stripped) >= 2 and (
+        (stripped.startswith("/") and stripped.endswith("/"))
+        or (stripped.startswith("[") and stripped.endswith("]"))
+    )
 
 
 def _media_object_key(material_id: str, asset_id: str, stem: str, extension: str) -> str:
