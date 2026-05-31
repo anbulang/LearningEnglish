@@ -62,7 +62,7 @@ make harness-capture-ios-screen SCREEN=login-screen
 | `dist/harness/HN-012/` | 真机上传识别 | `real-device-summary.json`、`real-device-job-final.json`、`real-device-material-detail.json` | `docs/harness/upload-recognition-loop.md` |
 | `dist/harness/HN-014/` | 学习资产自动生成 | `job-learning-assets.json`、`material-learning-assets.json`、`lesson-learning-assets.png` | `docs/harness/upload-recognition-loop.md` |
 | `dist/harness/HN-015/` | 资料删除 | `material-delete-api.log`、`material-delete-worker.log`、`material-delete-screen.png` | `docs/harness/upload-recognition-loop.md` |
-| `dist/harness/HN-016A/` | DashScope 媒体 provider | `dashscope-provider-smoke-summary.json`、`worker-dashscope-real-summary.json`、课程详情与 App shell 截图 | `docs/harness/provider-readiness-runbook.md` |
+| `dist/harness/HN-016A/` | Qwen 识别 + DashScope 媒体 provider | `qwen-material-smoke-summary.json`、`dashscope-provider-smoke-summary.json`、`worker-dashscope-real-summary.json`、`worker-reference-crop.png`、课程详情与 App shell 截图 | `docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-017/` | 口语评分 | `dashscope-worker-smoke-summary.json`、`public-uploads-tunnel-smoke-summary.json`、`real-device-speaking-summary.json`、真机结果页截图 | `docs/harness/hn017-speaking-readiness-summary.md`、`docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-018/` | 独立报告页 | `weekly-report.json`、`summary.json`、`reports-screen.png` | `docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-019/`（预期目录，待生成） | 真机回归与 evidence 治理 | 首次按 `device-regression-runbook.md` 复跑后生成 R0/R1/R2/R3 summary 和 `evidence-index.json` | `docs/harness/device-regression-runbook.md`、`docs/harness/evidence-archive-policy.md` |

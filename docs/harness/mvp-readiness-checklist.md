@@ -222,7 +222,9 @@ make harness-capture-ios-screen SCREEN=report-screen
 
 - HN-016 真实媒体 provider 证据：`dist/harness/HN-016/`
 - HN-016A DashScope 国内媒体 provider 证据：`dist/harness/HN-016A/`
+  - 已有：`qwen-material-smoke-summary.json`，证明 Qwen-VL 真实讲义识别、图片级记录、learning assets、课程知识包摘要和 bbox 兜底链路。
   - 已有：`dashscope-provider-smoke-summary.json`、`dashscope-reference-edit-smoke-summary.json`、`worker-dashscope-real-summary.json`、生成图片与 US/UK TTS 文件。
+  - 已有：`worker-reference-crop.png`，证明 worker 使用讲义 `source_bbox` 裁剪参考图并放大到 DashScope image edit 最小尺寸后再图生图。
   - 已有：课程详情页展示真实 DashScope 图片和音频状态的 widget UI 截图 `lesson-detail-dashscope-media-screen.png`。
   - 已有：iOS 模拟器完整 App shell 截图 `ios-simulator-app-shell-lesson-detail-dashscope-media-screen.png` 和摘要 `ios-simulator-app-shell-summary.json`。
   - 复现步骤：`docs/harness/provider-readiness-runbook.md`。

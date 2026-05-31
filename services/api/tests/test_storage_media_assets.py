@@ -108,7 +108,9 @@ def test_build_reference_image_crops_source_bbox(monkeypatch, tmp_path: Path) ->
     assert reference.name == "asset_queen-reference.png"
     assert fake_storage.resolved_asset is stored
     with Image.open(reference) as cropped:
-        assert cropped.size == (50, 40)
+        assert cropped.width >= 512
+        assert cropped.height >= 512
+        assert cropped.size == (640, 512)
         assert cropped.getpixel((0, 0)) == (255, 0, 0)
 
 

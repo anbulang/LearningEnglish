@@ -36,7 +36,7 @@ AI_REQUEST_TIMEOUT_SECONDS=180
 AI_PROVIDER=qwen
 DASHSCOPE_API_KEY=<your-dashscope-api-key>
 DASHSCOPE_COMPATIBLE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_VISION_MODEL=qwen-vl-max-latest
+QWEN_VISION_MODEL=qwen-vl-max
 QWEN_MODEL=qwen-plus
 AI_REQUEST_TIMEOUT_SECONDS=180
 ```
