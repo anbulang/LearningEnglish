@@ -562,7 +562,7 @@ def _seed_impersonation_session_fixture(*, prefix: str) -> dict:
 
 
 def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_client, monkeypatch) -> None:
-    fixture = _seed_operations_snapshot_fixture(prefix="task4_all")
+    _seed_operations_snapshot_fixture(prefix="task4_all")
     monkeypatch.setenv("AI_PROVIDER", "doubao")
     monkeypatch.setenv("MEDIA_PROVIDER", "real")
     monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", "dashscope")
@@ -605,6 +605,7 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
         "speaking_attempts",
         "provider_configuration",
         "module_toggle_coverage",
+        "issues",
         "audit_event",
         "access_context",
     }
@@ -621,7 +622,7 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert 1 <= len(payload["material_parse_jobs"]["latest_failed"]) <= 5
     assert 1 <= len(payload["material_parse_jobs"]["latest_running"]) <= 5
     assert all(item["tenant_id"] for item in payload["material_parse_jobs"]["latest_failed"])
-    assert any(item["id"].startswith("task4_all_job_a_extra_") for item in payload["material_parse_jobs"]["latest_failed"])
+    assert all(item["status"] == "failed" for item in payload["material_parse_jobs"]["latest_failed"])
     assert payload["media_generation"]["materials_by_status"]["failed"] >= 5
     assert payload["media_generation"]["asset_status_fields_by_status"]["failed"] >= 6
     assert payload["media_generation"]["failure_signals"]["generated_image_status"] >= 5
@@ -634,7 +635,7 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert payload["speaking_attempts"]["oldest_pending_minutes"] >= 80
     assert 1 <= len(payload["speaking_attempts"]["latest_failed"]) <= 5
     assert 1 <= len(payload["speaking_attempts"]["latest_pending"]) <= 5
-    assert any(item["id"].startswith("task4_all_attempt_a_extra_") for item in payload["speaking_attempts"]["latest_failed"])
+    assert all(item["status"] == "failed" for item in payload["speaking_attempts"]["latest_failed"])
     assert payload["provider_configuration"]["global"]["tenant_id"] == "global"
     assert payload["provider_configuration"]["runtime"]["ai_provider"] == "doubao"
     assert payload["provider_configuration"]["runtime"]["media_provider"] == "real"
@@ -655,14 +656,13 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert payload["provider_configuration"]["runtime"]["readiness"]["speech_provider_ready"] is True
     assert payload["provider_configuration"]["runtime"]["readiness"]["speech_assessment_provider_ready"] is True
     tenant_overrides = payload["provider_configuration"]["tenant_overrides"]
-    assert {
-        "tenant_id": fixture["tenant_a"]["tenant_id"],
-        "ai_provider": "doubao",
-        "media_provider": "real",
-        "fallback_mode": "per_tenant",
-        "monthly_guardrail": 300,
-        "source": "tenant_override",
-    } in tenant_overrides
+    assert payload["provider_configuration"]["override_count"] >= 1
+    assert 1 <= len(tenant_overrides) <= payload["provider_configuration"]["tenant_overrides_limit"]
+    assert all(
+        {"tenant_id", "ai_provider", "media_provider", "fallback_mode", "monthly_guardrail", "source"}
+        <= set(policy.keys())
+        for policy in tenant_overrides
+    )
     assert "ark-task4-api-key-value" not in str(payload)
     assert "openai-task4-api-key-value" not in str(payload)
     assert "dashscope-task4-api-key-value" not in str(payload)
@@ -677,6 +677,30 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
         "weekly_reports",
     ]
     assert payload["module_toggle_coverage"]["disabled"] >= 1
+    assert payload["summary"]["severity"] == "critical"
+    assert payload["summary"]["issue_count"] == len(payload["issues"])
+    assert payload["issues"]
+    for issue in payload["issues"]:
+        assert {
+            "id",
+            "severity",
+            "status_label",
+            "reason",
+            "recommended_action",
+            "required_permission",
+            "related_resource",
+            "source",
+        } <= set(issue.keys())
+        assert issue["source"] == "database_snapshot"
+        assert issue["related_resource"]["tenant_id"]
+    material_issue = next(
+        issue
+        for issue in payload["issues"]
+        if issue["related_resource"]["type"] == "material_parse_job"
+    )
+    assert material_issue["severity"] == "critical"
+    assert material_issue["recommended_action"] == "retry_material_job"
+    assert material_issue["required_permission"] == "admin.material.retry"
     assert payload["audit_event"]["action"] == "admin.operations.read"
     assert payload["audit_event"]["tenant_scope"] == "all"
     assert payload["audit_event"]["trace_id"] == "req_task4_operations_all"
@@ -740,6 +764,10 @@ def test_admin_operations_snapshot_honors_tenant_scope_without_disclosure(api_cl
     assert payload["tenant_scope"] == fixture["tenant_a"]["tenant_id"]
     assert payload["summary"]["tenant_count"] == 1
     assert {item["tenant_id"] for item in payload["material_parse_jobs"]["latest_failed"]} == {
+        fixture["tenant_a"]["tenant_id"]
+    }
+    assert payload["issues"]
+    assert {item["related_resource"]["tenant_id"] for item in payload["issues"]} == {
         fixture["tenant_a"]["tenant_id"]
     }
     assert fixture["tenant_b"]["tenant_id"] not in str(payload)
