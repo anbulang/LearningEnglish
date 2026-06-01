@@ -103,17 +103,17 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 
 ## Admin Phase 3 运维平台化
 
-Phase 3 把 admin 后端从单个 route 文件中的堆叠逻辑拆到服务层，现有 `/v1/admin/...` path 和 Phase 2 response keys 保持兼容。
+Phase 3 把 admin 后端从单个 route 文件中的堆叠逻辑拆到 `app.services.admin.*` 服务层，现有 `/v1/admin/...` path 和 Phase 2 response keys 保持兼容。
 
 服务层边界：
 
-- `app.services.admin_identity`：解析本地 token、`ADMIN_API_CREDENTIALS_JSON`、token SHA-256 比对和 inactive admin 拒绝。
-- `app.services.admin_permissions`：exact permission 检查、any-permission read fallback 和统一 missing permission 错误。
-- `app.services.admin_scope`：`tenant_scope=all` 与单租户 no-disclosure 边界。
-- `app.services.admin_audit`：审计事件写入、分页过滤、resource timeline 和 route read audit。
-- `app.services.admin_read_models`：dashboard 与 tenant detail read model。
-- `app.services.admin_operations`：operations snapshot、severity、issue vocabulary 和 recommended action。
-- `app.services.admin_actions`：mutation `action_result` 统一合同。
+- `app.services.admin.identity`：解析本地 token、`ADMIN_API_CREDENTIALS_JSON`、token SHA-256 比对和 inactive admin 拒绝。
+- `app.services.admin.permissions`：exact permission 检查、any-permission read fallback 和统一 missing permission 错误。
+- `app.services.admin.scope`：`tenant_scope=all` 与单租户 no-disclosure 边界。
+- `app.services.admin.audit`：审计事件写入、分页过滤、resource timeline 和 route read audit。
+- `app.services.admin.read_models`：dashboard 与 tenant detail read model。
+- `app.services.admin.operations`：operations snapshot、severity、issue vocabulary 和 recommended action。
+- `app.services.admin.actions`：mutation `action_result` 统一合同。
 
 `GET /v1/admin/operations` 的 Phase 3 `issues` 合同：
 
