@@ -118,10 +118,10 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | 路径 | 内容 |
 | --- | --- |
 | [`apps/mobile`](apps/mobile) | Flutter 移动端，覆盖 phone / tablet 自适应体验 |
-| [`apps/admin`](apps/admin) | React/Vite 多租户后台原型，Phase 1 使用 mock 数据验证后台信息架构 |
+| [`apps/admin`](apps/admin) | React/Vite 多租户运维管理后台，可连接 `/v1/admin/*` live API |
 | [`packages/contracts`](packages/contracts) | Dart 侧共享领域契约，和 API Pydantic models 对齐 |
 | [`packages/design_tokens`](packages/design_tokens) | Flutter 设计 token |
-| [`services/api`](services/api) | FastAPI API、SQLAlchemy models、Alembic migrations |
+| [`services/api`](services/api) | FastAPI 后端服务，内部按 `api/parent`、`api/admin`、`services/parent`、`services/admin`、`services/shared` 区分家长端、运维管理和共享能力 |
 | [`services/workers`](services/workers) | Celery worker 和讲义处理任务边界 |
 | [`infra`](infra) | Docker Compose 本地依赖：PostgreSQL、Redis、MinIO、API、worker |
 | [`docs`](docs) | 产品、设计、架构、Harness 验收文档 |
