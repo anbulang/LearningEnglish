@@ -8,7 +8,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import AdminAuditEventModel
-from app.services.admin_scope import audit_scope_filter
+from app.services.admin.scope import audit_scope_filter
 
 
 class AdminAuditActor(Protocol):

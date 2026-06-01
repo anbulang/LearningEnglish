@@ -22,10 +22,10 @@ from app.models.contracts import (
     MaterialStatus,
     MediaGenerationStatus,
 )
-from app.services.mappers import course_material_from_model, material_job_from_model
-from app.services.pipeline import ProviderBackedPipelineService
-from app.services.job_queue import enqueue_material_job
-from app.services.media_queue import enqueue_learning_asset_media_job
+from app.services.shared.mappers import course_material_from_model, material_job_from_model
+from app.services.shared.pipeline import ProviderBackedPipelineService
+from app.services.shared.job_queue import enqueue_material_job
+from app.services.shared.media_queue import enqueue_learning_asset_media_job
 
 router = APIRouter(prefix="/material-jobs", tags=["material-jobs"])
 

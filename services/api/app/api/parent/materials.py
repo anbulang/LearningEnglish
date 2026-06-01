@@ -32,8 +32,8 @@ from app.models.contracts import (
     MediaGenerationStatus,
     PrimaryAccent,
 )
-from app.services.mappers import course_material_from_model, material_job_from_model
-from app.services.job_queue import enqueue_material_job
+from app.services.shared.mappers import course_material_from_model, material_job_from_model
+from app.services.shared.job_queue import enqueue_material_job
 
 router = APIRouter(prefix="/materials", tags=["materials"])
 

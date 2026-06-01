@@ -19,7 +19,7 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus, SpeakingAttemptStatus
-from app.services.admin_scope import get_tenant_or_404
+from app.services.admin.scope import get_tenant_or_404
 
 TENANT_DETAIL_LATEST_LIMIT = 5
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")

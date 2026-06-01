@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from fastapi import HTTPException
 
-from app.services.admin_identity import AdminActor
-from app.services.admin_permissions import ADMIN_PERMISSIONS, require_any_permission, require_permission
+from app.services.admin.identity import AdminActor
+from app.services.admin.permissions import ADMIN_PERMISSIONS, require_any_permission, require_permission
 
 
 def _actor(permissions: list[str]) -> AdminActor:

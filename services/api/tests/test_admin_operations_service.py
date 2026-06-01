@@ -17,7 +17,7 @@ from app.db.models import (  # noqa: E402
     TenantProviderPolicyModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus, SpeakingAttemptStatus  # noqa: E402
-from app.services.admin_operations import build_admin_operations  # noqa: E402
+from app.services.admin.operations import build_admin_operations  # noqa: E402
 
 
 def _seed_tenant(prefix: str, *, tenant_id: str = "") -> dict[str, str]:

@@ -12,7 +12,7 @@ configure_test_environment("learning-english-api-admin-scope-")
 
 from app.core.db import SessionLocal, init_db  # noqa: E402
 from app.db.models import ParentAccountModel  # noqa: E402
-from app.services.admin_scope import ensure_admin_tenant_scope, get_tenant_or_404, normalize_tenant_scope  # noqa: E402
+from app.services.admin.scope import ensure_admin_tenant_scope, get_tenant_or_404, normalize_tenant_scope  # noqa: E402
 
 
 def _seed_tenant(tenant_id: str) -> None:

@@ -27,7 +27,7 @@ from app.models.contracts import (
     SpeakingAttemptStatus,
     WeeklyReportResponse,
 )
-from app.services.mappers import weekly_report_from_model
+from app.services.shared.mappers import weekly_report_from_model
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 

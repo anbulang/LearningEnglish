@@ -33,7 +33,7 @@ from app.db.models import (
     StoredAssetModel,
 )
 from app.models.contracts import JobStatus, LearningAsset, MaterialStatus, MediaGenerationStatus
-from app.services.learning_asset_media import GeneratedMedia, MediaProviderConfigurationError
+from app.services.shared.learning_asset_media import GeneratedMedia, MediaProviderConfigurationError
 from workers_app.celery_app import celery_app
 from workers_app.tasks import process_learning_asset_media, process_material_job
 

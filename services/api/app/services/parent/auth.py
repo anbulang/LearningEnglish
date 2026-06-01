@@ -19,7 +19,7 @@ from app.core.security import (
 from app.core.settings import get_settings
 from app.db.models import AuthSessionModel, ChildProfileModel, ParentAccountModel, PhoneBindingModel
 from app.models.contracts import AuthLoginResponse, AuthStatus, AuthTokens, ParentAccount
-from app.services.mappers import child_profile_from_model, parent_account_from_model
+from app.services.shared.mappers import child_profile_from_model, parent_account_from_model
 
 
 @dataclass(frozen=True)

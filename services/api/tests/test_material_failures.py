@@ -6,7 +6,7 @@ from app.core.db import SessionLocal
 from app.db.models import CourseMaterialModel, KnowledgePackModel, MaterialParseJobModel, ReviewTaskModel
 from app.core.config import get_pipeline_service
 from app.models.contracts import JobStatus, MaterialStatus
-from app.services.pipeline import ProviderBackedPipelineService, StubOCRProvider
+from app.services.shared.pipeline import ProviderBackedPipelineService, StubOCRProvider
 from app.main import app
 from conftest import auth_headers, configure_test_environment
 
@@ -142,7 +142,7 @@ def test_material_job_queue_uses_redis_url_for_result_backend(monkeypatch) -> No
     monkeypatch.delenv("CELERY_RESULT_BACKEND", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "celery", type("CeleryModule", (), {"Celery": FakeCelery}))
 
-    from app.services.job_queue import enqueue_material_job
+    from app.services.shared.job_queue import enqueue_material_job
 
     enqueue_material_job("job_test")
 

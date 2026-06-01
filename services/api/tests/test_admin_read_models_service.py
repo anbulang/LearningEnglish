@@ -20,7 +20,7 @@ from app.db.models import (  # noqa: E402
     TenantProviderPolicyModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus  # noqa: E402
-from app.services.admin_read_models import build_admin_dashboard, build_admin_tenant_detail  # noqa: E402
+from app.services.admin.read_models import build_admin_dashboard, build_admin_tenant_detail  # noqa: E402
 
 
 def _seed_read_model_fixture(tenant_id: str = "tenant_read_model") -> dict:

@@ -18,8 +18,8 @@ from app.db.models import (
     TenantProviderPolicyModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus, MediaGenerationStatus, SpeakingAttemptStatus
-from app.services.admin_permissions import ADMIN_MATERIAL_RETRY, ADMIN_OPERATIONS_READ
-from app.services.admin_scope import (
+from app.services.admin.permissions import ADMIN_MATERIAL_RETRY, ADMIN_OPERATIONS_READ
+from app.services.admin.scope import (
     ensure_admin_tenant_scope,
     tenant_child_scope_filter,
     tenant_module_setting_scope_filter,

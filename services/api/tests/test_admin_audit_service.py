@@ -8,13 +8,13 @@ from conftest import configure_test_environment
 configure_test_environment("learning-english-api-admin-audit-")
 
 from app.core.db import SessionLocal, init_db  # noqa: E402
-from app.services.admin_audit import (  # noqa: E402
+from app.services.admin.audit import (  # noqa: E402
     AdminAuditFilters,
     list_resource_timeline,
     record_admin_audit_event,
     search_admin_audit_events,
 )
-from app.services.admin_identity import AdminActor  # noqa: E402
+from app.services.admin.identity import AdminActor  # noqa: E402
 
 
 def _actor() -> AdminActor:

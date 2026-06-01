@@ -11,8 +11,8 @@ import pytest
 
 from app.core.settings import get_settings
 from app.models.contracts import LearningAsset
-from app.services import learning_asset_media as media_module
-from app.services.learning_asset_media import (
+from app.services.shared import learning_asset_media as media_module
+from app.services.shared.learning_asset_media import (
     DashScopeImageGenerationProvider,
     DashScopeTTSProvider,
     MediaProviderBundle,

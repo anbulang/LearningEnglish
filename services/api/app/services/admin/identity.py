@@ -9,7 +9,7 @@ from typing import Any, Protocol
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.services.admin_permissions import ADMIN_PERMISSIONS
+from app.services.admin.permissions import ADMIN_PERMISSIONS
 
 
 class AdminSettings(Protocol):

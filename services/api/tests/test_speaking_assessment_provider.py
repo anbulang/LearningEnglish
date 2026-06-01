@@ -8,7 +8,7 @@ import pytest
 
 from app.core.settings import get_settings
 from app.models.contracts import SpeakingWordFeedback
-from app.services.speaking_assessment import (
+from app.services.shared.speaking_assessment import (
     DashScopeSpeechAssessmentProvider,
     SpeechAssessmentError,
     SpeechAssessmentConfigurationError,

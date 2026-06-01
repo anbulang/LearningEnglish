@@ -1,8 +1,8 @@
 from functools import lru_cache
 
-from app.services.auth import AuthService
-from app.services.pipeline import build_pipeline_service
-from app.services.storage import get_storage_service
+from app.services.parent.auth import AuthService
+from app.services.shared.pipeline import build_pipeline_service
+from app.services.shared.storage import get_storage_service
 
 
 @lru_cache

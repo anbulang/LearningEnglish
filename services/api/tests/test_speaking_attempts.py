@@ -288,7 +288,7 @@ def test_speaking_queue_uses_api_side_celery_client(monkeypatch) -> None:
     monkeypatch.setitem(__import__("sys").modules, "celery", type("CeleryModule", (), {"Celery": FakeCelery}))
     get_settings.cache_clear()
     try:
-        from app.services.speaking_queue import enqueue_speaking_attempt_job
+        from app.services.shared.speaking_queue import enqueue_speaking_attempt_job
 
         enqueue_speaking_attempt_job("attempt_test")
     finally:

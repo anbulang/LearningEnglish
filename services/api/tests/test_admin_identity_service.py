@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from app.services.admin_identity import admin_token_hash, resolve_admin_actor
+from app.services.admin.identity import admin_token_hash, resolve_admin_actor
 
 
 class _Settings:

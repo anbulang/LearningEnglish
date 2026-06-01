@@ -6,7 +6,7 @@ from app.api.deps import get_current_parent
 from app.core.db import get_db
 from app.db.models import ChildProfileModel, CourseMaterialModel, ParentAccountModel, ParentCoachingScriptModel
 from app.models.contracts import MaterialStatus, ParentCoachingScript
-from app.services.mappers import parent_coaching_script_from_model
+from app.services.shared.mappers import parent_coaching_script_from_model
 
 router = APIRouter(prefix="/parent-coaching", tags=["parent-coaching"])
 

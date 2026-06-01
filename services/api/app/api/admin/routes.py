@@ -29,15 +29,15 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import JobStatus, MaterialStatus, SpeakingAttemptStatus
-from app.services.admin_audit import (
+from app.services.admin.audit import (
     AdminAuditFilters,
     record_admin_audit_event as _record_audit_event,
     search_admin_audit_events,
     serialize_admin_audit_event as _audit_event_payload,
 )
-from app.services.admin_actions import build_action_result
-from app.services.admin_identity import AdminActor, resolve_admin_actor
-from app.services.admin_permissions import (
+from app.services.admin.actions import build_action_result
+from app.services.admin.identity import AdminActor, resolve_admin_actor
+from app.services.admin.permissions import (
     ADMIN_AUDIT_READ,
     ADMIN_DASHBOARD_READ,
     ADMIN_IMPERSONATION_END,
@@ -52,15 +52,15 @@ from app.services.admin_permissions import (
     has_permission,
     require_permission,
 )
-from app.services.admin_operations import build_admin_operations
-from app.services.admin_read_models import build_admin_dashboard, build_admin_tenant_detail
-from app.services.admin_scope import (
+from app.services.admin.operations import build_admin_operations
+from app.services.admin.read_models import build_admin_dashboard, build_admin_tenant_detail
+from app.services.admin.scope import (
     audit_scope_filter as _audit_scope_filter,
     ensure_admin_tenant_scope as _ensure_admin_tenant_scope,
     ensure_tenant_in_scope,
     impersonation_session_scope_filter as _impersonation_session_scope_filter,
 )
-from app.services.job_queue import enqueue_material_job
+from app.services.shared.job_queue import enqueue_material_job
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

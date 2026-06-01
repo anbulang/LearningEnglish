@@ -8,7 +8,7 @@ from app.api.deps import get_current_parent
 from app.core.db import get_db
 from app.db.models import ChildProfileModel, CourseMaterialModel, ParentAccountModel, ReviewTaskModel
 from app.models.contracts import MaterialStatus, ReviewTaskListResponse
-from app.services.mappers import review_task_from_model
+from app.services.shared.mappers import review_task_from_model
 
 router = APIRouter(prefix="/review-tasks", tags=["review-tasks"])
 
