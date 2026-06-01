@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi import HTTPException
 
-from app.api.routes.admin import require_admin_token
+from app.api.admin.routes import require_admin_token
 from app.core.settings import get_settings
 
 

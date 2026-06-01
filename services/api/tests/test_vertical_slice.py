@@ -55,7 +55,7 @@ def _mark_job_needs_review(material_id: str, job_id: str) -> None:
 def test_vertical_slice_flow(api_client, monkeypatch) -> None:
     enqueued_media_material_ids: list[str] = []
     monkeypatch.setattr(
-        "app.api.routes.material_jobs.enqueue_learning_asset_media_job",
+        "app.api.parent.material_jobs.enqueue_learning_asset_media_job",
         lambda material_id: enqueued_media_material_ids.append(material_id),
     )
 

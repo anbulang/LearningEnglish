@@ -320,7 +320,7 @@ def test_admin_retry_material_job_records_failed_audit_when_enqueue_fails(api_cl
     def fail_enqueue(job_id: str) -> None:
         raise RuntimeError("redis unavailable")
 
-    monkeypatch.setattr("app.api.routes.admin.enqueue_material_job", fail_enqueue)
+    monkeypatch.setattr("app.api.admin.routes.enqueue_material_job", fail_enqueue)
     material_id, job_id, _ = seed_parent_material(
         api_client,
         auth_code="admin-retry-enqueue-failure",
