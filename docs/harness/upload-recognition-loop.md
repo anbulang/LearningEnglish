@@ -200,10 +200,15 @@ HN-019 不改变上传识别主链，也不新增上传、AI 校对、课程详�
 **Harness：**
 - 自动化：
   ```bash
-  MAC_IP=192.168.2.15
-  flutter build ios --profile --dart-define=API_BASE_URL="http://${MAC_IP}:8000/v1"
+  LAN_IP=<current-host-ip>
+  flutter build ios --profile --dart-define=API_BASE_URL="http://${LAN_IP}:8000/v1"
   ```
 - 人工：真机操作截图和 API 日志摘录。
+
+说明：
+
+- 本节后续出现的 `192.168.*` 地址都是历史 evidence 中的当时局域网 IP，不是当前默认值。
+- 新一轮真机主链回归优先参考 `docs/harness/device-regression-runbook.md`，并使用 `make harness-hn019-real-device-main-chain` 触发真机 harness、等待后端完成并生成主链 summary。
 
 **证据位置：**
 - `dist/harness/HN-012/`

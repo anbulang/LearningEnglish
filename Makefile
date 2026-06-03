@@ -14,7 +14,7 @@ API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0
 ADMIN_API_BASE_URL ?= http://127.0.0.1:8000
 ADMIN_API_TOKEN ?= local-admin-token
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -111,6 +111,9 @@ harness-mvp-readiness:
 
 harness-doubao-smoke:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_doubao_smoke.sh
+
+harness-hn019-real-device-main-chain:
+	$(PYTHON) /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_hn019_real_device_main_chain.py
 
 harness-reset-ios-sim:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/reset_ios_simulator_app.sh

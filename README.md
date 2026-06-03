@@ -118,7 +118,7 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | 路径 | 内容 |
 | --- | --- |
 | [`apps/mobile`](apps/mobile) | Flutter 移动端，覆盖 phone / tablet 自适应体验 |
-| [`apps/admin`](apps/admin) | React/Vite 多租户后台原型，Phase 1 使用 mock 数据验证后台信息架构 |
+| [`apps/admin`](apps/admin) | React/Vite 多租户后台控制台：默认可用 mock 数据启动，也可接本地 admin API 查看 read model 并执行受控 mutation |
 | [`packages/contracts`](packages/contracts) | Dart 侧共享领域契约，和 API Pydantic models 对齐 |
 | [`packages/design_tokens`](packages/design_tokens) | Flutter 设计 token |
 | [`services/api`](services/api) | FastAPI API、SQLAlchemy models、Alembic migrations |
@@ -243,7 +243,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 文档 |
 | --- | --- |
-| 项目进度与 ToDo | [`docs/project/2026-05-31-status-and-todo.md`](docs/project/2026-05-31-status-and-todo.md) |
+| 项目进度与 ToDo | [`docs/project/2026-06-03-status-and-todo.md`](docs/project/2026-06-03-status-and-todo.md) |
 | 系统总览 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
