@@ -40,7 +40,7 @@ describe("ProviderOps", () => {
     );
 
     await userEvent.selectOptions(screen.getByLabelText("Tenant"), "tenant_sunny_kids");
-    await userEvent.selectOptions(screen.getByLabelText("AI provider"), "doubao");
+    await userEvent.selectOptions(screen.getByLabelText("AI provider"), "qwen");
     await userEvent.selectOptions(screen.getByLabelText("Media provider"), "real");
     await userEvent.selectOptions(screen.getByLabelText("Fallback mode"), "per_tenant");
     await userEvent.clear(screen.getByLabelText("Monthly guardrail"));
@@ -50,13 +50,31 @@ describe("ProviderOps", () => {
 
     expect(onOverrideProviderPolicy).toHaveBeenCalledWith({
       tenantId: "tenant_sunny_kids",
-      aiProvider: "doubao",
+      aiProvider: "qwen",
       mediaProvider: "real",
       fallbackMode: "per_tenant",
       monthlyGuardrail: 750,
       reason: "Pilot tenant approved for real media provider."
     });
     expect(await screen.findByText("Provider policy override recorded.")).toBeInTheDocument();
+  });
+
+  it("allows operators to select every backend-supported AI provider", () => {
+    render(
+      <ProviderOps
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        policies={mockProviderPolicies}
+        dataMode="live"
+        onOverrideProviderPolicy={vi.fn()}
+      />
+    );
+
+    const options = Array.from(screen.getByLabelText("AI provider").querySelectorAll("option")).map((option) => option.value);
+
+    expect(options).toEqual(["stub", "doubao", "qwen", "dashscope", "bailian", "aliyun"]);
   });
 
   it("resets the override form to the scoped tenant policy when tenant scope changes", async () => {

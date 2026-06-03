@@ -678,6 +678,7 @@ def test_learning_assets_fallback_uses_vocabulary_and_sentences() -> None:
 
     assert [asset.text for asset in assets] == ["queen", "duck", "Find the queen."]
     assert all(asset.source_page_index >= 1 for asset in assets)
+    assert all(asset.source_bbox is not None for asset in assets)
     assert all(asset.pronunciation_text for asset in assets)
     assert len(assets) <= 20
 

@@ -22,7 +22,7 @@ interface ProviderOpsProps {
   onOverrideProviderPolicy?: (input: ProviderPolicyOverrideInput) => Promise<void>;
 }
 
-const aiProviderOptions: ProviderPolicy["aiProvider"][] = ["stub", "doubao"];
+const aiProviderOptions: ProviderPolicy["aiProvider"][] = ["stub", "doubao", "qwen", "dashscope", "bailian", "aliyun"];
 const mediaProviderOptions: ProviderPolicy["mediaProvider"][] = ["mock", "real"];
 const fallbackModeOptions: ProviderPolicy["fallbackMode"][] = ["global_stub", "auto_to_mock", "per_tenant"];
 
@@ -305,7 +305,7 @@ function hasProviderWarning(material: AdminMaterial): boolean {
 }
 
 function toneForAiProvider(provider: ProviderPolicy["aiProvider"]) {
-  return provider === "doubao" ? "success" : "neutral";
+  return provider === "stub" ? "neutral" : "success";
 }
 
 function toneForMediaProvider(provider: ProviderPolicy["mediaProvider"]) {

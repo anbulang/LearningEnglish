@@ -1326,6 +1326,7 @@ def _fallback_learning_assets(
                 kind=kind,
                 translation="",
                 source_page_index=((index - 1) % effective_page_count) + 1,
+                source_bbox=_fallback_source_bbox(index=index, kind=kind),
                 pronunciation_text=clean,
                 image_prompt=f"参考讲义内容，为 {clean} 生成清晰彩色儿童插图。",
                 difficulty="easy",

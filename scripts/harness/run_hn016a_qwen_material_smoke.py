@@ -43,7 +43,7 @@ def _run_qwen_material_smoke(*, evidence_dir: Path, started: float) -> dict:
         raise RuntimeError("DASHSCOPE_API_KEY is required for HN-016A Qwen material smoke")
 
     os.environ["APP_ENV"] = os.environ.get("APP_ENV", "development")
-    os.environ["AI_PROVIDER"] = os.environ.get("AI_PROVIDER", "qwen")
+    os.environ["AI_PROVIDER"] = "qwen"
 
     from app.core.settings import get_settings  # noqa: E402
     from app.models.contracts import CourseMaterial, JobStatus, MaterialParseJob  # noqa: E402
