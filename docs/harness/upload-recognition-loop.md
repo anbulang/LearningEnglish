@@ -200,10 +200,15 @@ HN-019 不改变上传识别主链，也不新增上传、AI 校对、课程详�
 **Harness：**
 - 自动化：
   ```bash
-  MAC_IP=192.168.2.15
-  flutter build ios --profile --dart-define=API_BASE_URL="http://${MAC_IP}:8000/v1"
+  LAN_IP=<current-host-ip>
+  flutter build ios --profile --dart-define=API_BASE_URL="http://${LAN_IP}:8000/v1"
   ```
 - 人工：真机操作截图和 API 日志摘录。
+
+说明：
+
+- 本节后续出现的 `192.168.*` 地址都是历史 evidence 中的当时局域网 IP，不是当前默认值。
+- 新一轮真机主链回归优先参考 `docs/harness/device-regression-runbook.md`，并使用 `make harness-hn019-real-device-main-chain` 触发真机 harness、等待后端完成并生成主链 summary。
 
 **证据位置：**
 - `dist/harness/HN-012/`
@@ -387,8 +392,10 @@ HN-019 不改变上传识别主链，也不新增上传、AI 校对、课程详�
   - `dist/harness/HN-016A/dashscope-provider-smoke-summary.json`
   - `dist/harness/HN-016A/dashscope-rabbit-image.png`
   - `dist/harness/HN-016A/dashscope-reference-edit-image.png`
-  - `dist/harness/HN-016A/dashscope-tts-us.mp3`
-  - `dist/harness/HN-016A/dashscope-tts-uk.mp3`
+  - `dist/harness/HN-016A/dashscope-tts-word-us.mp3`
+  - `dist/harness/HN-016A/dashscope-tts-word-uk.mp3`
+  - `dist/harness/HN-016A/dashscope-tts-sentence-us.mp3`
+  - `dist/harness/HN-016A/dashscope-tts-sentence-uk.mp3`
 - DashScope worker / storage 回填 smoke 已通过，证据：
   - `dist/harness/HN-016A/worker-dashscope-real-summary.json`
   - `dist/harness/HN-016A/worker-storage/generated/media/material_dashscope_real/asset_rabbit/`
@@ -396,7 +403,7 @@ HN-019 不改变上传识别主链，也不新增上传、AI 校对、课程详�
 
 **当前代码状态：**
 - `MEDIA_PROVIDER` 默认已从 mock 切到 `real`，图片与 TTS 默认 provider 均为 DashScope。
-- DashScope TTS 请求会按 US / UK 发音分别加入儿童跟读场景的发音指令。
+- DashScope TTS 请求会按 US / UK voice 分别生成音频；若 AI 返回 `/.../` 或 `[...]` 音标，worker 会使用原始英文单词/句子作为 TTS 输入，避免把音标读出来。
 - 自动化回归已覆盖 DashScope 图片、TTS、worker/storage 回填；课程详情 widget 和 iOS 模拟器 App shell 证据已补齐。
 - 已补课程详情 UI 截图 Harness，使用真实 DashScope 生成的 PNG、US TTS、UK TTS 文件渲染课程详情：
   - `dist/harness/HN-016A/lesson-detail-dashscope-media-screen.png`

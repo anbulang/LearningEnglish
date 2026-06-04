@@ -64,13 +64,14 @@ cp infra/env/local.example.env infra/.env
 
 在 `infra/.env` 中填入 `DASHSCOPE_API_KEY`。如果当前网络必须走系统代理，再显式设置 `MEDIA_HTTP_TRUST_ENV=true`。
 
-2. 运行真实 provider smoke 和 worker/storage 回填 smoke：
+2. 运行真实 Qwen 讲义识别 smoke、媒体 provider smoke 和 worker/storage 回填 smoke：
 
 ```bash
 cd /Users/chaucermini/Code/LearningEnglish
 set -a
 source infra/.env
 set +a
+services/api/.venv/bin/python scripts/harness/run_hn016a_qwen_material_smoke.py
 services/api/.venv/bin/python scripts/harness/run_hn016a_dashscope_provider_smoke.py
 services/api/.venv/bin/python scripts/harness/run_hn016a_worker_dashscope_smoke.py
 ```
@@ -80,9 +81,14 @@ services/api/.venv/bin/python scripts/harness/run_hn016a_worker_dashscope_smoke.
 ```bash
 cd /Users/chaucermini/Code/LearningEnglish
 ls -lh dist/harness/HN-016A/
+jq '.status, .provider, .vision_model, .learning_asset_count, .learning_assets_with_bbox' dist/harness/HN-016A/qwen-material-smoke-summary.json
 jq '.status, .provider' dist/harness/HN-016A/dashscope-provider-smoke-summary.json
-jq '.status' dist/harness/HN-016A/worker-dashscope-real-summary.json
+jq '.status, .ready_media_count, .source_reference_crop' dist/harness/HN-016A/worker-dashscope-real-summary.json
 ```
+
+`qwen-material-smoke-summary.json` 必须证明 Qwen-VL 真实返回 `image_records`、`learning_assets`、课程知识包摘要，并且每个 learning asset 都有 `source_bbox`。如果模型没有返回 bbox，后端会生成保守 fallback bbox，确保 worker 仍能裁剪讲义局部。
+
+`worker-reference-crop.png` 是 worker smoke 使用同一裁剪逻辑生成的参考区域；DashScope image edit 要求输入图宽高均不小于 512，因此裁剪结果会等比放大到 provider 最小尺寸后再传给图生图。
 
 4. 移动端 UI 证据：
 

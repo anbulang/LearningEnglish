@@ -1,6 +1,6 @@
 # Harness Evidence 归档策略
 
-更新时间：2026-05-31
+更新时间：2026-06-01
 
 ## 目的
 
@@ -11,7 +11,8 @@
 - 每个需求或主题使用 `dist/harness/HN-XXX/`。
 - 每个目录优先保留一个 `summary.json` 或等价摘要文件。
 - 多次复跑可以覆盖稳定文件名，也可以放进带时间戳的子目录。
-- 无论采用哪种方式，summary 都必须说明 `run_id`、`started_at`、`device`、`result` 和关键文件路径。
+- 新建或更新的 summary 应优先说明 `run_id`、`started_at`、`device`、`result` 和关键文件路径。
+- 既有历史 summary 如果仍沿用 `recorded_at`、`level`、`evidence`、`limitations` 等旧字段，可以先保留；下一次复跑或替代时再补齐推荐字段，不要求为了对齐字段名而重写旧证据。
 
 当前已存在的主要目录包括：
 
@@ -23,6 +24,7 @@
 - `dist/harness/HN-016A/`
 - `dist/harness/HN-017/`
 - `dist/harness/HN-018/`
+- `dist/harness/HN-019/`
 - `dist/harness/screens/`
 
 ## 必须保留的证据类型

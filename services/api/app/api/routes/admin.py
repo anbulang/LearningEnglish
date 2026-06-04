@@ -52,7 +52,7 @@ ADMIN_PERMISSIONS = [
     "admin.audit.read",
 ]
 
-AI_PROVIDERS = {"stub", "doubao"}
+AI_PROVIDERS = {"stub", "doubao", "qwen", "dashscope", "bailian", "aliyun"}
 MEDIA_PROVIDERS = {"mock", "real"}
 FALLBACK_MODES = {"global_stub", "auto_to_mock", "per_tenant"}
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")
@@ -1463,7 +1463,7 @@ def _provider_api_key_configured(provider: str, settings) -> bool:
         return True
     if provider == "openai":
         return bool(settings.openai_api_key)
-    if provider in {"dashscope", "qwen"}:
+    if provider in {"dashscope", "qwen", "bailian", "aliyun"}:
         return bool(settings.dashscope_api_key)
     if provider == "doubao":
         return bool(settings.ark_api_key)
@@ -2140,19 +2140,25 @@ def _ocr_confidence(job: Optional[MaterialParseJobModel]) -> float:
 
 
 def _admin_provider() -> str:
-    return "doubao" if get_settings().ai_provider == "doubao" else "stub"
+    return _normalized_admin_ai_provider()
 
 
 def _global_provider_policy() -> dict:
     settings = get_settings()
+    ai_provider = _normalized_admin_ai_provider()
     return {
         "tenant_id": "global",
-        "ai_provider": "doubao" if settings.ai_provider == "doubao" else "stub",
+        "ai_provider": ai_provider,
         "media_provider": "real" if settings.media_provider == "real" else "mock",
-        "fallback_mode": "global_stub" if settings.ai_provider != "doubao" else "auto_to_mock",
+        "fallback_mode": "global_stub" if ai_provider == "stub" else "auto_to_mock",
         "monthly_guardrail": 0,
         "source": "global_default",
     }
+
+
+def _normalized_admin_ai_provider() -> str:
+    provider = get_settings().ai_provider.strip().lower()
+    return provider if provider in AI_PROVIDERS else "stub"
 
 
 def _tenant_provider_policy_payload(policy: TenantProviderPolicyModel) -> dict:

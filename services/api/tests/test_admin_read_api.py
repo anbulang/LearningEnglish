@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.core.db import SessionLocal
+from app.core.settings import get_settings
 from app.db.models import CourseMaterialModel, KnowledgePackModel, MaterialParseJobModel, ParentCoachingScriptModel, ReviewTaskModel
 from conftest import auth_headers, configure_test_environment
 
@@ -447,6 +448,41 @@ def test_admin_provider_policy_override_updates_dashboard_and_records_audit_even
     assert audit_event["id"] in {event["id"] for event in access.json()["audit_events"]}
 
 
+def test_admin_provider_policy_override_accepts_qwen(api_client) -> None:
+    material_id, _, _ = seed_parent_material(
+        api_client,
+        auth_code="admin-provider-qwen",
+        phone_number="13800138142",
+        child_name="Leo Provider",
+        material_title="Qwen Provider Worksheet",
+    )
+    dashboard = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+    tenant_id = next(material["tenant_id"] for material in dashboard.json()["materials"] if material["id"] == material_id)
+
+    response = api_client.post(
+        "/v1/admin/providers/policies?tenant_scope=all",
+        json={
+            "tenant_id": tenant_id,
+            "ai_provider": "qwen",
+            "media_provider": "real",
+            "fallback_mode": "per_tenant",
+            "monthly_guardrail": 500,
+            "reason": "Pilot tenant approved for DashScope Qwen provider.",
+        },
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["provider_policy"] == {
+        "tenant_id": tenant_id,
+        "ai_provider": "qwen",
+        "media_provider": "real",
+        "fallback_mode": "per_tenant",
+        "monthly_guardrail": 500,
+        "source": "tenant_override",
+    }
+
+
 def test_admin_tenant_module_toggle_requires_reason(api_client) -> None:
     material_id, _, _ = seed_parent_material(
         api_client,
@@ -645,6 +681,37 @@ def test_admin_dashboard_returns_cross_tenant_material_pipeline(api_client) -> N
     missing = api_client.get("/v1/admin/dashboard?tenant_scope=tenant_missing", headers=ADMIN_HEADERS)
     assert missing.status_code == 404
     assert missing.json()["detail"] == "Tenant scope not found"
+
+
+def test_admin_dashboard_reflects_qwen_global_provider(api_client, monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setenv("AI_PROVIDER", "qwen")
+        m.setenv("DASHSCOPE_API_KEY", "sk-test-dashscope")
+        m.setenv("MEDIA_PROVIDER", "real")
+        get_settings.cache_clear()
+        material_id, _, _ = seed_parent_material(
+            api_client,
+            auth_code="admin-read-qwen",
+            phone_number="13800138112",
+            child_name="Ava Qwen",
+            material_title="Qwen Worksheet",
+        )
+
+        response = api_client.get("/v1/admin/dashboard?tenant_scope=all", headers=ADMIN_HEADERS)
+
+    get_settings.cache_clear()
+    assert response.status_code == 200
+    payload = response.json()
+    material = next(item for item in payload["materials"] if item["id"] == material_id)
+    assert material["provider"] == "qwen"
+    assert {
+        "tenant_id": "global",
+        "ai_provider": "qwen",
+        "media_provider": "real",
+        "fallback_mode": "auto_to_mock",
+        "monthly_guardrail": 0,
+        "source": "global_default",
+    } in payload["provider_policies"]
 
 
 def seed_parent_material(

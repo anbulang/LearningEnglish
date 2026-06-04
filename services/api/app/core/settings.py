@@ -146,7 +146,7 @@ def get_settings() -> Settings:
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
         ),
         qwen_model=os.getenv("QWEN_MODEL", "qwen-plus"),
-        qwen_vision_model=os.getenv("QWEN_VISION_MODEL", "qwen-vl-max-latest"),
+        qwen_vision_model=os.getenv("QWEN_VISION_MODEL", "qwen-vl-max"),
         admin_api_token=os.getenv("ADMIN_API_TOKEN", "").strip(),
         admin_api_credentials_json=os.getenv("ADMIN_API_CREDENTIALS_JSON", "").strip(),
         admin_cors_origins=_csv_tuple(os.getenv("ADMIN_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173")),

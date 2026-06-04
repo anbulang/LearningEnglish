@@ -1,12 +1,14 @@
 # HN-017 口语评分 Readiness 摘要
 
-更新时间：2026-05-31
+更新时间：2026-06-02
 
 ## 当前结论
 
 `HN-017` 的代码链路已经落地：孩子录音上传、音频 storage、异步 worker、DashScope ASR、Qwen 评分、结果页展示和周报回填都已有自动化或 Harness 证据。
 
 物理手机 `Chaucer` 发起的 speaking attempt 已补齐：真机从 `192.168.2.12` 访问局域网 API，完成 `POST /v1/speaking-attempts`，本地 watcher 调用 DashScope ASR + Qwen 后把 `attempt_b0e110c126d1` 写回 `scored`，并通过 iPhone Mirroring 保存了真机结果页截图。
+
+上面的固定 LAN IP 属于历史 evidence。后续复跑时应替换成当前机器可访问的 `API_BASE_URL` / `PUBLIC_BASE_URL`，不要直接复用旧 IP。
 
 ## 已验证内容
 
@@ -44,13 +46,15 @@ git diff --check
 ```
 
 ```bash
-set -a; source infra/.env; set +a; APP_ENV=testing DATABASE_URL=sqlite:////private/tmp/learningenglish-hn017-device.db LOCAL_STORAGE_PATH=/private/tmp/learningenglish-hn017-device-uploads PUBLIC_BASE_URL=http://192.168.2.15:8000 STORAGE_BACKEND=local .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
-set -a; source infra/.env; set +a; APP_ENV=testing DATABASE_URL=sqlite:////private/tmp/learningenglish-hn017-device.db LOCAL_STORAGE_PATH=/private/tmp/learningenglish-hn017-device-uploads PUBLIC_BASE_URL=http://192.168.2.15:8000 STORAGE_BACKEND=local HN017_PUBLIC_AUDIO_URL=https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav services/api/.venv/bin/python scripts/harness/watch_hn017_speaking_attempts.py
+LAN_IP=<current-host-ip>
+set -a; source infra/.env; set +a; APP_ENV=testing DATABASE_URL=sqlite:////private/tmp/learningenglish-hn017-device.db LOCAL_STORAGE_PATH=/private/tmp/learningenglish-hn017-device-uploads PUBLIC_BASE_URL=http://${LAN_IP}:8000 STORAGE_BACKEND=local .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+set -a; source infra/.env; set +a; APP_ENV=testing DATABASE_URL=sqlite:////private/tmp/learningenglish-hn017-device.db LOCAL_STORAGE_PATH=/private/tmp/learningenglish-hn017-device-uploads PUBLIC_BASE_URL=http://${LAN_IP}:8000 STORAGE_BACKEND=local HN017_PUBLIC_AUDIO_URL=https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav services/api/.venv/bin/python scripts/harness/watch_hn017_speaking_attempts.py
 cd apps/mobile
-flutter run -d 00008150-00094D0A0A78401C --profile -t tool/harness/real_device_speaking_upload_harness.dart --dart-define=API_BASE_URL=http://192.168.2.15:8000/v1 --no-resident
+flutter run -d <device-id> --profile -t tool/harness/real_device_speaking_upload_harness.dart --dart-define=API_BASE_URL=http://${LAN_IP}:8000/v1 --no-resident
 xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F273D --terminate-existing com.anbulang.learningenglish --timeout 60
 ```
 
-## 待补内容
+## 剩余边界
 
-- 暂无 HN-017 readiness 必需证据缺口。
+- 当前没有 HN-017 必需证据缺口。
+- 复跑真实 speaking 时仍要确认 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL` 可被 DashScope 访问；局域网或 `localhost` URL 不能直接当成 `R3 passed` 证据。
