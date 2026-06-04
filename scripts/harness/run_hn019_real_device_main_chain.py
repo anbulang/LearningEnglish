@@ -50,9 +50,30 @@ def main() -> None:
 
 def _run(*, context: dict, started: float) -> dict:
     _wait_for_health(context["api_base_url"], timeout_seconds=20)
-    before = _latest_harness_material()
     flutter = _run_flutter_harness(context)
-    material = _wait_for_new_material(before_id=before.get("id") if before else "", timeout_seconds=240)
+    material_id = _flutter_material_id(flutter)
+    if not material_id and flutter.get("status") == "failed":
+        _capture_logs(EVIDENCE_DIR)
+        restore = _restore_normal_app(context)
+        return {
+            "status": "failed",
+            "run_id": context["run_id"],
+            "started_at": context["started_at"],
+            "elapsed_seconds": round(perf_counter() - started, 3),
+            "context": _public_context(context),
+            "flutter": flutter,
+            "restore_normal_app": restore,
+            "failure_hint": "Flutter harness 在创建 material 前失败；请优先查看 flutter log 中的真实错误。",
+            "evidence_files": [
+                str(EVIDENCE_DIR / "real-device-main-chain-flutter.log"),
+                str(EVIDENCE_DIR / "real-device-main-chain-api.log"),
+                str(EVIDENCE_DIR / "real-device-main-chain-worker.log"),
+            ],
+        }
+    if not material_id:
+        raise RuntimeError(f"Flutter harness did not emit material_id: {flutter}")
+
+    material = _wait_for_material(material_id=material_id, timeout_seconds=30)
     job = _query_job(material["id"])
     media = _query_media_summary(material["id"])
 
@@ -173,7 +194,7 @@ def _run_flutter_harness(context: dict) -> dict:
         text=True,
         bufsize=1,
     )
-    lines = ["$ " + " ".join(command), ""]
+    lines = ["$ " + " ".join(_redacted_command(command, context)), ""]
     result: dict | None = None
     deadline = time.monotonic() + int(context["mobile_timeout_seconds"])
     while time.monotonic() < deadline:
@@ -230,6 +251,24 @@ def _flutter_passed(flutter: dict) -> bool:
     if not isinstance(result, dict):
         return False
     return result.get("status") == "passed" and int(result.get("report_asset_count") or 0) > 0
+
+
+def _flutter_material_id(flutter: dict) -> str:
+    result = flutter.get("result")
+    if not isinstance(result, dict):
+        return ""
+    value = result.get("material_id")
+    return value if isinstance(value, str) and value else ""
+
+
+def _redacted_command(command: list[str], context: dict) -> list[str]:
+    redacted: list[str] = []
+    for item in command:
+        if item.startswith("--dart-define=SOURCE_IMAGE_URLS="):
+            redacted.append(f"--dart-define=SOURCE_IMAGE_URLS=<redacted:{context['source_image_count']} item(s)>")
+        else:
+            redacted.append(item)
+    return redacted
 
 
 def _terminate_process(process: subprocess.Popen[str]) -> None:
@@ -315,39 +354,14 @@ def _safe_restore_normal_app(context: dict) -> dict:
         return {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
 
-def _wait_for_new_material(*, before_id: str, timeout_seconds: int) -> dict:
+def _wait_for_material(*, material_id: str, timeout_seconds: int) -> dict:
     deadline = time.monotonic() + timeout_seconds
-    latest: dict | None = None
     while time.monotonic() < deadline:
-        latest = _latest_harness_material()
-        if latest and latest.get("id") != before_id:
-            return latest
+        material = _query_material(material_id)
+        if material and material.get("id") == material_id:
+            return material
         time.sleep(2)
-    raise RuntimeError(f"timed out waiting for new {TITLE_PREFIX} material; latest={latest}")
-
-
-def _latest_harness_material() -> dict:
-    sql = f"""
-SELECT row_to_json(t)::text
-FROM (
-  SELECT
-    id,
-    child_id,
-    title,
-    topic,
-    status,
-    uploaded_at,
-    created_at,
-    updated_at,
-    COALESCE(jsonb_array_length(image_records::jsonb), 0) AS image_record_count,
-    COALESCE(jsonb_array_length(learning_assets::jsonb), 0) AS learning_asset_count
-  FROM course_materials
-  WHERE title LIKE {_sql_literal(TITLE_PREFIX + '%')}
-  ORDER BY uploaded_at DESC NULLS LAST, created_at DESC
-  LIMIT 1
-) t;
-"""
-    return _psql_json(sql)
+    raise RuntimeError(f"timed out waiting for material {material_id}")
 
 
 def _query_material(material_id: str) -> dict:
@@ -605,6 +619,11 @@ def _write_json(path: Path, payload: dict) -> None:
 def _sanitize_log(text: str) -> str:
     sanitized = re.sub(r"(?i)(Authorization:\s*Bearer\s+)[^\s]+", r"\1<redacted>", text)
     sanitized = re.sub(r"(sk-)[A-Za-z0-9_-]{8,}", r"\1<redacted>", sanitized)
+    sanitized = re.sub(
+        r"(--dart-define=SOURCE_IMAGE_URLS=)[^\s]+",
+        r"\1<redacted>",
+        sanitized,
+    )
     for key in ("Signature", "OSSAccessKeyId", "Expires", "SecurityToken", "X-Amz-Signature", "X-Amz-Credential"):
         sanitized = re.sub(fr"([?&]{key}=)[^&\s]+", rf"\1<redacted>", sanitized)
     return sanitized

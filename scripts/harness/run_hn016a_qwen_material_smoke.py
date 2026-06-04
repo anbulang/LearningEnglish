@@ -47,7 +47,7 @@ def _run_qwen_material_smoke(*, evidence_dir: Path, started: float) -> dict:
 
     from app.core.settings import get_settings  # noqa: E402
     from app.models.contracts import CourseMaterial, JobStatus, MaterialParseJob  # noqa: E402
-    from app.services.pipeline import build_pipeline_service  # noqa: E402
+    from app.services.pipeline import _fallback_source_bbox, build_pipeline_service  # noqa: E402
 
     get_settings.cache_clear()
     worksheet_path = evidence_dir / "qwen-real-worksheet.png"
@@ -72,14 +72,15 @@ def _run_qwen_material_smoke(*, evidence_dir: Path, started: float) -> dict:
     service = build_pipeline_service()
     prepared = service.prepare_job(material, job, local_paths=[worksheet_path])
     knowledge_pack, review_tasks, coaching_script = service.build_knowledge_assets(material, prepared)
-    learning_assets_with_bbox = sum(1 for asset in prepared.draft_learning_assets if asset.source_bbox is not None)
+    bbox_counts = _bbox_evidence_counts(prepared.draft_learning_assets, _fallback_source_bbox)
 
     summary = {
         "status": (
             "passed"
             if prepared.status == JobStatus.needs_review
             and prepared.draft_learning_assets
-            and learning_assets_with_bbox == len(prepared.draft_learning_assets)
+            and bbox_counts["learning_assets_with_bbox"] == len(prepared.draft_learning_assets)
+            and bbox_counts["provider_bbox_count"] == len(prepared.draft_learning_assets)
             else "failed"
         ),
         "provider": os.environ.get("AI_PROVIDER"),
@@ -92,7 +93,8 @@ def _run_qwen_material_smoke(*, evidence_dir: Path, started: float) -> dict:
         "draft_sentences": prepared.draft_sentences,
         "image_record_count": len(prepared.draft_image_records),
         "learning_asset_count": len(prepared.draft_learning_assets),
-        "learning_assets_with_bbox": learning_assets_with_bbox,
+        **bbox_counts,
+        "bbox_evidence_note": "provider_bbox_count 必须等于 learning_asset_count，避免把系统 fallback bbox 误记为百炼 bbox 能力。",
         "learning_assets": [
             {
                 "text": asset.text,
@@ -127,6 +129,21 @@ def _run_qwen_material_smoke(*, evidence_dir: Path, started: float) -> dict:
     if summary["status"] != "passed":
         raise RuntimeError(f"Qwen material smoke failed: {summary}")
     return summary
+
+
+def _bbox_evidence_counts(learning_assets: list, fallback_source_bbox) -> dict[str, int]:
+    learning_assets_with_bbox = sum(1 for asset in learning_assets if asset.source_bbox is not None)
+    fallback_bbox_count = sum(
+        1
+        for index, asset in enumerate(learning_assets, start=1)
+        if asset.source_bbox is not None
+        and asset.source_bbox.model_dump() == fallback_source_bbox(index=index, kind=asset.kind).model_dump()
+    )
+    return {
+        "learning_assets_with_bbox": learning_assets_with_bbox,
+        "provider_bbox_count": learning_assets_with_bbox - fallback_bbox_count,
+        "fallback_bbox_count": fallback_bbox_count,
+    }
 
 
 def _write_sample_worksheet(path: Path) -> None:
