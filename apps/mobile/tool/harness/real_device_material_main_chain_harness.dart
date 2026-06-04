@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -93,6 +95,10 @@ class _HarnessScreenState extends State<_HarnessScreen> {
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
     if (imageUrls.isEmpty) {
+      _emitHarnessResult({
+        'status': 'failed',
+        'error': '缺少 SOURCE_IMAGE_URLS',
+      });
       setState(() {
         _error = '缺少 SOURCE_IMAGE_URLS';
         _running = false;
@@ -107,8 +113,8 @@ class _HarnessScreenState extends State<_HarnessScreen> {
       final token = await _login(dio);
       final options = Options(headers: {'Authorization': 'Bearer $token'});
       final childId = await _createChild(dio, options);
-      final imagePaths = await _downloadImages(dio, imageUrls);
-      final upload = await _createMaterial(dio, options, childId, imagePaths);
+      final images = await _downloadImages(dio, imageUrls);
+      final upload = await _createMaterial(dio, options, childId, images);
       final materialId = upload.materialId;
       final jobId = upload.jobId;
       final parsedJob = await _pollJob(dio, options, jobId);
@@ -125,23 +131,30 @@ class _HarnessScreenState extends State<_HarnessScreen> {
         materialId: materialId,
       );
       final report = await _getWeeklyReport(dio, options, childId);
+      final summary = <String, dynamic>{
+        'status': 'passed',
+        'title': upload.title,
+        'material_id': materialId,
+        'job_id': jobId,
+        'job_status': parsedJob['status'],
+        'material_status': material['status'],
+        'image_record_count': _listLength(material['image_records']),
+        'learning_asset_count': _listLength(material['learning_assets']),
+        'knowledge_pack_topic': knowledgePack['topic'],
+        'review_task_count': _listLength(reviewTasks['items']),
+        'report_asset_count': _listLength(report['asset_mastery']),
+      };
+      _emitHarnessResult(summary);
       setState(() {
-        _summary = <String, dynamic>{
-          'title': upload.title,
-          'material_id': materialId,
-          'job_id': jobId,
-          'job_status': parsedJob['status'],
-          'material_status': material['status'],
-          'image_record_count': _listLength(material['image_records']),
-          'learning_asset_count': _listLength(material['learning_assets']),
-          'knowledge_pack_topic': knowledgePack['topic'],
-          'review_task_count': _listLength(reviewTasks['items']),
-          'report_asset_count': _listLength(report['asset_mastery']),
-        };
+        _summary = summary;
         _running = false;
       });
       _log('完成：$materialId');
     } catch (error) {
+      _emitHarnessResult({
+        'status': 'failed',
+        'error': '${error.runtimeType}: $error',
+      });
       setState(() {
         _error = '${error.runtimeType}: $error';
         _running = false;
@@ -200,33 +213,50 @@ class _HarnessScreenState extends State<_HarnessScreen> {
     return id;
   }
 
-  Future<List<String>> _downloadImages(Dio dio, List<String> urls) async {
+  Future<List<_SourceImage>> _downloadImages(Dio dio, List<String> urls) async {
     final tempDir = await getTemporaryDirectory();
-    final paths = <String>[];
+    final images = <_SourceImage>[];
     for (var index = 0; index < urls.length; index += 1) {
-      final path = '${tempDir.path}/hn019-page-${index + 1}.jpg';
-      await dio.download(urls[index], path);
-      paths.add(path);
+      final uri = Uri.parse(urls[index]);
+      final response = await dio.get<List<int>>(
+        uri.toString(),
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final contentType = _imageContentTypeFor(
+        uri,
+        response.headers.value(Headers.contentTypeHeader),
+      );
+      final extension = _extensionForContentType(contentType);
+      final filename = 'hn019-page-${index + 1}.$extension';
+      final path = '${tempDir.path}/$filename';
+      await File(path).writeAsBytes(response.data ?? const <int>[]);
+      images.add(
+        _SourceImage(
+          path: path,
+          filename: filename,
+          contentType: contentType,
+        ),
+      );
       _log('讲义图片下载：第 ${index + 1} 页');
     }
-    return paths;
+    return images;
   }
 
   Future<_UploadResult> _createMaterial(
     Dio dio,
     Options options,
     String childId,
-    List<String> imagePaths,
+    List<_SourceImage> images,
   ) async {
     final title =
         'HN-019 Device Main Chain ${DateTime.now().millisecondsSinceEpoch}';
     final files = <MultipartFile>[];
-    for (var index = 0; index < imagePaths.length; index += 1) {
+    for (final image in images) {
       files.add(
         await MultipartFile.fromFile(
-          imagePaths[index],
-          filename: 'hn019-page-${index + 1}.jpg',
-          contentType: DioMediaType('image', 'jpeg'),
+          image.path,
+          filename: image.filename,
+          contentType: _mediaTypeForContentType(image.contentType),
         ),
       );
     }
@@ -355,6 +385,77 @@ class _HarnessScreenState extends State<_HarnessScreen> {
   void _log(String message) {
     setState(() => _logs.insert(0, message));
   }
+
+  void _emitHarnessResult(Map<String, dynamic> payload) {
+    // ignore: avoid_print
+    print('HN019_RESULT:${jsonEncode(payload)}');
+  }
+}
+
+class _SourceImage {
+  const _SourceImage({
+    required this.path,
+    required this.filename,
+    required this.contentType,
+  });
+
+  final String path;
+  final String filename;
+  final String contentType;
+}
+
+String _imageContentTypeFor(Uri uri, String? headerValue) {
+  final normalized = headerValue?.split(';').first.trim().toLowerCase();
+  if (_isSupportedImageContentType(normalized)) {
+    return normalized!;
+  }
+  final path = uri.path.toLowerCase();
+  if (path.endsWith('.png')) {
+    return 'image/png';
+  }
+  if (path.endsWith('.webp')) {
+    return 'image/webp';
+  }
+  if (path.endsWith('.heic')) {
+    return 'image/heic';
+  }
+  if (path.endsWith('.heif')) {
+    return 'image/heif';
+  }
+  return 'image/jpeg';
+}
+
+bool _isSupportedImageContentType(String? value) {
+  return value == 'image/jpeg' ||
+      value == 'image/jpg' ||
+      value == 'image/png' ||
+      value == 'image/webp' ||
+      value == 'image/heic' ||
+      value == 'image/heif';
+}
+
+String _extensionForContentType(String contentType) {
+  switch (contentType) {
+    case 'image/png':
+      return 'png';
+    case 'image/webp':
+      return 'webp';
+    case 'image/heic':
+      return 'heic';
+    case 'image/heif':
+      return 'heif';
+    default:
+      return 'jpg';
+  }
+}
+
+DioMediaType _mediaTypeForContentType(String contentType) {
+  final parts = contentType.split('/');
+  if (parts.length != 2 || parts.first.isEmpty || parts.last.isEmpty) {
+    return DioMediaType('image', 'jpeg');
+  }
+  final subtype = parts.last == 'jpg' ? 'jpeg' : parts.last;
+  return DioMediaType(parts.first, subtype);
 }
 
 class _UploadResult {

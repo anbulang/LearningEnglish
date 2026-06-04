@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import select
+import signal
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -30,11 +32,13 @@ def main() -> None:
     try:
         summary = _run(context=context, started=started)
     except Exception as exc:  # noqa: BLE001
+        restore = _safe_restore_normal_app(context)
         summary = {
             "status": "failed",
             "error": f"{type(exc).__name__}: {exc}",
             "elapsed_seconds": round(perf_counter() - started, 3),
             "context": _public_context(context),
+            "restore_normal_app": restore,
         }
         _write_json(summary_path, summary)
         _capture_logs(EVIDENCE_DIR)
@@ -74,7 +78,8 @@ def _run(*, context: dict, started: float) -> dict:
     restore = _restore_normal_app(context)
 
     passed = (
-        material.get("status") == "ready"
+        _flutter_passed(flutter)
+        and material.get("status") == "ready"
         and job.get("status") == "ready"
         and int(material.get("image_record_count") or 0) == context["source_image_count"]
         and int(material.get("learning_asset_count") or 0) > 0
@@ -130,6 +135,7 @@ def _read_context() -> dict:
         "source_image_count": source_count,
         "flutter_device_id": os.environ.get("DEVICE_ID", "00008150-00094D0A0A78401C"),
         "devicectl_device_id": os.environ.get("DEVICETL_DEVICE_ID", "19586D29-7FF4-5289-8B83-30AA8C3F273D"),
+        "mobile_timeout_seconds": os.environ.get("HN019_MOBILE_TIMEOUT_SECONDS", "420"),
         "backend_timeout_seconds": os.environ.get("HN019_BACKEND_TIMEOUT_SECONDS", "900"),
         "restore_normal_app": os.environ.get("HN019_RESTORE_APP", "1") != "0",
         "restore_ipa_path": os.environ.get(
@@ -158,31 +164,87 @@ def _run_flutter_harness(context: dict) -> dict:
         "tool/harness/real_device_material_main_chain_harness.dart",
         f"--dart-define=API_BASE_URL={context['api_base_url']}",
         f"--dart-define=SOURCE_IMAGE_URLS={context['source_image_urls']}",
-        "--no-resident",
     ]
-    completed = subprocess.run(
+    process = subprocess.Popen(
         command,
         cwd=MOBILE_ROOT,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        check=False,
+        bufsize=1,
     )
-    log = "\n".join(
-        [
-            "$ " + " ".join(command),
-            "",
-            completed.stdout,
-            completed.stderr,
-        ]
-    )
+    lines = ["$ " + " ".join(command), ""]
+    result: dict | None = None
+    deadline = time.monotonic() + int(context["mobile_timeout_seconds"])
+    while time.monotonic() < deadline:
+        if process.stdout is None:
+            break
+        ready, _, _ = select.select([process.stdout], [], [], 1)
+        if ready:
+            line = process.stdout.readline()
+            if not line:
+                break
+            lines.append(line.rstrip("\n"))
+            parsed = _parse_flutter_result(line)
+            if parsed is not None:
+                result = parsed
+                break
+        if process.poll() is not None:
+            break
+    timed_out = result is None and process.poll() is None
+    if process.poll() is None:
+        _terminate_process(process)
+    returncode = process.returncode
+    if result is None and timed_out:
+        result = {"status": "failed", "error": "timed out waiting for HN019_RESULT"}
+    elif result is None:
+        result = {"status": "failed", "error": "flutter run exited before HN019_RESULT"}
+    log = "\n".join(lines)
     (EVIDENCE_DIR / "real-device-main-chain-flutter.log").write_text(
         _sanitize_log(log),
         encoding="utf-8",
     )
     return {
-        "returncode": completed.returncode,
+        "returncode": returncode,
+        "status": result.get("status"),
+        "result": result,
+        "timed_out": timed_out,
         "log": str(EVIDENCE_DIR / "real-device-main-chain-flutter.log"),
     }
+
+
+def _parse_flutter_result(line: str) -> dict | None:
+    marker = "HN019_RESULT:"
+    if marker not in line:
+        return None
+    payload = line.split(marker, 1)[1].strip()
+    try:
+        parsed = json.loads(payload)
+    except json.JSONDecodeError:
+        return {"status": "failed", "error": f"invalid HN019_RESULT payload: {payload}"}
+    return parsed if isinstance(parsed, dict) else {"status": "failed", "error": "HN019_RESULT was not an object"}
+
+
+def _flutter_passed(flutter: dict) -> bool:
+    result = flutter.get("result")
+    if not isinstance(result, dict):
+        return False
+    return result.get("status") == "passed" and int(result.get("report_asset_count") or 0) > 0
+
+
+def _terminate_process(process: subprocess.Popen[str]) -> None:
+    process.send_signal(signal.SIGINT)
+    try:
+        process.wait(timeout=10)
+        return
+    except subprocess.TimeoutExpired:
+        process.terminate()
+    try:
+        process.wait(timeout=10)
+        return
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=10)
 
 
 def _restore_normal_app(context: dict) -> dict:
@@ -244,6 +306,13 @@ def _restore_normal_app(context: dict) -> dict:
         "launch_returncode": launch.returncode,
         "log": str(EVIDENCE_DIR / "real-device-main-chain-restore.log"),
     }
+
+
+def _safe_restore_normal_app(context: dict) -> dict:
+    try:
+        return _restore_normal_app(context)
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
 
 def _wait_for_new_material(*, before_id: str, timeout_seconds: int) -> dict:

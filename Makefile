@@ -113,7 +113,7 @@ harness-doubao-smoke:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_doubao_smoke.sh
 
 harness-hn019-real-device-main-chain:
-	$(PYTHON) /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_hn019_real_device_main_chain.py
+	$(PYTHON) scripts/harness/run_hn019_real_device_main_chain.py
 
 harness-reset-ios-sim:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/reset_ios_simulator_app.sh
