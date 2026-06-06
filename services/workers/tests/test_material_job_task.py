@@ -3,6 +3,7 @@ import sys
 import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from sqlalchemy import select
 
@@ -38,7 +39,14 @@ from workers_app.celery_app import celery_app
 from workers_app.tasks import process_learning_asset_media, process_material_job
 
 
-def _seed_media_material(material_id: str, asset_id: str, text: str) -> None:
+def _seed_media_material(
+    material_id: str,
+    asset_id: str,
+    text: str,
+    *,
+    pronunciation_text: Optional[str] = None,
+    kind: str = "word",
+) -> None:
     uploads_root = os.environ["LOCAL_STORAGE_PATH"]
     object_key = f"material/{material_id}/source.png"
     os.makedirs(f"{uploads_root}/material/{material_id}", exist_ok=True)
@@ -79,10 +87,10 @@ def _seed_media_material(material_id: str, asset_id: str, text: str) -> None:
                 {
                     "id": asset_id,
                     "text": text,
-                    "kind": "word",
+                    "kind": kind,
                     "translation": "练习词",
                     "primary_accent": "us",
-                    "pronunciation_text": text,
+                    "pronunciation_text": pronunciation_text if pronunciation_text is not None else text,
                     "image_prompt": f"A child-friendly flashcard image for {text}.",
                 }
             ],
@@ -411,6 +419,51 @@ def test_process_learning_asset_media_generates_and_stores_provider_media(monkey
         assert review_task.content_json["audio_url"] == tts_us_url
     finally:
         db.close()
+
+
+def test_process_learning_asset_media_uses_asset_text_when_pronunciation_text_is_ipa(monkeypatch) -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    _seed_media_material("material_media_ipa_word", "asset_cat", "cat", pronunciation_text="/kæt/")
+    _seed_media_material(
+        "material_media_ipa_sentence",
+        "asset_rabbit_sentence",
+        "A rabbit can hop fast.",
+        pronunciation_text="/ə ˈræbɪt kæn hɒp fɑːst/",
+        kind="sentence",
+    )
+    tts_inputs: list[tuple[str, str]] = []
+
+    class FakeImageProvider:
+        def generate(self, asset, prompt, reference_image_path):
+            return GeneratedMedia(b"image-bytes", "image/png", ".png")
+
+    class FakeTTSProvider:
+        def synthesize(self, text, accent):
+            tts_inputs.append((text, accent))
+            return GeneratedMedia(f"{accent}-audio".encode(), "audio/mpeg", ".mp3")
+
+    class FakeBundle:
+        image_provider = FakeImageProvider()
+        tts_provider = FakeTTSProvider()
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr("workers_app.tasks.build_media_provider_bundle", lambda: FakeBundle())
+
+    word_result = process_learning_asset_media("material_media_ipa_word")
+    sentence_result = process_learning_asset_media("material_media_ipa_sentence")
+
+    assert word_result["status"] == "ready"
+    assert sentence_result["status"] == "ready"
+    assert tts_inputs == [
+        ("cat", "us"),
+        ("cat", "uk"),
+        ("A rabbit can hop fast.", "us"),
+        ("A rabbit can hop fast.", "uk"),
+    ]
 
 
 def test_process_learning_asset_media_stores_dashscope_style_media(monkeypatch) -> None:

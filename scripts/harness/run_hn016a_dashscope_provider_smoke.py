@@ -90,12 +90,20 @@ def _run_provider_smoke(*, evidence_dir: Path, started: float) -> dict:
         reference_edit_path.write_bytes(reference_edit.payload)
 
         tts_us = bundle.tts_provider.synthesize("rabbit", "us")
-        tts_us_path = evidence_dir / "dashscope-tts-us.mp3"
+        tts_us_path = evidence_dir / "dashscope-tts-word-us.mp3"
         tts_us_path.write_bytes(tts_us.payload)
 
         tts_uk = bundle.tts_provider.synthesize("rabbit", "uk")
-        tts_uk_path = evidence_dir / "dashscope-tts-uk.mp3"
+        tts_uk_path = evidence_dir / "dashscope-tts-word-uk.mp3"
         tts_uk_path.write_bytes(tts_uk.payload)
+
+        sentence_tts_us = bundle.tts_provider.synthesize("A rabbit can hop fast.", "us")
+        sentence_tts_us_path = evidence_dir / "dashscope-tts-sentence-us.mp3"
+        sentence_tts_us_path.write_bytes(sentence_tts_us.payload)
+
+        sentence_tts_uk = bundle.tts_provider.synthesize("A rabbit can hop fast.", "uk")
+        sentence_tts_uk_path = evidence_dir / "dashscope-tts-sentence-uk.mp3"
+        sentence_tts_uk_path.write_bytes(sentence_tts_uk.payload)
     finally:
         bundle.close()
 
@@ -115,15 +123,25 @@ def _run_provider_smoke(*, evidence_dir: Path, started: float) -> dict:
             "content_type": reference_edit.content_type,
             "size_bytes": reference_edit_path.stat().st_size,
         },
-        "tts_us": {
+        "tts_word_us": {
             "path": str(tts_us_path),
             "content_type": tts_us.content_type,
             "size_bytes": tts_us_path.stat().st_size,
         },
-        "tts_uk": {
+        "tts_word_uk": {
             "path": str(tts_uk_path),
             "content_type": tts_uk.content_type,
             "size_bytes": tts_uk_path.stat().st_size,
+        },
+        "tts_sentence_us": {
+            "path": str(sentence_tts_us_path),
+            "content_type": sentence_tts_us.content_type,
+            "size_bytes": sentence_tts_us_path.stat().st_size,
+        },
+        "tts_sentence_uk": {
+            "path": str(sentence_tts_uk_path),
+            "content_type": sentence_tts_uk.content_type,
+            "size_bytes": sentence_tts_uk_path.stat().st_size,
         },
         "elapsed_seconds": round(perf_counter() - started, 3),
     }

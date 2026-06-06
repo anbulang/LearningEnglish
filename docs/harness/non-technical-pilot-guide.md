@@ -49,7 +49,7 @@ DOUBAO_TEXT_MODEL_OR_ENDPOINT=<文本解析 endpoint 或 model>
 ```bash
 AI_PROVIDER=qwen
 DASHSCOPE_API_KEY=<阿里云百炼 API Key>
-QWEN_VISION_MODEL=qwen-vl-max-latest
+QWEN_VISION_MODEL=qwen-vl-max
 QWEN_MODEL=qwen-plus
 MEDIA_PROVIDER=real
 MEDIA_IMAGE_PROVIDER=dashscope

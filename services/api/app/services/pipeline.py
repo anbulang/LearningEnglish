@@ -201,7 +201,8 @@ class DoubaoVisionOCRProvider:
                     "learning_assets 常规目标 8 到 15 个，绝对总量 1 到 20 个，每项包含 "
                     "text, kind, translation, source_page_index, source_bbox, "
                     "source_visual_description, pronunciation_text, image_prompt, difficulty, teaching_note。"
-                    "source_bbox 使用 0 到 1 的相对坐标；无法定位时可为空。"
+                    "source_bbox 必须返回，使用 0 到 1 的相对坐标；单词或短语框住对应图文卡片，"
+                    "句子框住对应英文文字行。无法精确框选时，也要返回最接近的页面区域，不要返回空值。"
                     "不要把教师说明、页码、版权或出版社信息放入 learning_assets。"
                     "如果不确定，请在 warnings 用中文说明。"
                 ),
@@ -509,7 +510,8 @@ class QwenVisionOCRProvider:
                     "learning_assets 常规目标 8 到 15 个，绝对总量 1 到 20 个，每项包含 "
                     "text, kind, translation, source_page_index, source_bbox, "
                     "source_visual_description, pronunciation_text, image_prompt, difficulty, teaching_note。"
-                    "source_bbox 使用 0 到 1 的相对坐标；无法定位时可为空。"
+                    "source_bbox 必须返回，使用 0 到 1 的相对坐标；单词或短语框住对应图文卡片，"
+                    "句子框住对应英文文字行。无法精确框选时，也要返回最接近的页面区域，不要返回空值。"
                     "不要把教师说明、页码、版权或出版社信息放入 learning_assets。"
                     "如果不确定，请在 warnings 用中文说明。"
                 ),
@@ -1239,6 +1241,8 @@ def _learning_asset_from_raw(
     kind = _clean_text_value(raw.get("kind")).lower()
     if kind not in {"word", "phrase", "sentence"}:
         kind = "sentence" if " " in text or text.endswith((".", "?", "!")) else "word"
+    if source_bbox is None:
+        source_bbox = _fallback_source_bbox(index=index, kind=kind)
 
     try:
         page_index = int(raw.get("source_page_index") or 1)
@@ -1264,6 +1268,23 @@ def _learning_asset_from_raw(
         tts_us_status=MediaGenerationStatus.pending,
         tts_uk_status=MediaGenerationStatus.pending,
         primary_accent=PrimaryAccent.us,
+    )
+
+
+def _fallback_source_bbox(*, index: int, kind: str) -> SourceBoundingBox:
+    zero_based = max(0, index - 1)
+    if kind == "sentence":
+        row = min(zero_based, 5)
+        y = min(0.42 + row * 0.09, 0.86)
+        return SourceBoundingBox(x=0.08, y=y, width=0.84, height=0.08)
+
+    column = zero_based % 3
+    row = min(zero_based // 3, 2)
+    return SourceBoundingBox(
+        x=0.08 + column * 0.29,
+        y=0.18 + row * 0.22,
+        width=0.24,
+        height=0.18,
     )
 
 
@@ -1305,6 +1326,7 @@ def _fallback_learning_assets(
                 kind=kind,
                 translation="",
                 source_page_index=((index - 1) % effective_page_count) + 1,
+                source_bbox=_fallback_source_bbox(index=index, kind=kind),
                 pronunciation_text=clean,
                 image_prompt=f"参考讲义内容，为 {clean} 生成清晰彩色儿童插图。",
                 difficulty="easy",

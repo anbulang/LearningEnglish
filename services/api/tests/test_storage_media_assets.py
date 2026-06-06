@@ -108,8 +108,42 @@ def test_build_reference_image_crops_source_bbox(monkeypatch, tmp_path: Path) ->
     assert reference.name == "asset_queen-reference.png"
     assert fake_storage.resolved_asset is stored
     with Image.open(reference) as cropped:
-        assert cropped.size == (50, 40)
-        assert cropped.getpixel((0, 0)) == (255, 0, 0)
+        assert cropped.size == (512, 512)
+        assert cropped.getpixel((256, 256)) == (255, 0, 0)
+
+
+def test_build_reference_image_pads_thin_bbox_without_huge_resize(monkeypatch, tmp_path: Path) -> None:
+    get_settings.cache_clear()
+    upload_root = tmp_path / "uploads"
+    monkeypatch.setenv("LOCAL_STORAGE_PATH", str(upload_root))
+    source_path = upload_root / "material" / "material_1" / "worksheet.png"
+    source_path.parent.mkdir(parents=True)
+    image = Image.new("RGB", (1000, 80), color=(255, 255, 255))
+    image.paste((255, 0, 0), (0, 32, 1000, 48))
+    image.save(source_path)
+    stored = StoredAssetModel(
+        owner_type="material",
+        owner_id="material_1",
+        bucket="learning-english",
+        object_key="material/material_1/worksheet.png",
+        content_type="image/png",
+        size_bytes=source_path.stat().st_size,
+        url="http://testserver/uploads/material/material_1/worksheet.png",
+    )
+    asset = LearningAsset(
+        id="asset_sentence",
+        text="A rabbit can hop fast.",
+        kind="sentence",
+        source_page_index=1,
+        source_bbox=SourceBoundingBox(x=0, y=0.4, width=1, height=0.2),
+    )
+
+    reference = build_reference_image(asset, [stored], tmp_path / "refs", storage=_FakeStorage(source_path))
+
+    assert reference is not None
+    with Image.open(reference) as cropped:
+        assert cropped.size == (512, 512)
+        assert cropped.getpixel((256, 256)) == (255, 0, 0)
 
 
 def test_build_reference_image_returns_none_when_storage_resolve_fails(tmp_path: Path) -> None:
