@@ -1,6 +1,6 @@
 # Harness 文档索引
 
-更新时间：2026-05-31
+更新时间：2026-06-03
 
 ## 这份目录的作用
 
@@ -18,7 +18,7 @@
 - `Makefile`
 - `docs/architecture/*`
 - `docs/harness/*`
-- `docs/project/2026-05-31-status-and-todo.md`
+- `docs/project/2026-06-03-status-and-todo.md`
 - `services/api/README.md`
 - `services/workers/README.md`
 - `infra/env/local.example.env`
@@ -39,6 +39,7 @@
 HARNESS_RESET=1 make harness-mvp-readiness
 make harness-main-chain-smoke
 make harness-doubao-smoke
+API_BASE_URL=http://<current-host-ip>:8000/v1 SOURCE_IMAGE_URLS=https://example.com/page-1.jpg,https://example.com/page-2.jpg make harness-hn019-real-device-main-chain
 make harness-evidence-index
 make harness-reset-ios-sim
 make harness-capture-ios-screen SCREEN=login-screen
@@ -62,17 +63,17 @@ make harness-capture-ios-screen SCREEN=login-screen
 | `dist/harness/HN-012/` | 真机上传识别 | `real-device-summary.json`、`real-device-job-final.json`、`real-device-material-detail.json` | `docs/harness/upload-recognition-loop.md` |
 | `dist/harness/HN-014/` | 学习资产自动生成 | `job-learning-assets.json`、`material-learning-assets.json`、`lesson-learning-assets.png` | `docs/harness/upload-recognition-loop.md` |
 | `dist/harness/HN-015/` | 资料删除 | `material-delete-api.log`、`material-delete-worker.log`、`material-delete-screen.png` | `docs/harness/upload-recognition-loop.md` |
-| `dist/harness/HN-016A/` | DashScope 媒体 provider | `dashscope-provider-smoke-summary.json`、`worker-dashscope-real-summary.json`、课程详情与 App shell 截图 | `docs/harness/provider-readiness-runbook.md` |
+| `dist/harness/HN-016A/` | Qwen 识别 + DashScope 媒体 provider | `qwen-material-smoke-summary.json`、`dashscope-provider-smoke-summary.json`、`worker-dashscope-real-summary.json`、`worker-reference-crop.png`、课程详情与 App shell 截图 | `docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-017/` | 口语评分 | `dashscope-worker-smoke-summary.json`、`public-uploads-tunnel-smoke-summary.json`、`real-device-speaking-summary.json`、真机结果页截图 | `docs/harness/hn017-speaking-readiness-summary.md`、`docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-018/` | 独立报告页 | `weekly-report.json`、`summary.json`、`reports-screen.png` | `docs/harness/provider-readiness-runbook.md` |
-| `dist/harness/HN-019/`（预期目录，待生成） | 真机回归与 evidence 治理 | 首次按 `device-regression-runbook.md` 复跑后生成 R0/R1/R2/R3 summary 和 `evidence-index.json` | `docs/harness/device-regression-runbook.md`、`docs/harness/evidence-archive-policy.md` |
+| `dist/harness/HN-019/` | 真机回归与 evidence 治理 | `real-device-main-chain-summary.json`、`real-device-main-chain-material.json`、`real-device-main-chain-job.json`、`real-device-main-chain-media-summary.json`、主链 API/worker 日志；历史证据仍保留 `device-main-chain-summary.json` 等 | `docs/harness/device-regression-runbook.md`、`docs/harness/evidence-archive-policy.md` |
 | `dist/harness/screens/` | 标准截图路径 | `login-screen.png`、`phone-binding-screen.png`、`upload-screen.png`、`ai-review-screen.png`、`lesson-detail-screen.png`、`report-screen.png` | `docs/harness/mvp-readiness-checklist.md` |
 
 ## 当前结论
 
 - 当前主链已经覆盖上传、AI 校对、课程详情、复习、口语评分和报告，不再是只到上传识别的半链路。
 - 当前默认真实 provider 路径是 `qwen + DashScope media + DashScope speech`。
-- `HN-017` 真机 speaking evidence 已存在；`HN-019` 文档治理已补齐 runbook、archive policy 和索引脚本入口；当前剩余问题主要在 Android 交付链和更稳定的跨设备复现。
+- `HN-017` 真机 speaking evidence 已存在；`HN-019` 已完成至少一轮真机安装和主链回归证据归档；当前剩余问题主要在 Android 交付链、R3 真实 provider 复跑纪律，以及更稳定的跨设备复现。
 
 ## 使用约定
 
@@ -81,6 +82,6 @@ make harness-capture-ios-screen SCREEN=login-screen
 - 交付或文档治理收尾时，至少执行一次：
 
 ```bash
-rg -n "<按本轮旧状态快照、旧 evidence 待处理文案、旧 env 模板引用配置>" README.md docs apps services infra --glob '!docs/harness/README.md' --glob '!docs/superpowers/**'
+rg -n "2026-06-02-status-and-todo|2026-06-01-status-and-todo|2026-05-31-status-and-todo|待生成|预期目录|待补真机证据|infra/\\.env\\.example" README.md docs apps services infra --glob '!docs/superpowers/**'
 git diff --check
 ```

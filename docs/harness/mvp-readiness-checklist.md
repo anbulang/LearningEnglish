@@ -50,7 +50,7 @@
 - [x] `GET /v1/admin/tenants/{tenant_id}` 已覆盖单租户 read model、tenant scope no-disclosure、recent audit history 权限门控和 bounded latest lists
 - [x] `GET /v1/admin/operations` 已覆盖 material jobs、media generation、speaking attempts、provider runtime readiness、secret presence 布尔值和 tenant override bounded lists；当前不做 Celery broker introspection
 - [x] `GET /v1/admin/impersonation-sessions` 和 `POST /v1/admin/impersonation-sessions/{session_id}/end` 已覆盖 list/end/idempotent end、tenant scope no-disclosure 和 audit 记录
-- [ ] Admin UI 尚未接入 Phase 2 新读模型；`apps/admin` 当前仍主要调用 Phase 1 live endpoints：dashboard、access、material retry/archive、provider policy override、tenant module toggle、impersonation start
+- [ ] Admin UI 尚未接入 Phase 2 新读模型；`apps/admin` 当前 live mode 仍主要调用 dashboard、access、material retry/archive、provider policy override、tenant module toggle、impersonation start；`audit-events`、`operations`、`tenant detail`、`impersonation list/end` 仍未进入当前 UI
 - [ ] 完整 admin login/SSO、DB token rotation、role mutation 和 permission mutation 仍不是当前 Phase 2 能力
 
 ## 本次验收记录
@@ -136,7 +136,7 @@ make harness-capture-ios-screen SCREEN=report-screen
 - iOS 工程使用 Team `95RDXKW54K` 与 Bundle ID `com.anbulang.learningenglish`，本机签名 identity 为 `Apple Development: shenchao.bupt@gmail.com (4PZWF88ND8)`
 - Flutter Debug 包不能作为普通内测包从桌面直接启动；iOS 14+ 下会报 `Cannot create a FlutterEngine instance in debug mode without Flutter tooling or Xcode` 并闪退。因此 `make mobile-ios-ipa` 已改为默认产出 Profile/Internal 包
 - Profile/Internal IPA 仍属于 development provisioning 分发，真实测试设备必须被纳入 provisioning profile；当前真机 `Chaucer` 已验证可安装并启动
-- 真机测试包最近一次使用局域网 API：`http://192.168.2.15:8000/v1`，对应后端健康检查 `http://192.168.2.15:8000/healthz` 返回 `{"status":"ok"}`
+- 真机测试包最近一次 evidence 使用的局域网 API 是 `http://192.168.2.15:8000/v1`；复跑时应改为当前可访问的 `IOS_API_BASE_URL`，不要直接复用历史 IP
 - Android fallback 也未产出，当前机器运行全局 Flutter 会在 cache 写入阶段失败：`/opt/homebrew/share/flutter/bin/cache/engine.stamp: Operation not permitted`；复制一份可写 Flutter SDK 到 `/private/tmp/learningenglish-flutter` 后，`FLUTTER=/private/tmp/learningenglish-flutter/bin/flutter make mobile-apk` 进入下一层 blocker：`No Android SDK found`
 - Doubao provider smoke 曾出现网络/代理阻塞；当前仓库保留的最新成功证据为 `2026-05-04 08:12` 的 `dist/harness/HN-006/doubao-smoke.log`。后续如果更换网络环境，需要重新验证一次真实 provider 连通性；如需继承系统代理，API/worker 进程要显式设置 `AI_HTTP_TRUST_ENV=true`
 - `api-migrate` 已修正为默认迁移 Docker Postgres；如果只想使用 SQLite，需要显式覆盖 `API_DATABASE_URL`
@@ -222,7 +222,9 @@ make harness-capture-ios-screen SCREEN=report-screen
 
 - HN-016 真实媒体 provider 证据：`dist/harness/HN-016/`
 - HN-016A DashScope 国内媒体 provider 证据：`dist/harness/HN-016A/`
+  - 已有：`qwen-material-smoke-summary.json`，证明 Qwen-VL 真实讲义识别、图片级记录、learning assets、课程知识包摘要和 bbox 兜底链路。
   - 已有：`dashscope-provider-smoke-summary.json`、`dashscope-reference-edit-smoke-summary.json`、`worker-dashscope-real-summary.json`、生成图片与 US/UK TTS 文件。
+  - 已有：`worker-reference-crop.png`，证明 worker 使用讲义 `source_bbox` 裁剪参考图并放大到 DashScope image edit 最小尺寸后再图生图。
   - 已有：课程详情页展示真实 DashScope 图片和音频状态的 widget UI 截图 `lesson-detail-dashscope-media-screen.png`。
   - 已有：iOS 模拟器完整 App shell 截图 `ios-simulator-app-shell-lesson-detail-dashscope-media-screen.png` 和摘要 `ios-simulator-app-shell-summary.json`。
   - 复现步骤：`docs/harness/provider-readiness-runbook.md`。
@@ -266,14 +268,19 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] 人工截图证据已补齐：AI 校对、课程详情、学习资产和删除确认截图。
 
 2026-05-30 文档治理补充：
-- [x] 项目状态快照已切到 `docs/project/2026-05-31-status-and-todo.md`。
+- [x] 项目状态快照已完成一次从旧版快照到当时最新快照的切换。
 - [x] README 与 `docs/project/README.md` 已同步最新状态快照链接。
 - [x] `docs/harness/README.md` 已补齐 `HN-*` 证据索引和真相源边界说明。
 - [x] `HN-017` readiness 摘要与上传识别链路文档已去掉过时“待补真机证据”语气，统一为当前仓库事实。
 
 2026-05-31 HN-019 治理补充：
-- [x] `docs/project/2026-05-31-status-and-todo.md` 已替换前一版状态快照。
+- [x] 项目状态快照已按“同一时间只保留最新一份”的规则完成替换。
 - [x] `docs/harness/device-regression-runbook.md` 已说明 R0/R1/R2/R3 回归边界。
 - [x] `docs/harness/evidence-archive-policy.md` 已说明证据保留、脱敏和替代规则。
 - [x] `scripts/harness/generate_evidence_index.py` 与 `make harness-evidence-index` 已提供统一索引入口。
 - [x] `HN-017` 既有真机 speaking evidence 保持已闭环状态，复跑时按现有 `dist/harness/HN-017/real-device-*` 命名续证，不重新标为待补。
+
+2026-06-03 文档治理补充：
+- [x] 项目状态快照已切到 `docs/project/2026-06-03-status-and-todo.md`，并按目录规则替换旧快照。
+- [x] `docs/harness/README.md` 已把 `HN-019` 从“预期目录”改为当前已存在证据目录。
+- [x] evidence 归档策略已明确区分“新 summary 推荐字段”和“历史 summary 兼容字段”，避免文档与现有证据格式冲突。

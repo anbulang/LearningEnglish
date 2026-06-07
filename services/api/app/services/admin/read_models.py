@@ -23,6 +23,7 @@ from app.services.admin.scope import get_tenant_or_404
 
 TENANT_DETAIL_LATEST_LIMIT = 5
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")
+AI_PROVIDERS = {"stub", "doubao", "qwen", "dashscope", "bailian", "aliyun"}
 
 
 def build_admin_dashboard(db: Session, tenant_scope: str) -> dict[str, Any]:
@@ -694,19 +695,24 @@ def _ocr_confidence(job: Optional[MaterialParseJobModel]) -> float:
 
 
 def _admin_provider() -> str:
-    return "doubao" if get_settings().ai_provider == "doubao" else "stub"
+    return _normalized_ai_provider(get_settings().ai_provider)
 
 
 def _global_provider_policy() -> dict:
     settings = get_settings()
+    ai_provider = _normalized_ai_provider(settings.ai_provider)
     return {
         "tenant_id": "global",
-        "ai_provider": "doubao" if settings.ai_provider == "doubao" else "stub",
+        "ai_provider": ai_provider,
         "media_provider": "real" if settings.media_provider == "real" else "mock",
-        "fallback_mode": "global_stub" if settings.ai_provider != "doubao" else "auto_to_mock",
+        "fallback_mode": "global_stub" if ai_provider == "stub" else "auto_to_mock",
         "monthly_guardrail": 0,
         "source": "global_default",
     }
+
+
+def _normalized_ai_provider(provider: str) -> str:
+    return provider if provider in AI_PROVIDERS else "stub"
 
 
 def _tenant_provider_policy_payload(policy: TenantProviderPolicyModel) -> dict:

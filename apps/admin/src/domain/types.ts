@@ -22,6 +22,7 @@ export interface Tenant {
 export type MaterialStatus = "uploaded" | "processing" | "needs_review" | "ready" | "failed" | "archived";
 export type JobStatus = "queued" | "processing" | "needs_review" | "ready" | "failed";
 export type MediaStatus = "pending" | "processing" | "ready" | "failed";
+export type AIProvider = "stub" | "doubao" | "qwen" | "dashscope" | "bailian" | "aliyun";
 
 export interface SourcePage {
   pageIndex: number;
@@ -43,7 +44,7 @@ export interface AdminMaterial {
   sourcePages: SourcePage[];
   materialStatus: MaterialStatus;
   jobStatus: JobStatus;
-  provider: "stub" | "doubao";
+  provider: AIProvider;
   learningAssets: number;
   mediaStatus: MediaStatus;
   slaMinutes: number;
@@ -54,7 +55,7 @@ export interface AdminMaterial {
 export interface ProviderPolicy {
   tenantId: "global" | string;
   tier?: string;
-  aiProvider: "stub" | "doubao";
+  aiProvider: AIProvider;
   mediaProvider: "mock" | "real";
   fallbackMode: "global_stub" | "auto_to_mock" | "per_tenant";
   monthlyGuardrail: number;

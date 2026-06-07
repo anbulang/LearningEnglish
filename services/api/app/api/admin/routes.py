@@ -65,7 +65,7 @@ from app.services.shared.job_queue import enqueue_material_job
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-AI_PROVIDERS = {"stub", "doubao"}
+AI_PROVIDERS = {"stub", "doubao", "qwen", "dashscope", "bailian", "aliyun"}
 MEDIA_PROVIDERS = {"mock", "real"}
 FALLBACK_MODES = {"global_stub", "auto_to_mock", "per_tenant"}
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")

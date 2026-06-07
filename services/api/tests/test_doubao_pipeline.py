@@ -230,6 +230,8 @@ def test_qwen_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) -> N
         content = request_payload["messages"][1]["content"]
         assert [item["type"] for item in content] == ["text", "text", "image_url"]
         assert "image_records 数量必须等于输入图片数量" in content[0]["text"]
+        assert "source_bbox 必须返回" in content[0]["text"]
+        assert "不要返回空值" in content[0]["text"]
         assert content[2]["image_url"]["url"].startswith("data:image")
 
     provider = QwenVisionOCRProvider(
@@ -250,6 +252,7 @@ def test_qwen_vision_provider_extracts_structured_ocr_draft(tmp_path: Path) -> N
     assert draft.sentences == ["A rabbit can hop fast."]
     assert draft.image_records[0].image_title == "Rabbit page"
     assert draft.learning_assets[0].text == "A rabbit can hop fast."
+    assert draft.learning_assets[0].source_bbox is not None
     assert draft.confidence_summary == "百炼识别到 1 个核心句子。"
 
 
@@ -675,6 +678,7 @@ def test_learning_assets_fallback_uses_vocabulary_and_sentences() -> None:
 
     assert [asset.text for asset in assets] == ["queen", "duck", "Find the queen."]
     assert all(asset.source_page_index >= 1 for asset in assets)
+    assert all(asset.source_bbox is not None for asset in assets)
     assert all(asset.pronunciation_text for asset in assets)
     assert len(assets) <= 20
 

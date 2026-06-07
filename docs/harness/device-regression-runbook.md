@@ -1,6 +1,6 @@
 # 真机回归 Runbook
 
-更新时间：2026-05-31
+更新时间：2026-06-02
 
 ## 目的
 
@@ -57,7 +57,7 @@ git diff --check
 ```bash
 xcrun devicectl list devices
 xcrun devicectl device info lockState --device 19586D29-7FF4-5289-8B83-30AA8C3F273D
-LAN_IP=192.168.2.15
+LAN_IP=<current-host-ip>
 make mobile-ios-ipa IOS_API_BASE_URL="http://${LAN_IP}:8000/v1"
 xcrun devicectl device install app --device 19586D29-7FF4-5289-8B83-30AA8C3F273D dist/ios/LearningEnglish-Internal.xcarchive/Products/Applications/Runner.app
 xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F273D --terminate-existing com.anbulang.learningenglish --timeout 60
@@ -96,18 +96,40 @@ xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F2
 4. 确认草稿后进入课程详情。
 5. 打开报告页，确认不是空白页，也不是旧版复习页复用。
 
+如果希望减少人工录入、直接为 `HN-019` 生成一轮主链 summary，可用一键真机 harness：
+
+```bash
+cd /Users/chaucermini/Code/LearningEnglish
+API_BASE_URL=http://<current-host-ip>:8000/v1 \
+SOURCE_IMAGE_URLS=https://example.com/page-1.jpg,https://example.com/page-2.jpg \
+make harness-hn019-real-device-main-chain
+```
+
+说明：
+
+- `SOURCE_IMAGE_URLS` 需要提供当前可下载的讲义图片 URL。
+- 这条 harness 负责登录、建档、上传、轮询、确认、读取报告，并把 material/job/media/API/worker 摘要归档到 `dist/harness/HN-019/`；截图仍需要手工补存。
+- 默认真机 ID 使用当前开发机上的 `Chaucer`，如设备变化，通过 `DEVICE_ID=<flutter-device-id>` 和 `DEVICETL_DEVICE_ID=<devicectl-device-id>` 覆盖。
+- 默认会在验证结束后重新安装 `dist/ios/export/learning_english_mobile.ipa` 并启动正式 App；如只想保留 harness app，可设置 `HN019_RESTORE_APP=0`。
+- 历史 evidence 里出现的固定 LAN IP 只代表当时环境，不应当成当前默认值。
+
 建议保留证据到 `dist/harness/HN-019/`：
 
-- `device-main-chain-api.log`
-- `device-main-chain-worker.log`
+- `real-device-main-chain-summary.json`
+- `real-device-main-chain-material.json`
+- `real-device-main-chain-job.json`
+- `real-device-main-chain-media-summary.json`
+- `real-device-main-chain-api.log`
+- `real-device-main-chain-worker.log`
 - `device-upload-review-screen.png`
 - `device-lesson-detail-screen.png`
 - `device-reports-screen.png`
-- `device-main-chain-summary.json`
 
 通过标准：
 
 - 主链可走通，或失败时能定位在明确步骤。
+- `summary` 中 material/job 均为 `ready`，图片记录数等于上传页数，学习资产和复习任务数量大于 0。
+- `media-summary` 中生成图片、美式 TTS、英式 TTS 均为 `ready`。
 - summary 里说明设备、API base URL、provider 模式和结果。
 
 `failed` 判定：

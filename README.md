@@ -118,7 +118,7 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | 路径 | 内容 |
 | --- | --- |
 | [`apps/mobile`](apps/mobile) | Flutter 移动端，覆盖 phone / tablet 自适应体验 |
-| [`apps/admin`](apps/admin) | React/Vite 多租户运维管理后台，可连接 `/v1/admin/*` live API |
+| [`apps/admin`](apps/admin) | React/Vite 多租户运维管理后台：默认可用 mock 数据启动，也可连接 `/v1/admin/*` live API 查看 read model 并执行受控 mutation |
 | [`packages/contracts`](packages/contracts) | Dart 侧共享领域契约，和 API Pydantic models 对齐 |
 | [`packages/design_tokens`](packages/design_tokens) | Flutter 设计 token |
 | [`services/api`](services/api) | FastAPI 后端服务，内部按 `api/parent`、`api/admin`、`services/parent`、`services/admin`、`services/shared` 区分家长端、运维管理和共享能力 |
@@ -195,7 +195,7 @@ AI_HTTP_TRUST_ENV=true
 AI_PROVIDER=qwen
 DASHSCOPE_API_KEY=<your-dashscope-api-key>
 DASHSCOPE_COMPATIBLE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_VISION_MODEL=qwen-vl-max-latest
+QWEN_VISION_MODEL=qwen-vl-max
 QWEN_MODEL=qwen-plus
 AI_REQUEST_TIMEOUT_SECONDS=180
 AI_MAX_IMAGE_COUNT=5
@@ -243,7 +243,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 文档 |
 | --- | --- |
-| 项目进度与 ToDo | [`docs/project/2026-05-31-status-and-todo.md`](docs/project/2026-05-31-status-and-todo.md) |
+| 项目进度与 ToDo | [`docs/project/2026-06-03-status-and-todo.md`](docs/project/2026-06-03-status-and-todo.md) |
 | 系统总览 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
