@@ -35,15 +35,15 @@ from app.models.contracts import (
     PrimaryAccent,
     SpeakingAttemptStatus,
 )
-from app.services.learning_asset_media import MediaProviderConfigurationError, build_media_provider_bundle
-from app.services.mappers import course_material_from_model, material_job_from_model
-from app.services.pipeline import build_pipeline_service
-from app.services.speaking_assessment import (
+from app.services.shared.learning_asset_media import MediaProviderConfigurationError, build_media_provider_bundle
+from app.services.shared.mappers import course_material_from_model, material_job_from_model
+from app.services.shared.pipeline import build_pipeline_service
+from app.services.shared.speaking_assessment import (
     SpeechAssessmentError,
     build_speech_assessment_audio_url,
     build_speech_assessment_provider,
 )
-from app.services.storage import get_storage_service
+from app.services.shared.storage import get_storage_service
 
 
 @shared_task(name="materials.process_material_job")
@@ -617,7 +617,7 @@ def _build_reference_image(asset: LearningAsset, source_assets: list[StoredAsset
     if asset.source_bbox is None:
         return None
     try:
-        from app.services.media_reference import build_reference_image
+        from app.services.shared.media_reference import build_reference_image
     except ImportError:
         return None
 

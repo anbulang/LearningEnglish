@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../App";
-import { mockMaterials, mockModuleSettings, mockProviderPolicies, mockTenants } from "../domain/mockData";
+import { mockMaterials, mockModuleSettings, mockProviderPolicies, mockTenantDetailData, mockTenants } from "../domain/mockData";
 import { TenantDetail } from "./TenantDetail";
 
 describe("TenantDetail", () => {
@@ -58,6 +58,30 @@ describe("TenantDetail", () => {
     expect(screen.getAllByText("global_default").length).toBeGreaterThan(0);
     expect(screen.getByText("stub")).toBeInTheDocument();
     expect(screen.getByText("mock")).toBeInTheDocument();
+  });
+
+  it("renders backend tenant detail sections when API detail data is provided", () => {
+    render(
+      <TenantDetail
+        language="en"
+        tenantId="tenant_sunny_kids"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        policies={mockProviderPolicies}
+        moduleSettings={mockModuleSettings}
+        tenantDetailData={mockTenantDetailData}
+      />
+    );
+
+    expect(screen.getByText("Sunny Kids English")).toBeInTheDocument();
+    expect(screen.getAllByText("Emma Chen").length).toBeGreaterThan(0);
+    expect(screen.getByText("Read short phonics stories")).toBeInTheDocument();
+    expect(screen.getAllByText("Weekly reports").length).toBeGreaterThan(0);
+    expect(screen.getByText("completed_sessions")).toBeInTheDocument();
+    expect(screen.getAllByText("Speaking attempts").length).toBeGreaterThan(0);
+    expect(screen.getByText("scored")).toBeInTheDocument();
+    expect(screen.getByText("Risk summary")).toBeInTheDocument();
+    expect(screen.getByText("failed_material_jobs")).toBeInTheDocument();
   });
 
   it("makes the all-tenant preview context visible from App routing", async () => {

@@ -13,7 +13,7 @@ from app.models.contracts import (
     PrimaryAccent,
     SourceBoundingBox,
 )
-from app.services.mappers import course_material_from_model, material_job_from_model
+from app.services.shared.mappers import course_material_from_model, material_job_from_model
 
 
 def test_learning_asset_round_trips_media_fields() -> None:

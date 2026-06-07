@@ -15,7 +15,7 @@ from app.api.router import api_router
 from app.core.db import init_db
 from app.core.settings import ensure_local_paths, get_settings
 from app.db.models import StoredAssetModel
-from app.services.storage import get_storage_service
+from app.services.shared.storage import get_storage_service
 
 
 logger = logging.getLogger("learning_english.api")

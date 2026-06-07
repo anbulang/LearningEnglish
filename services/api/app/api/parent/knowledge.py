@@ -6,7 +6,7 @@ from app.api.deps import get_current_parent
 from app.core.db import get_db
 from app.db.models import ChildProfileModel, CourseMaterialModel, KnowledgePackModel, ParentAccountModel
 from app.models.contracts import KnowledgePackDetailResponse, MaterialStatus
-from app.services.mappers import course_material_from_model, knowledge_pack_from_model
+from app.services.shared.mappers import course_material_from_model, knowledge_pack_from_model
 
 router = APIRouter(prefix="/knowledge-packs", tags=["knowledge-packs"])
 

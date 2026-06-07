@@ -9,7 +9,7 @@ import pytest
 
 from app.core.settings import get_settings
 from app.models.contracts import CourseMaterial, JobStatus, MaterialImageRecord, MaterialParseJob
-from app.services.pipeline import (
+from app.services.shared.pipeline import (
     DashScopeProviderError,
     DoubaoLanguageParsingProvider,
     DoubaoProviderError,

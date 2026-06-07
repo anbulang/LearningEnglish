@@ -101,6 +101,45 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - DashScope ASR 需要云端可访问的公网音频 URL；本地 `localhost`、`testserver`、`192.168.*` 等地址会被提前拒绝。真机调试时可配置 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL`，让 worker 把 `audio_object_key` 改写成公网 `/uploads/{object_key}` 后再交给 provider。
 - `GET /v1/reports/weekly` 会返回周报基础统计、讲义汇总和每个 `learning_asset` 的掌握度、复习表现、口语表现与推荐动作。
 
+## Admin Phase 3 运维平台化
+
+Phase 3 把 admin 后端从单个 route 文件中的堆叠逻辑拆到 `app.services.admin.*` 服务层，现有 `/v1/admin/...` path 和 Phase 2 response keys 保持兼容。
+
+服务层边界：
+
+- `app.services.admin.identity`：解析本地 token、`ADMIN_API_CREDENTIALS_JSON`、token SHA-256 比对和 inactive admin 拒绝。
+- `app.services.admin.permissions`：exact permission 检查、any-permission read fallback 和统一 missing permission 错误。
+- `app.services.admin.scope`：`tenant_scope=all` 与单租户 no-disclosure 边界。
+- `app.services.admin.audit`：审计事件写入、分页过滤、resource timeline 和 route read audit。
+- `app.services.admin.read_models`：dashboard 与 tenant detail read model。
+- `app.services.admin.operations`：operations snapshot、severity、issue vocabulary 和 recommended action。
+- `app.services.admin.actions`：mutation `action_result` 统一合同。
+
+`GET /v1/admin/operations` 的 Phase 3 `issues` 合同：
+
+- `severity`：`ok|info|warning|critical`，供 UI 直接映射状态颜色。
+- `status_label`：后台可读问题名称。
+- `reason`：问题原因，不要求 UI 重新推断。
+- `recommended_action`：后端给出的建议动作；UI 不在本地猜测。
+- `required_permission`：执行该动作所需权限；不可执行时可以缺省或使用 unavailable action。
+- `related_resource`：包含 `type`、`id`、可选 `tenant_id`、`material_id`、`child_id`。
+- `source="database_snapshot"`：当前只代表数据库与配置快照，不代表真实 worker broker 状态。
+
+所有 Phase 3 mutation response 都应包含：
+
+- `required_permission`
+- 原资源 payload，例如 `material`、`provider_policy`、`module_setting` 或 `impersonation_session`
+- `action_result`：`action`、`status=success|noop|failed|unavailable`、`resource_type`、`resource_id`、`tenant_id`、`message`
+- `audit_event`
+
+Worker-facing health 仍然是 `source="database_snapshot"` 的运维摘要：可以用于发现解析失败、媒体失败、stale processing、provider 配置缺失等信号，但不能解读为 Celery broker queue depth、worker heartbeat 或真实 broker introspection。
+
+验证入口：
+
+```bash
+make api-test
+```
+
 ## 本地运行
 
 ```bash

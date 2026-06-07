@@ -8,9 +8,9 @@ from app.core.config import get_pipeline_service
 from app.core.db import SessionLocal
 from app.db.models import CourseMaterialModel, MaterialParseJobModel, StoredAssetModel
 from app.main import app
-from app.services.mappers import course_material_from_model, material_job_from_model
-from app.services.pipeline import DoubaoLanguageParsingProvider, DoubaoVisionOCRProvider, ProviderBackedPipelineService
-from app.services.storage import get_storage_service
+from app.services.shared.mappers import course_material_from_model, material_job_from_model
+from app.services.shared.pipeline import DoubaoLanguageParsingProvider, DoubaoVisionOCRProvider, ProviderBackedPipelineService
+from app.services.shared.storage import get_storage_service
 from conftest import auth_headers, configure_test_environment
 
 

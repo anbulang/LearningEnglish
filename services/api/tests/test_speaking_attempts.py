@@ -95,7 +95,7 @@ def test_create_speaking_attempt_uploads_audio_and_enqueues(api_client, monkeypa
     headers, _ = auth_headers(api_client, auth_code="speaking-upload-parent")
     child_id, material_id = _create_child_and_material(api_client, headers)
     enqueued: list[str] = []
-    monkeypatch.setattr("app.api.routes.speaking_attempts.enqueue_speaking_attempt_job", enqueued.append)
+    monkeypatch.setattr("app.api.parent.speaking_attempts.enqueue_speaking_attempt_job", enqueued.append)
 
     response = api_client.post(
         "/v1/speaking-attempts",
@@ -172,7 +172,7 @@ def test_create_speaking_attempt_rejects_unsupported_audio_type(api_client) -> N
 def test_get_speaking_attempt_requires_owner(api_client, monkeypatch) -> None:
     owner_headers, _ = auth_headers(api_client, auth_code="speaking-owner-parent")
     child_id, material_id = _create_child_and_material(api_client, owner_headers)
-    monkeypatch.setattr("app.api.routes.speaking_attempts.enqueue_speaking_attempt_job", lambda attempt_id: None)
+    monkeypatch.setattr("app.api.parent.speaking_attempts.enqueue_speaking_attempt_job", lambda attempt_id: None)
     create_response = api_client.post(
         "/v1/speaking-attempts",
         data={
@@ -214,7 +214,7 @@ def test_retry_speaking_attempt_requeues_failed_attempt(api_client, monkeypatch)
         db.refresh(attempt)
         attempt_id = attempt.id
     enqueued: list[str] = []
-    monkeypatch.setattr("app.api.routes.speaking_attempts.enqueue_speaking_attempt_job", enqueued.append)
+    monkeypatch.setattr("app.api.parent.speaking_attempts.enqueue_speaking_attempt_job", enqueued.append)
 
     response = api_client.post(f"/v1/speaking-attempts/{attempt_id}/retry", headers=headers)
 
@@ -246,7 +246,7 @@ def test_retry_speaking_attempt_rejects_scored_attempt(api_client, monkeypatch) 
         db.refresh(attempt)
         attempt_id = attempt.id
     enqueued: list[str] = []
-    monkeypatch.setattr("app.api.routes.speaking_attempts.enqueue_speaking_attempt_job", enqueued.append)
+    monkeypatch.setattr("app.api.parent.speaking_attempts.enqueue_speaking_attempt_job", enqueued.append)
 
     response = api_client.post(f"/v1/speaking-attempts/{attempt_id}/retry", headers=headers)
 
@@ -288,7 +288,7 @@ def test_speaking_queue_uses_api_side_celery_client(monkeypatch) -> None:
     monkeypatch.setitem(__import__("sys").modules, "celery", type("CeleryModule", (), {"Celery": FakeCelery}))
     get_settings.cache_clear()
     try:
-        from app.services.speaking_queue import enqueue_speaking_attempt_job
+        from app.services.shared.speaking_queue import enqueue_speaking_attempt_job
 
         enqueue_speaking_attempt_job("attempt_test")
     finally:

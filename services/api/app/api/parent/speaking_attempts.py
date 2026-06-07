@@ -12,8 +12,8 @@ from app.core.db import get_db
 from app.core.settings import get_settings
 from app.db.models import ChildProfileModel, CourseMaterialModel, ParentAccountModel, SpeakingAttemptModel
 from app.models.contracts import MaterialStatus, SpeakingAttempt, SpeakingAttemptStatus
-from app.services.mappers import speaking_attempt_from_model
-from app.services.speaking_queue import enqueue_speaking_attempt_job
+from app.services.shared.mappers import speaking_attempt_from_model
+from app.services.shared.speaking_queue import enqueue_speaking_attempt_job
 
 router = APIRouter(prefix="/speaking-attempts", tags=["speaking-attempts"])
 

@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.contracts import LearningAsset, MediaGenerationStatus, SourceBoundingBox
-from app.services.learning_asset_media import HN014MockMediaProvider
+from app.services.shared.learning_asset_media import HN014MockMediaProvider
 
 
 def test_hn014_mock_media_provider_fills_urls_for_known_asset() -> None:

@@ -10,17 +10,16 @@
 
 ## 当前服务边界
 
-当前后端是一个模块化单体：
+当前后端仍是一个 FastAPI 模块化单体，但代码边界按入口和运行责任分组：
 
-- `auth`：微信登录占位、手机号验证码、Token 刷新、登出、`/me`
-- `children`：孩子档案创建与列表
-- `materials`：讲义上传、资料详情、归档删除、学习资产主发音切换
-- `material_jobs`：识别状态查询、确认、重试
-- `knowledge`：课程详情中的知识包读取
-- `review`：复习任务查询、练习完成
-- `speaking`：口语尝试列表和创建
-- `parent_coaching`：亲子陪练脚本读取
-- `reports`：周报读取
+- `api/parent`：家长端 HTTP API，继续暴露 `/v1/auth`、`/v1/materials`、`/v1/reports` 等原有路径，并使用 `Bearer` parent token。
+- `api/admin`：运维管理 HTTP API，继续暴露 `/v1/admin/*`，并使用 admin 身份、权限和审计边界。
+- `services/parent`：家长端业务编排，例如登录、验证码、token 刷新和家长资料读取。
+- `services/admin`：运维管理业务编排，例如 admin identity、permission、scope、audit、operations read model 和 action result。
+- `services/shared`：被 API 与 worker 共用的基础能力，例如 provider pipeline、storage、queue enqueue helper、mapper、learning asset media、speaking assessment。
+- `db` / `models` / `core`：数据库模型、契约模型、settings、DB session 和安全基础能力。
+
+外部路径保持兼容：家长端继续访问 `/v1/*`，运维管理继续访问 `/v1/admin/*`。
 
 ## 已实现 API 面
 

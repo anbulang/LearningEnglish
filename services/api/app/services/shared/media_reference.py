@@ -8,7 +8,7 @@ from PIL import Image, UnidentifiedImageError
 
 from app.db.models import StoredAssetModel
 from app.models.contracts import LearningAsset
-from app.services.storage import get_storage_service
+from app.services.shared.storage import get_storage_service
 
 
 _REFERENCE_CANVAS_SIDE = 512
