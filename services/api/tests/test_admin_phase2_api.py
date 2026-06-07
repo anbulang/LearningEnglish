@@ -1324,6 +1324,8 @@ def test_admin_tenant_detail_returns_admin_read_model_for_all_scope(api_client, 
         "region": "local",
         "tier": "pilot",
         "created_at": "2026-05-28T15:00:00+00:00",
+        "active_parents": 1,
+        "children": 2,
         "updated_at": "2026-05-28T15:00:00+00:00",
     }
     assert payload["summary"] == {
@@ -1909,6 +1911,53 @@ def test_admin_audit_events_clamp_limit_above_one_hundred(api_client, monkeypatc
     payload = response.json()
     assert len(payload["items"]) == 100
     assert payload["next_cursor"]
+
+
+def test_admin_audit_events_fallback_to_default_limit_for_nonnumeric_limit(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_limit_default",
+                "display_name": "Limit Default Admin",
+                "email": "limit-default@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("limit-default-token"),
+            }
+        ],
+    )
+    created_at = datetime(2026, 5, 28, 14, 30, tzinfo=timezone.utc)
+    for index in range(2):
+        _seed_audit_event(
+            audit_id=f"audit_task2_limit_default_{index:03d}",
+            actor_id="admin_limit_default",
+            tenant_scope="tenant_task2_limit_default",
+            action="admin.task2.limit_default",
+            resource_type="admin_audit_event",
+            risk_level="low",
+            created_at=created_at,
+        )
+
+    response = api_client.get(
+        "/v1/admin/audit-events",
+        params={
+            "tenant_scope": "tenant_task2_limit_default",
+            "action": "admin.task2.limit_default",
+            "actor_id": "admin_limit_default",
+            "limit": "not-a-number",
+        },
+        headers={"X-Admin-Token": "limit-default-token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["id"] for item in payload["items"]] == [
+        "audit_task2_limit_default_001",
+        "audit_task2_limit_default_000",
+    ]
+    assert payload["next_cursor"] == ""
 
 
 def test_admin_audit_events_require_audit_read_permission(api_client, monkeypatch) -> None:

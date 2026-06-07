@@ -126,6 +126,34 @@ describe("AuditAccess", () => {
     });
   });
 
+  it("preserves the current tenant scope when loading audit events", async () => {
+    const onLoadAuditEvents = vi.fn().mockResolvedValue(mockAuditEventsPage);
+    render(
+      <AuditAccess
+        language="en"
+        accessData={accessData}
+        dataMode="live"
+        tenants={mockTenants}
+        tenantScope="tenant_sunny_kids"
+        auditEventsPage={mockAuditEventsPage}
+        onLoadAuditEvents={onLoadAuditEvents}
+      />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    expect(onLoadAuditEvents).toHaveBeenCalledWith({
+      tenantScope: "tenant_sunny_kids"
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Load next page" }));
+
+    expect(onLoadAuditEvents).toHaveBeenLastCalledWith({
+      tenantScope: "tenant_sunny_kids",
+      cursor: mockAuditEventsPage.nextCursor
+    });
+  });
+
   it("lists impersonation sessions and requires a reason before ending one", async () => {
     const onEndImpersonationSession = vi.fn().mockResolvedValue({
       requiredPermission: "admin.impersonation.end",
@@ -145,7 +173,7 @@ describe("AuditAccess", () => {
         language="en"
         accessData={{
           ...accessData,
-          permissions: [...accessData.permissions, "admin.impersonation.start", "admin.impersonation.end"]
+          permissions: ["*"]
         }}
         dataMode="live"
         tenants={mockTenants}

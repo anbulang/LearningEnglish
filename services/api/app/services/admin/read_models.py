@@ -125,7 +125,7 @@ def build_admin_tenant_detail(db: Session, tenant_scope: str, tenant_id: str) ->
     )
     return {
         "required_permission": "admin.tenant.read",
-        "tenant": _admin_tenant_detail_payload(tenant, risk_summary["risk_level"]),
+        "tenant": _admin_tenant_detail_payload(tenant, risk_summary["risk_level"], len(children)),
         "summary": _tenant_summary_payload(children, material_counts),
         "children": [
             _admin_child_payload(
@@ -196,7 +196,7 @@ def _admin_tenant_payload(parent: ParentAccountModel, child_count: int, material
     }
 
 
-def _admin_tenant_detail_payload(parent: ParentAccountModel, risk_level: str) -> dict:
+def _admin_tenant_detail_payload(parent: ParentAccountModel, risk_level: str, child_count: int) -> dict:
     return {
         "id": parent.id,
         "name": parent.display_name or _fallback_parent_name(parent),
@@ -211,6 +211,8 @@ def _admin_tenant_detail_payload(parent: ParentAccountModel, risk_level: str) ->
         "region": "local",
         "tier": "pilot",
         "created_at": _iso(parent.created_at),
+        "active_parents": 1,
+        "children": child_count,
         "updated_at": _iso(parent.updated_at),
     }
 

@@ -31,6 +31,7 @@ from app.db.models import (
 from app.models.contracts import JobStatus, MaterialStatus, SpeakingAttemptStatus
 from app.services.admin.audit import (
     AdminAuditFilters,
+    audit_page_limit,
     record_admin_audit_event as _record_audit_event,
     search_admin_audit_events,
     serialize_admin_audit_event as _audit_event_payload,
@@ -227,7 +228,7 @@ def list_admin_audit_events(
             risk_level=risk_level or None,
             result=result or None,
             actor_id=actor_id or None,
-            limit=limit,
+            limit=audit_page_limit(limit),
             cursor=cursor or None,
         ),
     )
@@ -374,6 +375,7 @@ def retry_admin_material_job(
     job.status = JobStatus.processing.value
     job.warnings = []
     job.confidence_summary = "任务已重新排队。"
+    job.started_at = datetime.now(timezone.utc)
     job.finished_at = None
     job.draft_image_records = material.image_records or []
     job.draft_learning_assets = material.learning_assets or []

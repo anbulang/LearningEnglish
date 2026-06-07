@@ -714,6 +714,11 @@ td small {
   color: var(--cocoa-coral);
 }
 
+.table-muted-action {
+  color: var(--dust-brown);
+  font-size: 0.8rem;
+}
+
 .sla-risk {
   color: var(--cocoa-coral);
   font-weight: 900;

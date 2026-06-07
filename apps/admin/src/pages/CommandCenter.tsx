@@ -10,6 +10,7 @@ interface CommandCenterProps {
   tenants: Tenant[];
   materials: AdminMaterial[];
   operationsData?: AdminOperationsData;
+  adminPermissions?: string[];
   onSubmitIssueAction?: (issue: AdminOperationsIssue, reason: string) => void | Promise<void>;
 }
 
@@ -24,10 +25,12 @@ export function CommandCenter({
   tenants,
   materials,
   operationsData,
+  adminPermissions = [],
   onSubmitIssueAction
 }: CommandCenterProps) {
   const [selectedIssue, setSelectedIssue] = useState<AdminOperationsIssue | null>(null);
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+  const [issueActionError, setIssueActionError] = useState("");
   const scopedMaterials = getMaterialsForScope(materials, tenantScope);
   const scopedTenants = tenantScope === "all" ? tenants : tenants.filter((tenant) => tenant.id === tenantScope);
   const counts = getLifecycleCounts(scopedMaterials);
@@ -118,16 +121,7 @@ export function CommandCenter({
                       <td>
                         <StatusChip tone={severityTone(issue.severity)}>{issue.severity}</StatusChip>
                       </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="table-link-button"
-                          onClick={() => setSelectedIssue(issue)}
-                          aria-label={`${copy.openActionFor} ${issue.statusLabel}`}
-                        >
-                          {issue.recommendedAction}
-                        </button>
-                      </td>
+                      <td>{renderIssueAction(issue)}</td>
                     </tr>
                   ))
                 : riskRows.map((material) => (
@@ -186,7 +180,11 @@ export function CommandCenter({
           issue={selectedIssue}
           isOpen={true}
           isSubmitting={isSubmittingIssue}
-          onClose={() => setSelectedIssue(null)}
+          submitError={issueActionError}
+          onClose={() => {
+            setIssueActionError("");
+            setSelectedIssue(null);
+          }}
           onSubmit={(reason) => void handleSubmitIssueAction(selectedIssue, reason)}
         />
       )}
@@ -199,12 +197,40 @@ export function CommandCenter({
       return;
     }
     setIsSubmittingIssue(true);
+    setIssueActionError("");
     try {
       await onSubmitIssueAction(issue, reason);
       setSelectedIssue(null);
+    } catch (error) {
+      setIssueActionError(error instanceof Error && error.message ? error.message : copy.actionFailed);
     } finally {
       setIsSubmittingIssue(false);
     }
+  }
+
+  function renderIssueAction(issue: AdminOperationsIssue) {
+    const canSubmit =
+      Boolean(onSubmitIssueAction) && isSupportedIssueAction(issue) && hasRequiredPermission(adminPermissions, issue.requiredPermission);
+    if (!canSubmit) {
+      return (
+        <span className="table-muted-action" aria-label={`${copy.actionUnavailableFor} ${issue.statusLabel}`}>
+          {issue.recommendedAction}
+        </span>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className="table-link-button"
+        onClick={() => {
+          setIssueActionError("");
+          setSelectedIssue(issue);
+        }}
+        aria-label={`${copy.openActionFor} ${issue.statusLabel}`}
+      >
+        {issue.recommendedAction}
+      </button>
+    );
   }
 }
 
@@ -237,6 +263,20 @@ function numberFromRecord(record: Record<string, unknown> | undefined, key: stri
   return typeof value === "number" ? value : 0;
 }
 
+function hasRequiredPermission(adminPermissions: string[], requiredPermission: string | undefined): boolean {
+  return !requiredPermission || adminPermissions.includes("*") || adminPermissions.includes(requiredPermission);
+}
+
+function isSupportedIssueAction(issue: AdminOperationsIssue): boolean {
+  if (issue.recommendedAction === "retry_material_job") {
+    return issue.relatedResource.type === "material_parse_job";
+  }
+  if (issue.recommendedAction === "archive_material") {
+    return Boolean(issue.relatedResource.materialId || issue.relatedResource.id);
+  }
+  return false;
+}
+
 const zhCopy = {
   title: "平台指挥台",
   subtitle: "多租户学习内容生产、AI 处理和学习结果的统一运营入口",
@@ -255,6 +295,8 @@ const zhCopy = {
   status: "状态",
   action: "操作",
   openActionFor: "打开操作",
+  actionUnavailableFor: "不可执行的操作",
+  actionFailed: "操作提交失败，请检查权限或稍后重试。",
   lifecycle: "内容生产生命周期",
   tenantHealth: "租户健康摘要",
   stageUpload: "上传",
@@ -286,6 +328,8 @@ const enCopy = {
   status: "Status",
   action: "Action",
   openActionFor: "Open action for",
+  actionUnavailableFor: "Unavailable action for",
+  actionFailed: "Action failed. Check permissions or try again later.",
   lifecycle: "Content lifecycle",
   tenantHealth: "Tenant health summary",
   stageUpload: "Upload",

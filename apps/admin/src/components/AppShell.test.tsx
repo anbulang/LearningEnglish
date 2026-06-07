@@ -155,6 +155,169 @@ describe("AppShell", () => {
     expect(screen.getByRole("combobox", { name: "租户范围" })).toHaveDisplayValue("所有租户");
   });
 
+  it("keeps live dashboard data when access and operations reads fail", async () => {
+    vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    const dashboardPayload = {
+      tenants: [
+        {
+          id: "parent_live",
+          name: "微信家长live",
+          tenant_type: "pilot_family",
+          status: "active",
+          region: "local",
+          owner_contact: "13800138110",
+          tier: "pilot",
+          created_at: "2026-05-25T10:00:00+00:00",
+          active_parents: 1,
+          children: 1
+        }
+      ],
+      materials: [
+        {
+          id: "material_live",
+          tenant_id: "parent_live",
+          parent_name: "微信家长live",
+          child_name: "Mia Wang",
+          child_age: 6,
+          title: "Live API Worksheet",
+          page_count: 1,
+          job_id: "job_live",
+          confidence_summary: "上传完成，等待 OCR 与解析。",
+          ocr_confidence: 0.72,
+          source_pages: [],
+          material_status: "processing",
+          job_status: "processing",
+          provider: "stub",
+          learning_assets: 0,
+          media_status: "pending",
+          sla_minutes: 12,
+          updated_at: "2026-05-25T10:05:00+00:00",
+          warnings: []
+        }
+      ],
+      provider_policies: [
+        {
+          tenant_id: "global",
+          ai_provider: "stub",
+          media_provider: "mock",
+          fallback_mode: "global_stub",
+          monthly_guardrail: 0,
+          source: "global_default"
+        }
+      ],
+      module_settings: []
+    };
+    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      const url = String(input);
+      if (url.includes("/v1/admin/dashboard")) {
+        return { ok: true, json: async () => dashboardPayload };
+      }
+      return { ok: false, status: url.includes("/v1/admin/access") ? 403 : 500, json: async () => ({}) };
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+
+    render(<App />);
+
+    expect(await screen.findByText("真实 API")).toBeInTheDocument();
+    expect(screen.getAllByText("微信家长live").length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:8000/v1/admin/operations?tenant_scope=all", {
+        headers: { "X-Admin-Token": "local-admin-token" }
+      })
+    );
+    expect(screen.queryByText("Parse failed")).not.toBeInTheDocument();
+    expect(screen.queryByText("retry_material_job")).not.toBeInTheDocument();
+  });
+
+  it("keeps audit events when impersonation session loading fails", async () => {
+    vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
+    const dashboardPayload = {
+      tenants: [
+        {
+          id: "parent_live",
+          name: "微信家长live",
+          tenant_type: "pilot_family",
+          status: "active",
+          region: "local",
+          owner_contact: "13800138110",
+          tier: "pilot",
+          created_at: "2026-05-25T10:00:00+00:00",
+          active_parents: 1,
+          children: 1
+        }
+      ],
+      materials: [],
+      provider_policies: [
+        {
+          tenant_id: "global",
+          ai_provider: "stub",
+          media_provider: "mock",
+          fallback_mode: "global_stub",
+          monthly_guardrail: 0,
+          source: "global_default"
+        }
+      ],
+      module_settings: []
+    };
+    const accessPayload = {
+      current_admin: {
+        id: "admin_local",
+        display_name: "Local Platform Admin",
+        email: "admin@learningenglish.local",
+        role: "Platform Owner",
+        status: "active"
+      },
+      permissions: ["admin.dashboard.read", "admin.audit.read"],
+      audit_events: []
+    };
+    const auditEventsPayload = {
+      items: [
+        {
+          id: "audit_retry",
+          actor_id: "admin_local",
+          actor_role: "Platform Owner",
+          tenant_scope: "parent_live",
+          action: "admin.material_job.retry",
+          resource_type: "material_parse_job",
+          resource_id: "job_failed",
+          risk_level: "high",
+          result: "success",
+          reason: "OCR provider recovered.",
+          trace_id: "req_retry",
+          created_at: "2026-05-25T10:08:00+00:00"
+        }
+      ],
+      next_cursor: ""
+    };
+    const fetchImpl = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      const url = String(input);
+      if (url.includes("/v1/admin/dashboard")) {
+        return { ok: true, json: async () => dashboardPayload };
+      }
+      if (url.includes("/v1/admin/access")) {
+        return { ok: true, json: async () => accessPayload };
+      }
+      if (url.includes("/v1/admin/audit-events")) {
+        return { ok: true, json: async () => auditEventsPayload };
+      }
+      if (url.includes("/v1/admin/impersonation-sessions")) {
+        return { ok: false, status: 403, json: async () => ({}) };
+      }
+      return { ok: true, json: async () => ({ issues: [] }) };
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+
+    render(<App />);
+
+    expect(await screen.findByText("真实 API")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "审计与权限" }));
+
+    expect(await screen.findByText("admin.material_job.retry")).toBeInTheDocument();
+    expect(screen.getByText("OCR provider recovered.")).toBeInTheDocument();
+  });
+
   it("submits live admin archive mutation from the content pipeline", async () => {
     vi.stubEnv("VITE_ADMIN_API_BASE_URL", "http://127.0.0.1:8000");
     vi.stubEnv("VITE_ADMIN_API_TOKEN", "local-admin-token");
@@ -369,6 +532,12 @@ describe("AppShell", () => {
           })
         };
       }
+      if (url.includes("/v1/admin/audit-events")) {
+        return {
+          ok: true,
+          json: async () => ({ items: [retryEvent], next_cursor: "" })
+        };
+      }
       return {
         ok: true,
         json: async () => (url.includes("/v1/admin/access") ? accessPayload : dashboardPayload)
@@ -493,6 +662,12 @@ describe("AppShell", () => {
             },
             audit_event: providerEvent
           })
+        };
+      }
+      if (url.includes("/v1/admin/audit-events")) {
+        return {
+          ok: true,
+          json: async () => ({ items: [providerEvent], next_cursor: "" })
         };
       }
       return {
@@ -657,6 +832,12 @@ describe("AppShell", () => {
         return {
           ok: true,
           json: async () => tenantDetailPayload
+        };
+      }
+      if (url.includes("/v1/admin/audit-events")) {
+        return {
+          ok: true,
+          json: async () => ({ items: [moduleEvent], next_cursor: "" })
         };
       }
       return {

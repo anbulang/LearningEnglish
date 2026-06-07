@@ -376,10 +376,17 @@ export async function retryAdminMaterialJob(options: RetryAdminMaterialJobOption
       body: JSON.stringify({ reason: options.reason })
     }
   );
+  const payload = (await response.json().catch(() => undefined)) as AdminArchiveMaterialPayload | undefined;
   if (!response.ok) {
+    if (payload?.action_result && payload.audit_event && payload.material) {
+      return normalizeAdminArchiveMaterialPayload(payload);
+    }
     throw new Error(`Admin retry material job request failed: ${response.status}`);
   }
-  return normalizeAdminArchiveMaterialPayload((await response.json()) as AdminArchiveMaterialPayload);
+  if (!payload) {
+    throw new Error("Admin retry material job request returned an empty payload");
+  }
+  return normalizeAdminArchiveMaterialPayload(payload);
 }
 
 export async function overrideAdminProviderPolicy(
@@ -632,7 +639,7 @@ function normalizeAdminMaterialPayload(material: Record<string, unknown>): Admin
     mediaStatus: stringValue(material.media_status) as MediaStatus,
     slaMinutes: numberValue(material.sla_minutes),
     updatedAt: stringValue(material.updated_at),
-    warnings: arrayValue(material.warnings).map((item) => stringValue(item))
+    warnings: stringArrayValue(material.warnings)
   };
 }
 
@@ -784,6 +791,10 @@ function recordValue(value: unknown): Record<string, unknown> {
 
 function arrayValue(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object") : [];
+}
+
+function stringArrayValue(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => stringValue(item)).filter(Boolean) : [];
 }
 
 function appendOptionalParam(params: URLSearchParams, key: string, value: string | undefined): void {

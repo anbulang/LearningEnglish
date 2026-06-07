@@ -83,6 +83,8 @@ describe("CommandCenter", () => {
         tenants={mockTenants}
         materials={mockMaterials}
         operationsData={mockOperationsData}
+        adminPermissions={["admin.material.retry"]}
+        onSubmitIssueAction={vi.fn().mockResolvedValue(undefined)}
       />
     );
 
@@ -110,6 +112,7 @@ describe("CommandCenter", () => {
         tenants={mockTenants}
         materials={mockMaterials}
         operationsData={mockOperationsData}
+        adminPermissions={["admin.material.retry"]}
         onSubmitIssueAction={onSubmitIssueAction}
       />
     );
@@ -119,5 +122,65 @@ describe("CommandCenter", () => {
     await userEvent.click(screen.getByRole("button", { name: "Submit action" }));
 
     expect(onSubmitIssueAction).toHaveBeenCalledWith(mockOperationsData.issues[0], "OCR provider recovered.");
+  });
+
+  it("keeps the action drawer open and surfaces failed backend action results", async () => {
+    const onSubmitIssueAction = vi.fn().mockRejectedValue(new Error("Material retry enqueue failed."));
+    render(
+      <CommandCenter
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        operationsData={mockOperationsData}
+        adminPermissions={["admin.material.retry"]}
+        onSubmitIssueAction={onSubmitIssueAction}
+      />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Open action for Parse failed" }));
+    await userEvent.type(screen.getByLabelText("Audit reason"), "Queue broker is recovering.");
+    await userEvent.click(screen.getByRole("button", { name: "Submit action" }));
+
+    expect(await screen.findByText("Material retry enqueue failed.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Action review" })).toBeInTheDocument();
+  });
+
+  it("does not open unsupported backend operations issue actions", () => {
+    const onSubmitIssueAction = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CommandCenter
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        operationsData={mockOperationsData}
+        adminPermissions={["admin.operations.read", "admin.material.retry"]}
+        onSubmitIssueAction={onSubmitIssueAction}
+      />
+    );
+
+    expect(screen.getByLabelText("Unavailable action for Parse processing stale")).toHaveTextContent(
+      "inspect_material_job"
+    );
+    expect(screen.queryByRole("button", { name: "Open action for Parse processing stale" })).not.toBeInTheDocument();
+  });
+
+  it("does not open backend operations issue actions without the required permission", () => {
+    const onSubmitIssueAction = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CommandCenter
+        language="en"
+        tenantScope="all"
+        tenants={mockTenants}
+        materials={mockMaterials}
+        operationsData={mockOperationsData}
+        adminPermissions={["admin.operations.read"]}
+        onSubmitIssueAction={onSubmitIssueAction}
+      />
+    );
+
+    expect(screen.getByLabelText("Unavailable action for Parse failed")).toHaveTextContent("retry_material_job");
+    expect(screen.queryByRole("button", { name: "Open action for Parse failed" })).not.toBeInTheDocument();
   });
 });

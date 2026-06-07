@@ -156,6 +156,8 @@ def test_build_admin_tenant_detail_returns_phase_two_payload_keys() -> None:
     }
     assert payload["required_permission"] == "admin.tenant.read"
     assert payload["tenant"]["id"] == fixture["tenant_id"]
+    assert payload["tenant"]["active_parents"] == 1
+    assert payload["tenant"]["children"] == 1
     assert payload["children"][0]["id"] == fixture["child_id"]
     assert payload["materials"][0]["id"] == fixture["material_id"]
     assert payload["provider_policy"]["tenant_id"] == fixture["tenant_id"]

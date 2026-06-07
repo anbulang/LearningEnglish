@@ -53,6 +53,18 @@ function prependAuditEvent(events: AdminAuditEvent[], auditEvent: AdminAuditEven
   return [auditEvent, ...events.filter((event) => event.id !== auditEvent.id)];
 }
 
+function pruneOperationIssues(
+  current: AdminOperationsData | null,
+  matches: (issue: AdminOperationsIssue) => boolean
+): AdminOperationsData | null {
+  return current
+    ? {
+        ...current,
+        issues: current.issues.filter((issue) => !matches(issue))
+      }
+    : current;
+}
+
 export function App() {
   const [language, setLanguage] = useState<Language>("zh");
   const [tenantScope, setTenantScope] = useState<TenantScope>("all");
@@ -63,7 +75,7 @@ export function App() {
     providerPolicies: mockProviderPolicies,
     moduleSettings: mockModuleSettings
   });
-  const [operationsData, setOperationsData] = useState<AdminOperationsData>(mockOperationsData);
+  const [operationsData, setOperationsData] = useState<AdminOperationsData | null>(mockOperationsData);
   const [tenantDetailData, setTenantDetailData] = useState<AdminTenantDetailData | null>(null);
   const [auditEventsPage, setAuditEventsPage] = useState<AdminAuditEventsData | null>(null);
   const [impersonationSessions, setImpersonationSessions] = useState<AdminImpersonationSessionsData | null>(null);
@@ -80,12 +92,9 @@ export function App() {
     let isCancelled = false;
     const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
     void (async () => {
+      let data: AdminDashboardData;
       try {
-        const data = await loadAdminDashboard({
-          apiBaseUrl,
-          adminToken
-        });
-        const access = await loadAdminAccess({
+        data = await loadAdminDashboard({
           apiBaseUrl,
           adminToken
         });
@@ -93,7 +102,6 @@ export function App() {
           return;
         }
         setDashboardData(data);
-        setAccessData(access);
         setDataMode("live");
         setTenantScope((currentScope) => {
           if (currentScope === "all" || data.tenants.some((tenant) => tenant.id === currentScope)) {
@@ -104,6 +112,21 @@ export function App() {
       } catch {
         if (!isCancelled) {
           setDataMode("mock");
+          setAccessData(null);
+        }
+        return;
+      }
+
+      try {
+        const access = await loadAdminAccess({
+          apiBaseUrl,
+          adminToken
+        });
+        if (!isCancelled) {
+          setAccessData(access);
+        }
+      } catch {
+        if (!isCancelled) {
           setAccessData(null);
         }
       }
@@ -121,6 +144,7 @@ export function App() {
     }
     let isCancelled = false;
     const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    setOperationsData(null);
     void (async () => {
       try {
         const operations = await loadAdminOperations({
@@ -133,7 +157,7 @@ export function App() {
         }
       } catch {
         if (!isCancelled) {
-          setOperationsData(mockOperationsData);
+          setOperationsData(null);
         }
       }
     })();
@@ -188,31 +212,39 @@ export function App() {
     let isCancelled = false;
     const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
     void (async () => {
-      try {
-        const [auditPage, sessions] = await Promise.all([
-          loadAdminAuditEvents({
-            apiBaseUrl,
-            adminToken,
-            tenantScope,
-            limit: 25
-          }),
-          loadAdminImpersonationSessions({
-            apiBaseUrl,
-            adminToken,
-            tenantScope,
-            status: "all"
-          })
-        ]);
-        if (!isCancelled) {
-          setAuditEventsPage(auditPage);
-          setImpersonationSessions(sessions);
-        }
-      } catch {
-        if (!isCancelled) {
-          setAuditEventsPage(null);
-          setImpersonationSessions(null);
-        }
-      }
+      const auditRequest = loadAdminAuditEvents({
+        apiBaseUrl,
+        adminToken,
+        tenantScope,
+        limit: 25
+      })
+        .then((auditPage) => {
+          if (!isCancelled) {
+            setAuditEventsPage(auditPage);
+          }
+        })
+        .catch(() => {
+          if (!isCancelled) {
+            setAuditEventsPage(null);
+          }
+        });
+      const sessionsRequest = loadAdminImpersonationSessions({
+        apiBaseUrl,
+        adminToken,
+        tenantScope,
+        status: "all"
+      })
+        .then((sessions) => {
+          if (!isCancelled) {
+            setImpersonationSessions(sessions);
+          }
+        })
+        .catch(() => {
+          if (!isCancelled) {
+            setImpersonationSessions(null);
+          }
+        });
+      await Promise.all([auditRequest, sessionsRequest]);
     })();
     return () => {
       isCancelled = true;
@@ -252,6 +284,14 @@ export function App() {
           }
         : current
     );
+    setOperationsData((current) =>
+      pruneOperationIssues(
+        current,
+        (issue) =>
+          issue.relatedResource.id === result.material.id ||
+          issue.relatedResource.materialId === result.material.id
+      )
+    );
   }
 
   async function handleRetryMaterialJob(jobId: string, reason: string) {
@@ -286,6 +326,17 @@ export function App() {
             items: prependAuditEvent(current.items, result.auditEvent)
           }
         : current
+    );
+    if (result.actionResult?.status === "failed") {
+      throw new Error(result.actionResult.message || "Material retry action failed");
+    }
+    setOperationsData((current) =>
+      pruneOperationIssues(
+        current,
+        (issue) =>
+          issue.relatedResource.id === jobId ||
+          issue.relatedResource.materialId === result.material.id
+      )
     );
   }
 
@@ -535,8 +586,11 @@ export function App() {
           tenantScope={tenantScope}
           tenants={dashboardData.tenants}
           materials={dashboardData.materials}
-          operationsData={operationsData}
-          onSubmitIssueAction={dataMode === "live" ? handleSubmitOperationIssueAction : undefined}
+          operationsData={dataMode === "live" ? operationsData ?? undefined : mockOperationsData}
+          adminPermissions={accessData?.permissions ?? []}
+          onSubmitIssueAction={
+            dataMode === "live" && operationsData?.tenantScope === tenantScope ? handleSubmitOperationIssueAction : undefined
+          }
         />
       )}
       {activePage === "tenants" && (
@@ -570,6 +624,7 @@ export function App() {
           accessData={accessData}
           dataMode={dataMode}
           tenants={dashboardData.tenants}
+          tenantScope={tenantScope}
           auditEventsPage={auditEventsPage}
           impersonationSessions={impersonationSessions}
           onLoadAuditEvents={dataMode === "live" ? handleLoadAuditEvents : undefined}

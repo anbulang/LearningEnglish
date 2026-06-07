@@ -176,6 +176,8 @@ const tenantDetailPayload = {
     tier: "pilot",
     owner_contact: "13800138110",
     created_at: "2026-05-25T10:00:00+00:00",
+    active_parents: 1,
+    children: 1,
     updated_at: "2026-05-25T10:05:00+00:00"
   },
   summary: {
@@ -403,6 +405,52 @@ describe("admin API client", () => {
     });
   });
 
+  it("maps failed admin material retry payloads returned with service errors", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({
+        required_permission: "admin.material.retry",
+        detail: "Material retry enqueue failed",
+        material: {
+          ...apiPayload.materials[0],
+          material_status: "failed",
+          job_status: "failed",
+          warnings: ["识别任务排队失败：redis unavailable"]
+        },
+        action_result: {
+          action: "retry_material_job",
+          status: "failed",
+          resource_type: "material_parse_job",
+          resource_id: "job_1",
+          tenant_id: "parent_1",
+          message: "Material retry enqueue failed."
+        },
+        audit_event: {
+          ...accessPayload.audit_events[0],
+          action: "admin.material_job.retry",
+          resource_type: "material_parse_job",
+          resource_id: "job_1",
+          result: "failed"
+        }
+      })
+    });
+
+    const result = await retryAdminMaterialJob({
+      apiBaseUrl: "http://127.0.0.1:8000/",
+      adminToken: "local-admin-token",
+      tenantScope: "all",
+      jobId: "job_1",
+      reason: "Queue broker is recovering.",
+      fetchImpl
+    });
+
+    expect(result.material.jobStatus).toBe("failed");
+    expect(result.material.warnings).toContain("识别任务排队失败：redis unavailable");
+    expect(result.actionResult?.status).toBe("failed");
+    expect(result.auditEvent.result).toBe("failed");
+  });
+
   it("overrides an admin provider policy with tenant scope and reason", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
@@ -626,7 +674,13 @@ describe("admin API client", () => {
       headers: { "X-Admin-Token": "local-admin-token" }
     });
     expect(result.requiredPermission).toBe("admin.tenant.read");
-    expect(result.tenant).toMatchObject({ id: "parent_1", tenantType: "pilot_family", ownerContact: "13800138110" });
+    expect(result.tenant).toMatchObject({
+      id: "parent_1",
+      tenantType: "pilot_family",
+      ownerContact: "13800138110",
+      activeParents: 1,
+      children: 1
+    });
     expect(result.children[0]).toMatchObject({ id: "child_1", name: "Mia Wang" });
     expect(result.materials[0]).toMatchObject({ id: "material_1", tenantId: "parent_1" });
     expect(result.providerPolicy.tenantId).toBe("global");

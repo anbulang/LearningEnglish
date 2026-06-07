@@ -7,11 +7,12 @@ interface ActionDrawerProps {
   issue: AdminOperationsIssue;
   isOpen: boolean;
   isSubmitting: boolean;
+  submitError?: string;
   onClose: () => void;
   onSubmit: (reason: string) => void | Promise<void>;
 }
 
-export function ActionDrawer({ language, issue, isOpen, isSubmitting, onClose, onSubmit }: ActionDrawerProps) {
+export function ActionDrawer({ language, issue, isOpen, isSubmitting, submitError = "", onClose, onSubmit }: ActionDrawerProps) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const copy = messages[language];
@@ -79,6 +80,7 @@ export function ActionDrawer({ language, issue, isOpen, isSubmitting, onClose, o
           />
         </label>
         {error && <p className="form-error">{error}</p>}
+        {submitError && <p className="form-error">{submitError}</p>}
         {isUnavailable && <p className="form-error neutral">{copy["actionDrawer.unavailable"]}</p>}
 
         <div className="audit-actions">

@@ -264,6 +264,8 @@ def test_admin_retry_material_job_resets_state_and_records_audit_event(api_clien
         job.status = "failed"
         job.warnings = ["OCR timeout", "Queue timeout"]
         job.confidence_summary = "识别失败：OCR timeout"
+        old_started_at = datetime(2026, 5, 24, tzinfo=timezone.utc)
+        job.started_at = old_started_at
         job.finished_at = datetime(2026, 5, 25, tzinfo=timezone.utc)
         material.status = "failed"
         db.add_all([job, material])
@@ -312,6 +314,9 @@ def test_admin_retry_material_job_resets_state_and_records_audit_event(api_clien
         assert job.status == "processing"
         assert job.warnings == []
         assert job.confidence_summary == "任务已重新排队。"
+        assert job.started_at is not None
+        started_at = job.started_at.replace(tzinfo=timezone.utc) if job.started_at.tzinfo is None else job.started_at
+        assert started_at > old_started_at
         assert job.finished_at is None
         assert material.status == "processing"
 

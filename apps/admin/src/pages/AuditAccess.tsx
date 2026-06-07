@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StatusChip } from "../components/ui";
 import type { AdminAccessData } from "../domain/adminApi";
 import type {
@@ -32,6 +32,7 @@ interface AuditAccessProps {
   accessData: AdminAccessData | null;
   dataMode: "mock" | "live";
   tenants: Tenant[];
+  tenantScope?: string;
   auditEventsPage?: AdminAuditEventsData | null;
   impersonationSessions?: AdminImpersonationSessionsData | null;
   onLoadAuditEvents?: (filters: AuditEventFilters) => Promise<AdminAuditEventsData | void>;
@@ -44,6 +45,7 @@ export function AuditAccess({
   accessData,
   dataMode,
   tenants,
+  tenantScope = "all",
   auditEventsPage,
   impersonationSessions,
   onLoadAuditEvents,
@@ -53,7 +55,7 @@ export function AuditAccess({
   const copy = language === "zh" ? zhCopy : enCopy;
   const [selectedTenantId, setSelectedTenantId] = useState(tenants[0]?.id ?? "");
   const [auditFilters, setAuditFilters] = useState({
-    tenantScope: "all",
+    tenantScope,
     actorId: "",
     action: "",
     resourceType: "",
@@ -68,11 +70,15 @@ export function AuditAccess({
   const [endSessionError, setEndSessionError] = useState("");
   const [endSessionMessage, setEndSessionMessage] = useState("");
   const [endingSessionId, setEndingSessionId] = useState("");
-  const hasImpersonationPermission = Boolean(accessData?.permissions.includes("admin.impersonation.start"));
-  const hasEndImpersonationPermission = Boolean(accessData?.permissions.includes("admin.impersonation.end"));
+  const hasImpersonationPermission = hasPermission(accessData?.permissions, "admin.impersonation.start");
+  const hasEndImpersonationPermission = hasPermission(accessData?.permissions, "admin.impersonation.end");
   const effectiveTenantId = tenants.some((tenant) => tenant.id === selectedTenantId) ? selectedTenantId : tenants[0]?.id ?? "";
   const auditEvents = auditEventsPage?.items ?? accessData?.auditEvents ?? [];
   const nextCursor = auditEventsPage?.nextCursor ?? "";
+
+  useEffect(() => {
+    setAuditFilters((current) => ({ ...current, tenantScope }));
+  }, [tenantScope]);
 
   async function handleStartImpersonation() {
     if (!onStartImpersonation || !effectiveTenantId || !impersonationReason.trim()) {
@@ -468,6 +474,10 @@ function addOptionalFilter(filters: AuditEventFilters, key: keyof AuditEventFilt
   if (trimmed) {
     filters[key] = trimmed;
   }
+}
+
+function hasPermission(permissions: string[] | undefined, permission: string): boolean {
+  return Boolean(permissions?.includes("*") || permissions?.includes(permission));
 }
 
 function riskTone(riskLevel: AdminAuditEvent["riskLevel"]): "success" | "warning" | "danger" | "neutral" {
