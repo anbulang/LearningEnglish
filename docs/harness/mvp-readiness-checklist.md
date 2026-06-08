@@ -274,7 +274,9 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `scripts/harness/generate_evidence_index.py` 与 `make harness-evidence-index` 已提供统一索引入口。
 - [x] `HN-017` 既有真机 speaking evidence 保持已闭环状态，复跑时按现有 `dist/harness/HN-017/real-device-*` 命名续证，不重新标为待补。
 
-2026-06-03 文档治理补充：
-- [x] 项目状态快照已切到 `docs/project/2026-06-03-status-and-todo.md`，并按目录规则替换旧快照。
+2026-06-07 文档治理补充：
+- [x] 项目状态快照已切到 `docs/project/2026-06-07-status-and-todo.md`，并按目录规则替换旧快照。
+- [x] `README.md` 的“文档入口”已补齐适用人群 / 用途，减少把历史 spec/plan 误读成当前真相源的概率。
+- [x] `Makefile` 默认 `IOS_API_BASE_URL` 已恢复为本机 `127.0.0.1`，真机导包需显式覆盖当前 `LAN_IP`，不再让旧局域网地址伪装成默认事实。
 - [x] `docs/harness/README.md` 已把 `HN-019` 从“预期目录”改为当前已存在证据目录。
 - [x] evidence 归档策略已明确区分“新 summary 推荐字段”和“历史 summary 兼容字段”，避免文档与现有证据格式冲突。

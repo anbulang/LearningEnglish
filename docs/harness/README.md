@@ -1,6 +1,6 @@
 # Harness 文档索引
 
-更新时间：2026-06-03
+更新时间：2026-06-07
 
 ## 这份目录的作用
 
@@ -18,7 +18,7 @@
 - `Makefile`
 - `docs/architecture/*`
 - `docs/harness/*`
-- `docs/project/2026-06-03-status-and-todo.md`
+- `docs/project/2026-06-07-status-and-todo.md`
 - `services/api/README.md`
 - `services/workers/README.md`
 - `infra/env/local.example.env`
@@ -73,7 +73,10 @@ make harness-capture-ios-screen SCREEN=login-screen
 
 - 当前主链已经覆盖上传、AI 校对、课程详情、复习、口语评分和报告，不再是只到上传识别的半链路。
 - 当前默认真实 provider 路径是 `qwen + DashScope media + DashScope speech`。
-- `HN-017` 真机 speaking evidence 已存在；`HN-019` 已完成至少一轮真机安装和主链回归证据归档；当前剩余问题主要在 Android 交付链、R3 真实 provider 复跑纪律，以及更稳定的跨设备复现。
+- `HN-017` 真机 speaking evidence 已存在；`HN-019` 已完成至少一轮真机安装和主链回归证据归档。
+- 当前剩余问题主要在 Android / iOS 交付手册收口、R0/R1/R2/R3 固定复跑纪律、admin live mode 继续接入真实读模型，以及对非开发成员更短的交付入口。
+- `Makefile` 默认 `IOS_API_BASE_URL` 已回到 `http://127.0.0.1:8000/v1`；真机导包必须显式覆盖为当前局域网 API 地址，不能假设某个历史 `192.168.*` 仍然有效。
+- 最新项目级进度与 ToDo 统一以 `docs/project/2026-06-07-status-and-todo.md` 为准；旧快照不再并存。
 
 ## 使用约定
 
@@ -82,6 +85,6 @@ make harness-capture-ios-screen SCREEN=login-screen
 - 交付或文档治理收尾时，至少执行一次：
 
 ```bash
-rg -n "2026-06-02-status-and-todo|2026-06-01-status-and-todo|2026-05-31-status-and-todo|待生成|预期目录|待补真机证据|infra/\\.env\\.example" README.md docs apps services infra --glob '!docs/superpowers/**'
+rg -n "2026-06-05-status-and-todo|2026-06-04-status-and-todo|2026-06-03-status-and-todo|2026-06-02-status-and-todo|2026-06-01-status-and-todo|2026-05-31-status-and-todo|待生成|预期目录|待补真机证据|infra/\\.env\\.example" README.md docs apps services infra --glob '!docs/superpowers/**'
 git diff --check
 ```

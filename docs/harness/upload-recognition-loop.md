@@ -9,8 +9,9 @@
 当前仍未完全收口的部分主要有三类：
 
 - Android 交付链仍受本机 Flutter / Android SDK 环境阻塞，`make mobile-apk` 还没有形成可复查产物。
+- iOS 真机包默认不再假设某个固定局域网地址；导包时需要显式提供当前 `IOS_API_BASE_URL=http://<current-host-ip>:8000/v1`。
 - Doubao、OpenAI、DashScope 真依赖在部分网络环境下仍可能受代理继承影响；如果 shell 已配置 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 但 API / worker 仍无法访问外网，需要额外设置 `AI_HTTP_TRUST_ENV=true` 或 `MEDIA_HTTP_TRUST_ENV=true`。
-- 文档与 evidence 目录已经比较完整，但还缺一个统一索引来说明每个 `HN-*` 目录的关键文件与复查入口。
+- 文档与 evidence 目录已经比较完整，`make harness-evidence-index` 也能生成统一索引；当前剩余问题是各 `HN-*` summary 字段风格还未完全统一，以及新人仍需要更短的复查入口。
 
 ## 触发问题时的旧现状
 
