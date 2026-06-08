@@ -1,6 +1,6 @@
 # 真机回归 Runbook
 
-更新时间：2026-06-02
+更新时间：2026-06-07
 
 ## 目的
 
@@ -85,7 +85,7 @@ xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F2
 执行前准备：
 
 - API 和 worker 已启动。
-- App 指向当前可访问的局域网 API。
+- App 指向当前可访问的局域网 API；不要直接沿用 `Makefile` 的默认 `127.0.0.1`，真机导包时必须显式覆盖 `IOS_API_BASE_URL`。
 - 如需要 clean state，先清理测试账号或模拟器/真机旧数据。
 
 真机操作步骤：

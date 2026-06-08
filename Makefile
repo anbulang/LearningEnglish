@@ -7,7 +7,8 @@ IOS_FLUTTER_MODE ?= profile
 IOS_ARCHIVE_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/LearningEnglish-Internal.xcarchive
 IOS_EXPORT_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/export
 IOS_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.internal.plist
-IOS_API_BASE_URL ?= http://192.168.2.11:18000/v1
+# Real-device builds must override this with the current LAN host IP.
+IOS_API_BASE_URL ?= http://127.0.0.1:8000/v1
 IOS_PREFLIGHT_URL ?= $(subst /v1,,$(IOS_API_BASE_URL))/healthz
 IOS_DEVELOPMENT_TEAM ?= 95RDXKW54K
 API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0.0.1:5432/learning_english
