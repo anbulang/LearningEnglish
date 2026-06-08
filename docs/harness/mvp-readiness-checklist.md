@@ -50,7 +50,7 @@
 - [x] `GET /v1/admin/tenants/{tenant_id}` 已覆盖单租户 read model、tenant scope no-disclosure、recent audit history 权限门控和 bounded latest lists
 - [x] `GET /v1/admin/operations` 已覆盖 material jobs、media generation、speaking attempts、provider runtime readiness、secret presence 布尔值和 tenant override bounded lists；当前不做 Celery broker introspection
 - [x] `GET /v1/admin/impersonation-sessions` 和 `POST /v1/admin/impersonation-sessions/{session_id}/end` 已覆盖 list/end/idempotent end、tenant scope no-disclosure 和 audit 记录
-- [ ] Admin UI 尚未接入 Phase 2 新读模型；`apps/admin` 当前 live mode 仍主要调用 dashboard、access、material retry/archive、provider policy override、tenant module toggle、impersonation start；`audit-events`、`operations`、`tenant detail`、`impersonation list/end` 仍未进入当前 UI
+- [x] Admin UI 已接入 `operations`、`tenant detail`、`audit-events`、`impersonation list/end` 等 live read，且保留 material retry/archive、provider policy override、tenant module toggle、impersonation start 等受控 mutation；当前仍属于运营控制台原型，而不是完整 SSO/权限治理后台
 - [ ] 完整 admin login/SSO、DB token rotation、role mutation 和 permission mutation 仍不是当前 Phase 2 能力
 
 ## 本次验收记录
@@ -280,8 +280,8 @@ make harness-capture-ios-screen SCREEN=report-screen
 - [x] `scripts/harness/generate_evidence_index.py` 与 `make harness-evidence-index` 已提供统一索引入口。
 - [x] `HN-017` 既有真机 speaking evidence 保持已闭环状态，复跑时按现有 `dist/harness/HN-017/real-device-*` 命名续证，不重新标为待补。
 
-2026-06-07 文档治理补充：
-- [x] 项目状态快照已切到 `docs/project/2026-06-07-status-and-todo.md`，并按目录规则替换旧快照。
+2026-06-08 文档治理补充：
+- [x] 项目状态快照已切到 `docs/project/2026-06-08-status-and-todo.md`，并按目录规则替换旧快照。
 - [x] `README.md` 的“文档入口”已补齐适用人群 / 用途，减少把历史 spec/plan 误读成当前真相源的概率。
 - [x] `Makefile` 默认 `IOS_API_BASE_URL` 已恢复为本机 `127.0.0.1`，真机导包需显式覆盖当前 `LAN_IP`，不再让旧局域网地址伪装成默认事实。
 - [x] `docs/harness/README.md` 已把 `HN-019` 从“预期目录”改为当前已存在证据目录。
