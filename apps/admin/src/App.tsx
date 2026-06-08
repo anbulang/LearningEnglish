@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import { AppShell, type PageKey } from "./components/AppShell";
 import {
   archiveAdminMaterial,
+  endAdminImpersonationSession,
   loadAdminAccess,
+  loadAdminAuditEvents,
   loadAdminDashboard,
+  loadAdminImpersonationSessions,
+  loadAdminOperations,
+  loadAdminTenantDetail,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
   startAdminImpersonationSession,
@@ -11,11 +16,20 @@ import {
   type AdminAccessData,
   type AdminDashboardData
 } from "./domain/adminApi";
-import { mockMaterials, mockModuleSettings, mockProviderPolicies, mockTenants } from "./domain/mockData";
-import type { Language, TenantScope } from "./domain/types";
+import { mockMaterials, mockModuleSettings, mockOperationsData, mockProviderPolicies, mockTenants } from "./domain/mockData";
+import type {
+  AdminAuditEvent,
+  AdminAuditEventsData,
+  AdminImpersonationSessionsData,
+  AdminOperationsData,
+  AdminOperationsIssue,
+  AdminTenantDetailData,
+  Language,
+  TenantScope
+} from "./domain/types";
 import { createTranslator } from "./i18n/i18n";
 import type { MessageKey } from "./i18n/messages";
-import { AuditAccess } from "./pages/AuditAccess";
+import { AuditAccess, type AuditEventFilters } from "./pages/AuditAccess";
 import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
@@ -35,6 +49,22 @@ const pageTitles: Record<PageKey, MessageKey> = {
   developer: "page.developerApi.title"
 };
 
+function prependAuditEvent(events: AdminAuditEvent[], auditEvent: AdminAuditEvent): AdminAuditEvent[] {
+  return [auditEvent, ...events.filter((event) => event.id !== auditEvent.id)];
+}
+
+function pruneOperationIssues(
+  current: AdminOperationsData | null,
+  matches: (issue: AdminOperationsIssue) => boolean
+): AdminOperationsData | null {
+  return current
+    ? {
+        ...current,
+        issues: current.issues.filter((issue) => !matches(issue))
+      }
+    : current;
+}
+
 export function App() {
   const [language, setLanguage] = useState<Language>("zh");
   const [tenantScope, setTenantScope] = useState<TenantScope>("all");
@@ -45,6 +75,10 @@ export function App() {
     providerPolicies: mockProviderPolicies,
     moduleSettings: mockModuleSettings
   });
+  const [operationsData, setOperationsData] = useState<AdminOperationsData | null>(mockOperationsData);
+  const [tenantDetailData, setTenantDetailData] = useState<AdminTenantDetailData | null>(null);
+  const [auditEventsPage, setAuditEventsPage] = useState<AdminAuditEventsData | null>(null);
+  const [impersonationSessions, setImpersonationSessions] = useState<AdminImpersonationSessionsData | null>(null);
   const [accessData, setAccessData] = useState<AdminAccessData | null>(null);
   const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
   const t = createTranslator(language);
@@ -58,12 +92,9 @@ export function App() {
     let isCancelled = false;
     const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
     void (async () => {
+      let data: AdminDashboardData;
       try {
-        const data = await loadAdminDashboard({
-          apiBaseUrl,
-          adminToken
-        });
-        const access = await loadAdminAccess({
+        data = await loadAdminDashboard({
           apiBaseUrl,
           adminToken
         });
@@ -71,7 +102,6 @@ export function App() {
           return;
         }
         setDashboardData(data);
-        setAccessData(access);
         setDataMode("live");
         setTenantScope((currentScope) => {
           if (currentScope === "all" || data.tenants.some((tenant) => tenant.id === currentScope)) {
@@ -84,12 +114,142 @@ export function App() {
           setDataMode("mock");
           setAccessData(null);
         }
+        return;
+      }
+
+      try {
+        const access = await loadAdminAccess({
+          apiBaseUrl,
+          adminToken
+        });
+        if (!isCancelled) {
+          setAccessData(access);
+        }
+      } catch {
+        if (!isCancelled) {
+          setAccessData(null);
+        }
       }
     })();
     return () => {
       isCancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      setOperationsData(mockOperationsData);
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    setOperationsData(null);
+    void (async () => {
+      try {
+        const operations = await loadAdminOperations({
+          apiBaseUrl,
+          adminToken,
+          tenantScope
+        });
+        if (!isCancelled) {
+          setOperationsData(operations);
+        }
+      } catch {
+        if (!isCancelled) {
+          setOperationsData(null);
+        }
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [tenantScope]);
+
+  useEffect(() => {
+    setTenantDetailData(null);
+    if (activePage !== "tenants" || !selectedTenantId) {
+      return;
+    }
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      try {
+        const detail = await loadAdminTenantDetail({
+          apiBaseUrl,
+          adminToken,
+          tenantScope,
+          tenantId: selectedTenantId
+        });
+        if (!isCancelled) {
+          setTenantDetailData(detail);
+        }
+      } catch {
+        if (!isCancelled) {
+          setTenantDetailData(null);
+        }
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, selectedTenantId, tenantScope]);
+
+  useEffect(() => {
+    setAuditEventsPage(null);
+    setImpersonationSessions(null);
+    if (activePage !== "audit") {
+      return;
+    }
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      const auditRequest = loadAdminAuditEvents({
+        apiBaseUrl,
+        adminToken,
+        tenantScope,
+        limit: 25
+      })
+        .then((auditPage) => {
+          if (!isCancelled) {
+            setAuditEventsPage(auditPage);
+          }
+        })
+        .catch(() => {
+          if (!isCancelled) {
+            setAuditEventsPage(null);
+          }
+        });
+      const sessionsRequest = loadAdminImpersonationSessions({
+        apiBaseUrl,
+        adminToken,
+        tenantScope,
+        status: "all"
+      })
+        .then((sessions) => {
+          if (!isCancelled) {
+            setImpersonationSessions(sessions);
+          }
+        })
+        .catch(() => {
+          if (!isCancelled) {
+            setImpersonationSessions(null);
+          }
+        });
+      await Promise.all([auditRequest, sessionsRequest]);
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, tenantScope]);
 
   async function handleArchiveMaterial(materialId: string, reason: string) {
     const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
@@ -112,9 +272,25 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
           }
         : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
+          }
+        : current
+    );
+    setOperationsData((current) =>
+      pruneOperationIssues(
+        current,
+        (issue) =>
+          issue.relatedResource.id === result.material.id ||
+          issue.relatedResource.materialId === result.material.id
+      )
     );
   }
 
@@ -139,10 +315,41 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
           }
         : current
     );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
+          }
+        : current
+    );
+    if (result.actionResult?.status === "failed") {
+      throw new Error(result.actionResult.message || "Material retry action failed");
+    }
+    setOperationsData((current) =>
+      pruneOperationIssues(
+        current,
+        (issue) =>
+          issue.relatedResource.id === jobId ||
+          issue.relatedResource.materialId === result.material.id
+      )
+    );
+  }
+
+  async function handleSubmitOperationIssueAction(issue: AdminOperationsIssue, reason: string) {
+    if (issue.recommendedAction === "retry_material_job" && issue.relatedResource.type === "material_parse_job") {
+      await handleRetryMaterialJob(issue.relatedResource.id, reason);
+      return;
+    }
+    if (issue.recommendedAction === "archive_material") {
+      await handleArchiveMaterial(issue.relatedResource.materialId ?? issue.relatedResource.id, reason);
+      return;
+    }
+    throw new Error(`Unsupported admin operation action: ${issue.recommendedAction}`);
   }
 
   async function handleOverrideProviderPolicy(input: ProviderPolicyOverrideInput) {
@@ -175,7 +382,15 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
+          }
+        : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
           }
         : current
     );
@@ -206,14 +421,62 @@ export function App() {
         result.moduleSetting
       ]
     }));
+    setTenantDetailData((current) =>
+      current && current.tenant.id === result.moduleSetting.tenantId
+        ? {
+            ...current,
+            moduleSettings: [
+              ...current.moduleSettings.filter(
+                (setting) =>
+                  !(
+                    setting.tenantId === result.moduleSetting.tenantId &&
+                    setting.moduleKey === result.moduleSetting.moduleKey
+                  )
+              ),
+              result.moduleSetting
+            ]
+          }
+        : current
+    );
     setAccessData((current) =>
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
           }
         : current
     );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
+          }
+        : current
+    );
+  }
+
+  async function handleLoadAuditEvents(filters: AuditEventFilters) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin audit API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await loadAdminAuditEvents({
+      apiBaseUrl,
+      adminToken,
+      tenantScope: filters.tenantScope,
+      actorId: filters.actorId,
+      action: filters.action,
+      resourceType: filters.resourceType,
+      resourceId: filters.resourceId,
+      riskLevel: filters.riskLevel,
+      result: filters.result,
+      cursor: filters.cursor,
+      limit: 25
+    });
+    setAuditEventsPage(result);
+    return result;
   }
 
   async function handleStartImpersonation(input: { tenantId: string; targetParentId: string; reason: string }) {
@@ -234,10 +497,76 @@ export function App() {
       current
         ? {
             ...current,
-            auditEvents: [result.auditEvent, ...current.auditEvents.filter((event) => event.id !== result.auditEvent.id)]
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
           }
         : current
     );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
+          }
+        : current
+    );
+    setImpersonationSessions((current) =>
+      current
+        ? {
+            ...current,
+            items: [
+              result.impersonationSession,
+              ...current.items.filter((session) => session.id !== result.impersonationSession.id)
+            ],
+            auditEvent: result.auditEvent
+          }
+        : current
+    );
+  }
+
+  async function handleEndImpersonationSession(sessionId: string, reason: string) {
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      throw new Error("Admin impersonation API is not configured");
+    }
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    const result = await endAdminImpersonationSession({
+      apiBaseUrl,
+      adminToken,
+      tenantScope,
+      sessionId,
+      reason
+    });
+    setImpersonationSessions((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((session) => {
+              if (session.id !== result.impersonationSession.id) {
+                return session;
+              }
+              return result.actionResult.status === "noop" ? session : result.impersonationSession;
+            }),
+            auditEvent: result.auditEvent
+          }
+        : current
+    );
+    setAccessData((current) =>
+      current
+        ? {
+            ...current,
+            auditEvents: prependAuditEvent(current.auditEvents, result.auditEvent)
+          }
+        : current
+    );
+    setAuditEventsPage((current) =>
+      current
+        ? {
+            ...current,
+            items: prependAuditEvent(current.items, result.auditEvent)
+          }
+        : current
+    );
+    return result;
   }
 
   return (
@@ -257,6 +586,11 @@ export function App() {
           tenantScope={tenantScope}
           tenants={dashboardData.tenants}
           materials={dashboardData.materials}
+          operationsData={dataMode === "live" ? operationsData ?? undefined : mockOperationsData}
+          adminPermissions={accessData?.permissions ?? []}
+          onSubmitIssueAction={
+            dataMode === "live" && operationsData?.tenantScope === tenantScope ? handleSubmitOperationIssueAction : undefined
+          }
         />
       )}
       {activePage === "tenants" && (
@@ -267,6 +601,7 @@ export function App() {
           materials={dashboardData.materials}
           policies={dashboardData.providerPolicies}
           moduleSettings={dashboardData.moduleSettings}
+          tenantDetailData={tenantDetailData}
           isAllTenantPreview={tenantScope === "all"}
           dataMode={dataMode}
           onToggleTenantModule={dataMode === "live" ? handleToggleTenantModule : undefined}
@@ -289,7 +624,12 @@ export function App() {
           accessData={accessData}
           dataMode={dataMode}
           tenants={dashboardData.tenants}
+          tenantScope={tenantScope}
+          auditEventsPage={auditEventsPage}
+          impersonationSessions={impersonationSessions}
+          onLoadAuditEvents={dataMode === "live" ? handleLoadAuditEvents : undefined}
           onStartImpersonation={dataMode === "live" ? handleStartImpersonation : undefined}
+          onEndImpersonationSession={dataMode === "live" ? handleEndImpersonationSession : undefined}
         />
       )}
       {activePage === "providers" && (

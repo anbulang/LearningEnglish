@@ -4,7 +4,7 @@ import logging
 import os
 
 from app.core.settings import get_settings
-from app.services.job_queue import _default_result_backend
+from app.services.shared.job_queue import _default_result_backend
 
 logger = logging.getLogger(__name__)
 

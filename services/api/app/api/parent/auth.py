@@ -19,8 +19,8 @@ from app.models.contracts import (
     RefreshTokenRequest,
     WechatLoginRequest,
 )
-from app.services.auth import AuthService
-from app.services.mappers import child_profile_from_model, parent_account_from_model
+from app.services.parent.auth import AuthService
+from app.services.shared.mappers import child_profile_from_model, parent_account_from_model
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 me_router = APIRouter(tags=["auth"])

@@ -403,7 +403,7 @@ class DashScopeTTSProvider:
 class HN014MockMediaProvider:
     def __init__(self, public_base_url: str) -> None:
         self.public_base_url = public_base_url.rstrip("/")
-        self.root = Path(__file__).resolve().parents[1] / "static" / "mock_media" / "hn014"
+        self.root = Path(__file__).resolve().parents[2] / "static" / "mock_media" / "hn014"
         payload = json.loads((self.root / "manifest.json").read_text(encoding="utf-8"))
         assets = payload.get("assets", [])
         if not isinstance(assets, list):

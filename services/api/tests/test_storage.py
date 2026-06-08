@@ -6,7 +6,7 @@ import pytest
 from fastapi import UploadFile
 
 from app.core.settings import get_settings
-from app.services import storage
+from app.services.shared import storage
 
 
 class _FakeS3Client:

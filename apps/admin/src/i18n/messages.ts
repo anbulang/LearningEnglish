@@ -30,7 +30,21 @@ export const messages = {
     "page.auditAccess.title": "审计与权限",
     "page.developerApi.title": "Developer API",
     "placeholder.phase1": "Phase 1 仅保留导航入口；具体页面将在后续任务实现。",
-    "code.aiProvider": "AI_PROVIDER"
+    "code.aiProvider": "AI_PROVIDER",
+    "actionDrawer.title": "操作确认",
+    "actionDrawer.close": "关闭",
+    "actionDrawer.status": "状态",
+    "actionDrawer.action": "建议操作",
+    "actionDrawer.resource": "资源类型",
+    "actionDrawer.resourceId": "资源 ID",
+    "actionDrawer.tenant": "租户",
+    "actionDrawer.auditPreview": "审计预览",
+    "actionDrawer.reason": "审计原因",
+    "actionDrawer.reasonRequired": "必须填写原因。",
+    "actionDrawer.unavailable": "当前控制台不支持执行该操作。",
+    "actionDrawer.submit": "提交操作",
+    "actionDrawer.submitting": "提交中",
+    "actionDrawer.cancel": "取消"
   },
   en: {
     "nav.commandCenter": "Command Center",
@@ -61,7 +75,21 @@ export const messages = {
     "page.auditAccess.title": "Audit & Access",
     "page.developerApi.title": "Developer API",
     "placeholder.phase1": "Phase 1 keeps this navigation entry only; the full page will be implemented later.",
-    "code.aiProvider": "AI_PROVIDER"
+    "code.aiProvider": "AI_PROVIDER",
+    "actionDrawer.title": "Action review",
+    "actionDrawer.close": "Close",
+    "actionDrawer.status": "Status",
+    "actionDrawer.action": "Recommended action",
+    "actionDrawer.resource": "Resource type",
+    "actionDrawer.resourceId": "Resource ID",
+    "actionDrawer.tenant": "Tenant",
+    "actionDrawer.auditPreview": "Audit preview",
+    "actionDrawer.reason": "Audit reason",
+    "actionDrawer.reasonRequired": "Reason is required.",
+    "actionDrawer.unavailable": "Action is not available from this console.",
+    "actionDrawer.submit": "Submit action",
+    "actionDrawer.submitting": "Submitting",
+    "actionDrawer.cancel": "Cancel"
   }
 } as const satisfies Record<Language, Record<string, string>>;
 

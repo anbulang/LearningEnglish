@@ -254,6 +254,12 @@ make harness-capture-ios-screen SCREEN=report-screen
 - `git diff --check`：无输出
 - owned docs/config secret scan：未发现 admin test token、provider test key 或 OpenAI-style secret 明文
 
+2026-05-31 Admin Operations Platform Phase 3 验证项：
+- [x] Backend service tests：admin identity、permissions、scope、audit、read models、operations 和 action result 已拆入服务层并由 `make api-test` 覆盖。
+- [x] API compatibility：现有 `/v1/admin/...` route path 未重命名，Phase 2 response keys 保留，`/v1/admin/operations` 增加 `issues`，mutation response 增加 `action_result`。
+- [x] Admin UI test/build：`apps/admin` 已接入 operations、tenant detail、audit filters / pagination 和 impersonation sessions；需以 `cd apps/admin && npm test` 与 `cd apps/admin && npm run build` 作为前端 gate。
+- [x] Phase 3 non-goals：SSO / magic link、DB-backed role mutation、permission mutation、真实 worker broker introspection、queue depth 和 worker heartbeat 不属于本阶段完成范围。
+
 2026-05-23 P0 收口补充：
 - [x] 资料跳转规则已抽到 `material_navigation.dart`，首页和资料库共用同一套 ready / review 路由判断。
 - [x] AI 校对页长耗时轮询回归已覆盖连续多次 `processing` 后进入 `needs_review` 的场景。

@@ -6,7 +6,7 @@ from app.core.db import SessionLocal
 from app.db.models import CourseMaterialModel, KnowledgePackModel, MaterialParseJobModel, ReviewTaskModel
 from app.core.config import get_pipeline_service
 from app.models.contracts import JobStatus, MaterialStatus
-from app.services.pipeline import ProviderBackedPipelineService, StubOCRProvider
+from app.services.shared.pipeline import ProviderBackedPipelineService, StubOCRProvider
 from app.main import app
 from conftest import auth_headers, configure_test_environment
 
@@ -77,7 +77,7 @@ def test_create_material_rejects_missing_child(api_client) -> None:
 def test_create_material_enqueues_background_job(api_client, monkeypatch) -> None:
     enqueued_job_ids: list[str] = []
     monkeypatch.setattr(
-        "app.api.routes.materials.enqueue_material_job",
+        "app.api.parent.materials.enqueue_material_job",
         lambda job_id: enqueued_job_ids.append(job_id),
     )
     headers, _ = auth_headers(api_client, auth_code="enqueue-parent")
@@ -92,7 +92,7 @@ def test_create_material_returns_failed_job_when_enqueue_fails(api_client, monke
     def fail_enqueue(job_id: str) -> None:
         raise RuntimeError("redis unavailable")
 
-    monkeypatch.setattr("app.api.routes.materials.enqueue_material_job", fail_enqueue)
+    monkeypatch.setattr("app.api.parent.materials.enqueue_material_job", fail_enqueue)
     headers, _ = auth_headers(api_client, auth_code="enqueue-fail-parent")
     child_id = _create_child(api_client, headers)
 
@@ -142,7 +142,7 @@ def test_material_job_queue_uses_redis_url_for_result_backend(monkeypatch) -> No
     monkeypatch.delenv("CELERY_RESULT_BACKEND", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "celery", type("CeleryModule", (), {"Celery": FakeCelery}))
 
-    from app.services.job_queue import enqueue_material_job
+    from app.services.shared.job_queue import enqueue_material_job
 
     enqueue_material_job("job_test")
 
@@ -205,7 +205,7 @@ def test_retry_missing_job_returns_not_found(api_client) -> None:
 
 def test_retry_failed_job_requeues_processing(api_client) -> None:
     enqueued_job_ids: list[str] = []
-    from app.api.routes import material_jobs
+    from app.api.parent import material_jobs
 
     original_enqueue = material_jobs.enqueue_material_job
     material_jobs.enqueue_material_job = lambda job_id: enqueued_job_ids.append(job_id)
@@ -250,7 +250,7 @@ def test_retry_failed_job_requeues_processing(api_client) -> None:
 def test_confirm_job_persists_learning_assets_and_enqueues_media_job(api_client, monkeypatch) -> None:
     enqueued_material_ids: list[str] = []
     monkeypatch.setattr(
-        "app.api.routes.material_jobs.enqueue_learning_asset_media_job",
+        "app.api.parent.material_jobs.enqueue_learning_asset_media_job",
         lambda material_id: enqueued_material_ids.append(material_id),
     )
     headers, _ = auth_headers(api_client, auth_code="confirm-assets-parent")
@@ -299,7 +299,7 @@ def test_confirm_job_persists_learning_assets_and_enqueues_media_job(api_client,
 def test_confirm_ready_job_is_idempotent(api_client, monkeypatch) -> None:
     enqueued_material_ids: list[str] = []
     monkeypatch.setattr(
-        "app.api.routes.material_jobs.enqueue_learning_asset_media_job",
+        "app.api.parent.material_jobs.enqueue_learning_asset_media_job",
         lambda material_id: enqueued_material_ids.append(material_id),
     )
     headers, _ = auth_headers(api_client, auth_code="confirm-ready-idempotent-parent")
@@ -379,7 +379,7 @@ def test_confirm_job_keeps_course_ready_when_media_enqueue_fails(api_client, mon
     def fail_enqueue(material_id: str) -> None:
         raise RuntimeError("redis unavailable")
 
-    monkeypatch.setattr("app.api.routes.material_jobs.enqueue_learning_asset_media_job", fail_enqueue)
+    monkeypatch.setattr("app.api.parent.material_jobs.enqueue_learning_asset_media_job", fail_enqueue)
     headers, _ = auth_headers(api_client, auth_code="confirm-media-enqueue-fail-parent")
     child_id = _create_child(api_client, headers)
     material_id, job_id = _create_material(api_client, headers, child_id)
@@ -426,7 +426,7 @@ def test_confirm_job_marks_media_enqueue_errors_on_learning_assets(api_client, m
     def fail_enqueue(material_id: str) -> None:
         raise RuntimeError("redis unavailable")
 
-    monkeypatch.setattr("app.api.routes.material_jobs.enqueue_learning_asset_media_job", fail_enqueue)
+    monkeypatch.setattr("app.api.parent.material_jobs.enqueue_learning_asset_media_job", fail_enqueue)
     headers, _ = auth_headers(api_client, auth_code="confirm-media-error-backfill-parent")
     child_id = _create_child(api_client, headers)
     material_id, job_id = _create_material(api_client, headers, child_id)

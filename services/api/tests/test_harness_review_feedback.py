@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from app.models.contracts import LearningAsset, SourceBoundingBox
-from app.services.pipeline import _fallback_source_bbox
+from app.services.shared.pipeline import _fallback_source_bbox
 
 ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:

@@ -8,8 +8,8 @@ from PIL import Image
 from app.core.settings import get_settings
 from app.db.models import StoredAssetModel
 from app.models.contracts import LearningAsset, SourceBoundingBox
-from app.services.media_reference import build_reference_image
-from app.services.storage import LocalStorageService
+from app.services.shared.media_reference import build_reference_image
+from app.services.shared.storage import LocalStorageService
 
 
 class _FakeStorage:

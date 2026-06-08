@@ -15,7 +15,7 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import MaterialStatus, PracticeSession, PracticeSessionCreate, ReviewTaskStatus
-from app.services.mappers import practice_session_from_model
+from app.services.shared.mappers import practice_session_from_model
 
 router = APIRouter(prefix="/practice-sessions", tags=["practice-sessions"])
 

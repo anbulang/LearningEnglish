@@ -1,5 +1,7 @@
 export type Language = "zh" | "en";
 export type TenantScope = "all" | string;
+export type AdminSeverity = "ok" | "info" | "warning" | "critical";
+export type AdminActionStatus = "success" | "noop" | "failed" | "unavailable";
 
 export type TenantType = "school" | "organization" | "pilot_family" | "internal";
 export type TenantStatus = "active" | "warning" | "suspended";
@@ -109,7 +111,7 @@ export interface AdminAuditEvent {
   resourceType: string;
   resourceId: string;
   riskLevel: "low" | "medium" | "high";
-  result: "success" | "failed";
+  result: "success" | "failed" | "noop";
   reason: string;
   traceId: string;
   createdAt: string;
@@ -124,4 +126,107 @@ export interface AdminImpersonationSession {
   reason: string;
   expiresAt: string;
   createdAt: string;
+  endedAt: string;
+  updatedAt: string;
+  tenantDisplayName: string;
+  targetParentDisplayName: string;
+}
+
+export interface AdminRelatedResource {
+  type: string;
+  id: string;
+  tenantId?: string;
+  materialId?: string;
+  childId?: string;
+}
+
+export interface AdminOperationsIssue {
+  id: string;
+  severity: AdminSeverity;
+  statusLabel: string;
+  reason: string;
+  recommendedAction: string;
+  requiredPermission?: string;
+  relatedResource: AdminRelatedResource;
+  source: "database_snapshot";
+}
+
+export interface AdminActionResult {
+  action: string;
+  status: AdminActionStatus;
+  resourceType: string;
+  resourceId: string;
+  tenantId: string;
+  message: string;
+}
+
+export interface AdminOperationsData {
+  tenantScope: string;
+  summary: Record<string, unknown>;
+  materialParseJobs: Record<string, unknown>;
+  mediaGeneration: Record<string, unknown>;
+  speakingAttempts: Record<string, unknown>;
+  providerConfiguration: Record<string, unknown>;
+  moduleToggleCoverage: Record<string, unknown>;
+  issues: AdminOperationsIssue[];
+}
+
+export interface AdminTenantDetailTenant extends Tenant {
+  displayName: string;
+  avatarUrl: string;
+  phoneNumber: string;
+  phoneVerifiedAt: string;
+  wechatUnionId: string;
+  wechatOpenId: string;
+  updatedAt: string;
+}
+
+export interface AdminTenantChild {
+  id: string;
+  name: string;
+  age: number;
+  level: string;
+  learningGoal: string;
+  preferredReviewDurationMinutes: number;
+  parentNotes: string;
+  latestWeeklyReportId: string;
+  speakingAttempts: number;
+}
+
+export interface AdminTenantDetailData {
+  requiredPermission: string;
+  tenant: AdminTenantDetailTenant;
+  summary: Record<string, unknown>;
+  children: AdminTenantChild[];
+  materials: AdminMaterial[];
+  providerPolicy: ProviderPolicy;
+  moduleSettings: TenantModuleSetting[];
+  weeklyReports: Record<string, unknown>;
+  speakingAttempts: Record<string, unknown>;
+  riskSummary: Record<string, unknown>;
+  auditEvent?: AdminAuditEvent;
+  accessContext?: {
+    currentAdmin: AdminAccessUser;
+    recentAuditEvents: AdminAuditEvent[];
+  };
+}
+
+export interface AdminAuditEventsData {
+  items: AdminAuditEvent[];
+  nextCursor: string;
+}
+
+export interface AdminImpersonationSessionsData {
+  requiredPermission: string;
+  tenantScope: string;
+  status: "active" | "ended" | "all";
+  items: AdminImpersonationSession[];
+  auditEvent: AdminAuditEvent;
+}
+
+export interface EndAdminImpersonationSessionResult {
+  requiredPermission: string;
+  impersonationSession: AdminImpersonationSession;
+  actionResult: AdminActionResult;
+  auditEvent: AdminAuditEvent;
 }

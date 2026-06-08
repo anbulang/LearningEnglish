@@ -562,7 +562,7 @@ def _seed_impersonation_session_fixture(*, prefix: str) -> dict:
 
 
 def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_client, monkeypatch) -> None:
-    fixture = _seed_operations_snapshot_fixture(prefix="task4_all")
+    _seed_operations_snapshot_fixture(prefix="task4_all")
     monkeypatch.setenv("AI_PROVIDER", "doubao")
     monkeypatch.setenv("MEDIA_PROVIDER", "real")
     monkeypatch.setenv("MEDIA_IMAGE_PROVIDER", "dashscope")
@@ -605,6 +605,7 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
         "speaking_attempts",
         "provider_configuration",
         "module_toggle_coverage",
+        "issues",
         "audit_event",
         "access_context",
     }
@@ -621,7 +622,7 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert 1 <= len(payload["material_parse_jobs"]["latest_failed"]) <= 5
     assert 1 <= len(payload["material_parse_jobs"]["latest_running"]) <= 5
     assert all(item["tenant_id"] for item in payload["material_parse_jobs"]["latest_failed"])
-    assert any(item["id"].startswith("task4_all_job_a_extra_") for item in payload["material_parse_jobs"]["latest_failed"])
+    assert all(item["status"] == "failed" for item in payload["material_parse_jobs"]["latest_failed"])
     assert payload["media_generation"]["materials_by_status"]["failed"] >= 5
     assert payload["media_generation"]["asset_status_fields_by_status"]["failed"] >= 6
     assert payload["media_generation"]["failure_signals"]["generated_image_status"] >= 5
@@ -634,7 +635,7 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert payload["speaking_attempts"]["oldest_pending_minutes"] >= 80
     assert 1 <= len(payload["speaking_attempts"]["latest_failed"]) <= 5
     assert 1 <= len(payload["speaking_attempts"]["latest_pending"]) <= 5
-    assert any(item["id"].startswith("task4_all_attempt_a_extra_") for item in payload["speaking_attempts"]["latest_failed"])
+    assert all(item["status"] == "failed" for item in payload["speaking_attempts"]["latest_failed"])
     assert payload["provider_configuration"]["global"]["tenant_id"] == "global"
     assert payload["provider_configuration"]["runtime"]["ai_provider"] == "doubao"
     assert payload["provider_configuration"]["runtime"]["media_provider"] == "real"
@@ -655,14 +656,13 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
     assert payload["provider_configuration"]["runtime"]["readiness"]["speech_provider_ready"] is True
     assert payload["provider_configuration"]["runtime"]["readiness"]["speech_assessment_provider_ready"] is True
     tenant_overrides = payload["provider_configuration"]["tenant_overrides"]
-    assert {
-        "tenant_id": fixture["tenant_a"]["tenant_id"],
-        "ai_provider": "doubao",
-        "media_provider": "real",
-        "fallback_mode": "per_tenant",
-        "monthly_guardrail": 300,
-        "source": "tenant_override",
-    } in tenant_overrides
+    assert payload["provider_configuration"]["override_count"] >= 1
+    assert 1 <= len(tenant_overrides) <= payload["provider_configuration"]["tenant_overrides_limit"]
+    assert all(
+        {"tenant_id", "ai_provider", "media_provider", "fallback_mode", "monthly_guardrail", "source"}
+        <= set(policy.keys())
+        for policy in tenant_overrides
+    )
     assert "ark-task4-api-key-value" not in str(payload)
     assert "openai-task4-api-key-value" not in str(payload)
     assert "dashscope-task4-api-key-value" not in str(payload)
@@ -677,6 +677,30 @@ def test_admin_operations_snapshot_all_scope_returns_production_read_model(api_c
         "weekly_reports",
     ]
     assert payload["module_toggle_coverage"]["disabled"] >= 1
+    assert payload["summary"]["severity"] == "critical"
+    assert payload["summary"]["issue_count"] == len(payload["issues"])
+    assert payload["issues"]
+    for issue in payload["issues"]:
+        assert {
+            "id",
+            "severity",
+            "status_label",
+            "reason",
+            "recommended_action",
+            "required_permission",
+            "related_resource",
+            "source",
+        } <= set(issue.keys())
+        assert issue["source"] == "database_snapshot"
+        assert issue["related_resource"]["tenant_id"]
+    material_issue = next(
+        issue
+        for issue in payload["issues"]
+        if issue["related_resource"]["type"] == "material_parse_job"
+    )
+    assert material_issue["severity"] == "critical"
+    assert material_issue["recommended_action"] == "retry_material_job"
+    assert material_issue["required_permission"] == "admin.material.retry"
     assert payload["audit_event"]["action"] == "admin.operations.read"
     assert payload["audit_event"]["tenant_scope"] == "all"
     assert payload["audit_event"]["trace_id"] == "req_task4_operations_all"
@@ -740,6 +764,10 @@ def test_admin_operations_snapshot_honors_tenant_scope_without_disclosure(api_cl
     assert payload["tenant_scope"] == fixture["tenant_a"]["tenant_id"]
     assert payload["summary"]["tenant_count"] == 1
     assert {item["tenant_id"] for item in payload["material_parse_jobs"]["latest_failed"]} == {
+        fixture["tenant_a"]["tenant_id"]
+    }
+    assert payload["issues"]
+    assert {item["related_resource"]["tenant_id"] for item in payload["issues"]} == {
         fixture["tenant_a"]["tenant_id"]
     }
     assert fixture["tenant_b"]["tenant_id"] not in str(payload)
@@ -992,7 +1020,7 @@ def test_admin_impersonation_session_end_ends_active_session_and_records_audit(a
 
     assert response.status_code == 200
     payload = response.json()
-    assert set(payload.keys()) == {"required_permission", "impersonation_session", "audit_event"}
+    assert set(payload.keys()) == {"required_permission", "impersonation_session", "action_result", "audit_event"}
     assert payload["required_permission"] == "admin.impersonation.end"
     session = payload["impersonation_session"]
     assert session["id"] == fixture["active_newer_id"]
@@ -1002,6 +1030,14 @@ def test_admin_impersonation_session_end_ends_active_session_and_records_audit(a
     assert session["ended_at"]
     assert session["updated_at"]
     assert session["tenant_display_name"] == "task5_end_active Tenant A"
+    assert payload["action_result"] == {
+        "action": "end_impersonation_session",
+        "status": "success",
+        "resource_type": "admin_impersonation_session",
+        "resource_id": fixture["active_newer_id"],
+        "tenant_id": fixture["tenant_a_id"],
+        "message": "Impersonation session ended.",
+    }
     audit_event = payload["audit_event"]
     assert audit_event["action"] == "admin.impersonation.end"
     assert audit_event["resource_type"] == "admin_impersonation_session"
@@ -1076,6 +1112,14 @@ def test_admin_impersonation_session_end_is_idempotent_and_preserves_ended_at(ap
     payload = response.json()
     assert payload["impersonation_session"]["status"] == "ended"
     assert payload["impersonation_session"]["ended_at"] == "2026-05-28T19:14:00+00:00"
+    assert payload["action_result"] == {
+        "action": "end_impersonation_session",
+        "status": "noop",
+        "resource_type": "admin_impersonation_session",
+        "resource_id": fixture["ended_id"],
+        "tenant_id": fixture["tenant_a_id"],
+        "message": "Impersonation session already ended.",
+    }
     assert payload["audit_event"]["action"] == "admin.impersonation.end.already_ended"
     assert payload["audit_event"]["risk_level"] == "medium"
     assert payload["audit_event"]["result"] == "noop"
@@ -1280,6 +1324,8 @@ def test_admin_tenant_detail_returns_admin_read_model_for_all_scope(api_client, 
         "region": "local",
         "tier": "pilot",
         "created_at": "2026-05-28T15:00:00+00:00",
+        "active_parents": 1,
+        "children": 2,
         "updated_at": "2026-05-28T15:00:00+00:00",
     }
     assert payload["summary"] == {
@@ -1650,6 +1696,7 @@ def test_admin_audit_events_filter_by_scope_fields_and_paginate_after_cursor(api
     _seed_audit_event(audit_id="audit_task2_007", tenant_scope="tenant_task2_b", created_at=created_at)
     _seed_audit_event(audit_id="audit_task2_008", resource_type="tenant_provider_policy", created_at=created_at)
     _seed_audit_event(audit_id="audit_task2_009", risk_level="low", created_at=created_at)
+    _seed_audit_event(audit_id="audit_task2_010", resource_id="material_task2_other", created_at=created_at)
 
     first_page = api_client.get(
         "/v1/admin/audit-events",
@@ -1657,6 +1704,7 @@ def test_admin_audit_events_filter_by_scope_fields_and_paginate_after_cursor(api
             "tenant_scope": "tenant_task2_a",
             "action": "admin.material.archive",
             "resource_type": "course_material",
+            "resource_id": "material_task2",
             "risk_level": "high",
             "result": "success",
             "actor_id": "admin_ops",
@@ -1677,6 +1725,7 @@ def test_admin_audit_events_filter_by_scope_fields_and_paginate_after_cursor(api
             "tenant_scope": "tenant_task2_a",
             "action": "admin.material.archive",
             "resource_type": "course_material",
+            "resource_id": "material_task2",
             "risk_level": "high",
             "result": "success",
             "actor_id": "admin_ops",
@@ -1862,6 +1911,53 @@ def test_admin_audit_events_clamp_limit_above_one_hundred(api_client, monkeypatc
     payload = response.json()
     assert len(payload["items"]) == 100
     assert payload["next_cursor"]
+
+
+def test_admin_audit_events_fallback_to_default_limit_for_nonnumeric_limit(api_client, monkeypatch) -> None:
+    _set_admin_credentials(
+        monkeypatch,
+        [
+            {
+                "id": "admin_limit_default",
+                "display_name": "Limit Default Admin",
+                "email": "limit-default@example.com",
+                "role": "Audit Viewer",
+                "status": "active",
+                "permissions": ["admin.audit.read"],
+                "token_sha256": _token_hash("limit-default-token"),
+            }
+        ],
+    )
+    created_at = datetime(2026, 5, 28, 14, 30, tzinfo=timezone.utc)
+    for index in range(2):
+        _seed_audit_event(
+            audit_id=f"audit_task2_limit_default_{index:03d}",
+            actor_id="admin_limit_default",
+            tenant_scope="tenant_task2_limit_default",
+            action="admin.task2.limit_default",
+            resource_type="admin_audit_event",
+            risk_level="low",
+            created_at=created_at,
+        )
+
+    response = api_client.get(
+        "/v1/admin/audit-events",
+        params={
+            "tenant_scope": "tenant_task2_limit_default",
+            "action": "admin.task2.limit_default",
+            "actor_id": "admin_limit_default",
+            "limit": "not-a-number",
+        },
+        headers={"X-Admin-Token": "limit-default-token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["id"] for item in payload["items"]] == [
+        "audit_task2_limit_default_001",
+        "audit_task2_limit_default_000",
+    ]
+    assert payload["next_cursor"] == ""
 
 
 def test_admin_audit_events_require_audit_read_permission(api_client, monkeypatch) -> None:

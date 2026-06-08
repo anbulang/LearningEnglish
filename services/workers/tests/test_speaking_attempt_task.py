@@ -34,7 +34,7 @@ from app.db.models import (
     WeeklyReportModel,
 )
 from app.models.contracts import MaterialStatus, SpeakingAttemptStatus
-from app.services.speaking_assessment import SpeechAssessmentResult
+from app.services.shared.speaking_assessment import SpeechAssessmentResult
 from workers_app.celery_app import celery_app
 from workers_app.tasks import score_speaking_attempt
 

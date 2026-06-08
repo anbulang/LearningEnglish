@@ -36,13 +36,13 @@ flowchart TD
 
 ## 代码边界
 
-- `apps/mobile`：Flutter 客户端，负责登录、资料库、上传、AI 校对、课程详情、复习、报告和个人页。
-- `apps/admin`：React/Vite 多租户后台原型，当前可接本地 admin API 做 dashboard/access 查看和少量受控 mutation。
-- `services/api`：FastAPI API，负责鉴权、同步读写、领域编排和稳定契约。
-- `services/workers`：Celery worker，负责讲义识别、学习资产媒体生成、周报聚合等异步任务。
-- `packages/contracts`：Dart 侧共享契约，和 API `Pydantic` model 对齐。
+- `apps/mobile`：Flutter 家长端 APP，负责登录、资料库、上传、AI 校对、课程详情、复习、报告和个人页。
+- `apps/admin`：React/Vite 多租户运维管理后台，面向 `/v1/admin/*` 的 dashboard、operations、audit、tenant 和受监督代入能力。
+- `services/api`：FastAPI 后端服务，保持一个运行进程；内部通过 `api/parent`、`api/admin`、`services/parent`、`services/admin`、`services/shared` 区分家长端、运维管理和共享服务能力。
+- `services/workers`：Celery worker，负责讲义识别、学习资产媒体生成、周报聚合和口语评分；只依赖共享服务能力和稳定领域模型，不依赖 HTTP route 包。
+- `packages/contracts`：Dart 侧共享领域契约，和 API Pydantic models 对齐。
 - `packages/design_tokens`：Flutter UI token。
-- `scripts/harness`：MVP readiness、主链 smoke、Doubao smoke、iOS 模拟器辅助脚本。
+- `scripts/harness`：MVP readiness、主链 smoke、provider smoke、iOS 模拟器辅助脚本。
 
 ## 当前不是的东西
 
