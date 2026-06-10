@@ -1,6 +1,6 @@
 # 真机回归 Runbook
 
-更新时间：2026-06-07
+更新时间：2026-06-10
 
 ## 目的
 
@@ -109,6 +109,7 @@ make harness-hn019-real-device-main-chain
 
 - `SOURCE_IMAGE_URLS` 需要提供当前可下载的讲义图片 URL。
 - 这条 harness 负责登录、建档、上传、轮询、确认、读取报告，并把 material/job/media/API/worker 摘要归档到 `dist/harness/HN-019/`；截图仍需要手工补存。
+- harness 内置对局域网 `healthz` 的 no-proxy 探测，避免 shell 里残留 `HTTP_PROXY` / `HTTPS_PROXY` 时把本机 LAN 健康检查误送到代理。
 - 默认真机 ID 使用当前开发机上的 `Chaucer`，如设备变化，通过 `DEVICE_ID=<flutter-device-id>` 和 `DEVICETL_DEVICE_ID=<devicectl-device-id>` 覆盖。
 - 默认会在验证结束后重新安装 `dist/ios/export/learning_english_mobile.ipa` 并启动正式 App；如只想保留 harness app，可设置 `HN019_RESTORE_APP=0`。
 - 历史 evidence 里出现的固定 LAN IP 只代表当时环境，不应当成当前默认值。

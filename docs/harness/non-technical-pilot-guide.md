@@ -2,7 +2,7 @@
 
 适用对象：内部测试同学、产品同学、需要完整体验 MVP 主链的非开发人员。
 
-当前版本说明：本文已按 2026-06-07 仓库现状更新，重点反映 AI 校对页自动轮询、DashScope 真实媒体 provider、DashScope ASR + Qwen 口语评分，以及当前交付边界仍受 Android 构建与 iOS 分发策略限制。
+当前版本说明：本文已按 2026-06-10 仓库现状更新，重点反映 AI 校对页自动轮询、DashScope 真实媒体 provider、DashScope ASR + Qwen 口语评分，以及当前交付边界仍受 Android 构建与 iOS 分发策略限制。
 
 ## 1. 你会体验到什么
 这次试用的目标是验证一条完整链路：
@@ -226,7 +226,7 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 如果可以，请附上截图。
 
 ## 7. 当前交付状态
-截至 2026-06-07，自动化主链、iOS IPA 导出和一轮真机主链 / speaking evidence 已经存在：
+截至 2026-06-10，自动化主链、iOS IPA 导出和一轮真机主链 / speaking evidence 已经存在：
 
 - API：登录、绑定、创建孩子、上传、进入 AI 校对
 - 移动端：上传成功后跳转 AI 校对页，AI 校对确认后跳转课程详情
