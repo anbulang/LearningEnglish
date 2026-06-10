@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 from urllib.parse import urlparse, urlunparse
-from urllib.request import urlopen
+from urllib.request import ProxyHandler, build_opener
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -542,13 +542,18 @@ def _wait_for_health(api_base_url: str, *, timeout_seconds: int) -> None:
     last_error = ""
     while time.monotonic() < deadline:
         try:
-            with urlopen(health_url, timeout=3) as response:  # noqa: S310
+            with _urlopen_without_proxy(health_url, timeout=3) as response:  # noqa: S310
                 if response.status < 500:
                     return
         except Exception as exc:  # noqa: BLE001
             last_error = f"{type(exc).__name__}: {exc}"
         time.sleep(1)
     raise RuntimeError(f"timed out waiting for {health_url}: {last_error}")
+
+
+def _urlopen_without_proxy(url: str, *, timeout: int):
+    opener = build_opener(ProxyHandler({}))
+    return opener.open(url, timeout=timeout)
 
 
 def _psql_json(sql: str) -> dict:
