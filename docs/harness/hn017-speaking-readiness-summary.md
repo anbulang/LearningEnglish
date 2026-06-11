@@ -26,7 +26,7 @@
 
 ### 代码与命令入口
 
-- 项目级状态快照：`docs/project/2026-06-10-status-and-todo.md`
+- 项目级状态快照：`docs/project/2026-06-11-status-and-todo.md`
 - 真机回归分级：`docs/harness/device-regression-runbook.md`
 - provider 运行入口：`docs/harness/provider-readiness-runbook.md`
 - readiness 总表：`docs/harness/mvp-readiness-checklist.md`
