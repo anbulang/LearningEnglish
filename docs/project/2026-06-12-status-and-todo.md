@@ -1,4 +1,4 @@
-# LearningEnglish 项目进度与 ToDo（2026-06-11）
+# LearningEnglish 项目进度与 ToDo（2026-06-12）
 
 ## 目的
 
@@ -23,11 +23,11 @@
 
 ## 当前结论
 
-LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真实 provider 路径已确定、admin 后台原型已接入主要 live read 与受控 mutation、HN-019 真机 harness 已经脚本化，但跨设备交付、真机回归执行纪律与文档入口压缩仍待收口** 的阶段。
+LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真实 provider 路径已确定、admin 后台原型已接入主要 live read 与受控 mutation、HN-019 真机 harness 已经脚本化，而且项目文档入口正被继续收敛到单一最新快照与少量可复查 runbook** 的阶段。
 
 一句话概括：
 
-> 当前最重要的工作不是再加一批新功能，而是把已经存在的主链、交付链和运维入口收敛成团队可重复执行的标准流程。
+> 当前最重要的工作不是再加一批新功能，而是把已经存在的主链、交付链、运维入口和文档入口收敛成团队可重复执行的标准流程。
 
 ## 项目进度
 
@@ -59,11 +59,11 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 - `scripts/harness/run_hn019_real_device_main_chain.py` 已形成独立真机主链 harness，可写出固定 summary / material / job / media / log 证据文件。
 - `scripts/harness/run_hn019_real_device_main_chain_test.py` 已补 focused test，覆盖局域网 `healthz` 探测不走系统代理。
 
-### 5. 文档治理：入口已收敛到单一最新快照
+### 5. 文档治理：入口继续收敛
 
 - `README.md`、`docs/project/README.md`、`docs/harness/README.md` 已形成项目入口、项目快照入口和 harness/readiness 入口。
-- `docs/project/` 当前只保留一份最新状态快照，避免旧快照与当前真相源竞争。
-- 多份 harness 文档已改写为“当前入口 / 当前结论 / 历史 evidence”结构，不再把历史运行流水直接写成今天的事实。
+- `docs/project/` 当前治理目标仍是只保留 `README.md` 与一份最新状态快照；旧素材目录如果不再服务当前工程治理，应移出该目录，避免和项目状态文档并存。
+- 多份 harness 文档已经改写为“当前入口 / 当前结论 / 历史 evidence”结构，不再把历史运行流水直接写成今天的事实。
 
 ## 当前可直接证明的仓库事实
 
@@ -71,13 +71,15 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 
 - API 当前通过 `/v1` 前缀同时挂载 parent 与 admin 路由。
 - worker 当前确实有真实讲义处理、学习资产媒体补齐和 speaking 评分任务，不是只剩 stub。
-- `apps/admin/src/pages` 当前只有 5 个已实现业务页面和 1 个 `PlaceholderPage`。
+- `apps/admin/src/pages` 当前有 `11` 个页面文件，其中 `5` 个对应已实现业务页面，另有占位页面与支撑页面。
 - `apps/mobile` 仍依赖 `packages/contracts` 与 `packages/design_tokens`，这两个包目录都存在。
 
 ### 文档与命令入口
 
 - `Makefile` 的 `mobile-bootstrap` 依赖 `packages/contracts`、`packages/design_tokens` 和 `apps/mobile` 三处 `flutter pub get`。
 - `IOS_API_BASE_URL` 默认仍是 `http://127.0.0.1:8000/v1`；真机导包必须显式覆盖当前局域网地址。
+- 本机 `dist/ios/export/learning_english_mobile.ipa` 文件当前存在，文件时间是 `2026-06-08 20:05:20`；这能证明最近一次导包产物仍在，但不等于本轮重新导包通过。
+- 当前 shell 环境里 `ANDROID_HOME` / `ANDROID_SDK_ROOT` 未设置；至少在这台机器上，Android 交付链仍应先区分“仓库缺能力”与“本机 SDK 未准备好”。
 - `docs/harness/` 当前仍是 harness/readiness 的主文档目录，`dist/harness/` 只是证据输出目录。
 - `HN-019` harness 对局域网健康检查显式使用 no-proxy 探测，这一点已经有脚本测试覆盖，不再只是 runbook 建议。
 
@@ -85,8 +87,8 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 
 - API 测试文件：`27` 个 `test_*.py`
 - worker 测试文件：`2` 个 `test_*.py`
-- mobile `test/` 与 `tool/harness/` 文件：`21` 个
-- admin 前端测试文件：`10` 个 `*.test.ts` / `*.test.tsx`
+- mobile `test/` 与 `tool/harness/` 文件：`19` 个
+- admin 前端测试文件：`5` 个 `*.test.tsx`
 
 ## 已完成但未在本轮重新执行的事项
 
@@ -124,6 +126,7 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 
 - 当前多份 harness 文档仍保留不少历史运行细节，容易让读者把一次历史验收当成当前事实。
 - 新成员要完成“理解项目 -> 启动本地环境 -> 真机回归 -> 找证据”的阅读路径仍偏长。
+- 非状态文档的素材目录和临时产物如果继续停留在 `docs/project/`，会削弱“单一快照 + 单一索引”的治理规则。
 
 ## 项目级 ToDo
 
@@ -152,7 +155,7 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 
 - [ ] 固化 `R0/R1/R2/R3` 每一级最小必需证据，不再允许只凭口头描述判定通过。
 - [ ] 基于当前 `HN-019` harness 输出，补齐目录级交接模板，明确哪些字段必须人工补充。
-- [ ] 固定主链回归截图清单：上传/AI 校对/课程详情/报告页。
+- [ ] 固定主链回归截图清单：上传 / AI 校对 / 课程详情 / 报告页。
 - [ ] 评估 `make harness-evidence-index` 对交接是否足够；如不够，补目录级 summary 模板。
 - [ ] 再补一轮按当前模板输出的 `HN-019` summary，验证 runbook 是否足够让新人照做。
 
@@ -181,7 +184,7 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 - [ ] 按 `docs/harness/hn020-parent-pilot-acceptance.md` 组织一轮家长或非技术试用，把问题按 `P0/P1/P2` 和 Batch 0-4 归档。
 - [ ] 做一轮平板关键页面人工验收，覆盖 AI 校对、课程详情、报告页、空态和失败态。
 - [ ] 决定 `HN-016` OpenAI 媒体路径的项目承诺：继续保留兼容证据，还是明确降为非默认路线。
-- [ ] 复查弱网、代理、缺少公网音频 URL 时，上传/媒体/speaking 的文案和恢复路径。
+- [ ] 复查弱网、代理、缺少公网音频 URL 时，上传 / 媒体 / speaking 的文案和恢复路径。
 - [ ] 形成失败态证据矩阵，把 provider 失败、worker 未启动、token 失效、局域网不可达等情况写成统一说明。
 
 ### P2：文档入口继续收敛
@@ -195,6 +198,7 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 - [ ] 把交付、真机复跑、provider 依赖和非开发试用入口压缩成更短的导读，而不是依赖多篇长文往返跳转。
 - [ ] 持续把 harness 长文改成“当前入口 / 当前结论 / 历史 evidence”结构。
 - [ ] 保持 `docs/project/` 同一时间只保留最新一份状态快照。
+- [ ] 清理 `docs/project/` 下不再服务当前工程治理的素材目录、临时产物或旧索引旁路。
 - [ ] 持续清理仍会把历史固定 IP、旧命令或过时结论伪装成当前操作步骤的文档。
 
 ## 建议执行顺序
@@ -203,10 +207,10 @@ LearningEnglish 当前处于 **家庭英语学习主链已经闭环、默认真�
 2. 再按 HN-020 跑一轮家长试用，把主链可用性问题转成修复批次。
 3. 然后把 HN-019 的截图清单、目录模板和复跑节奏固化，确保团队能按同一格式复跑和交接。
 4. 接着决定 admin 是继续维持 prototype，还是正式进入可运营收口阶段。
-5. 最后持续压缩文档入口，把长历史说明进一步剥离到 evidence 背景层。
+5. 最后持续压缩文档入口，把长历史说明进一步剥离到 evidence 背景层，并清理不再服务治理目标的文档残留。
 
 ## 当前判断
 
 - LearningEnglish 已经不再是“验证上传识别能不能跑”的项目，而是“把已有主链变成可复查、可交付、可运营系统”的项目。
-- 当前最大不确定性不在主链功能是否存在，而在交付流程、真机回归执行纪律和 admin 运营边界是否足够清楚。
-- 如果 P0 的交付手册和 HN-019 执行模板收口，这个仓库会更明确地从“开发者可运行 MVP”进入“团队可持续验证的 MVP”。
+- 当前最大不确定性不在主链功能是否存在，而在交付流程、真机回归执行纪律、admin 运营边界和文档入口是否足够清楚。
+- 如果 P0 的交付手册、HN-019 执行模板和 `docs/project/` 单一快照治理规则都收口，这个仓库会更明确地从“开发者可运行 MVP”进入“团队可持续验证的 MVP”。

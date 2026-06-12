@@ -1,6 +1,6 @@
 # HN-020 家长试用与非技术验收闭环
 
-更新时间：2026-06-11
+更新时间：2026-06-12
 
 ## 目的
 
@@ -63,6 +63,12 @@
 
 ```text
 dist/harness/HN-020/
+```
+
+可先生成记录模板：
+
+```bash
+make harness-hn020-parent-pilot-template
 ```
 
 推荐文件名：

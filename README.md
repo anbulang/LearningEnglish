@@ -244,7 +244,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 适用人群 / 用途 | 文档 |
 | --- | --- | --- |
-| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-06-11-status-and-todo.md`](docs/project/2026-06-11-status-and-todo.md) |
+| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-06-12-status-and-todo.md`](docs/project/2026-06-12-status-and-todo.md) |
 | 系统总览 | 新成员 / 快速理解系统边界与默认技术路径 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | 后端 / 数据层设计核对 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | API、worker 开发 / 服务边界核对 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
