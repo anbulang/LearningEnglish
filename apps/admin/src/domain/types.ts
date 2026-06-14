@@ -74,6 +74,22 @@ export interface AdminLearningAsset {
   updatedAt: string;
 }
 
+export interface AdminUserAccount {
+  childId: string;
+  childName: string;
+  age: number;
+  level: string;
+  learningGoal: string;
+  preferredReviewDurationMinutes: number;
+  parentNotes: string;
+  tenantId: string;
+  parentName: string;
+  materialsCount: number;
+  speakingAttempts: number;
+  latestWeeklyReportId: string;
+  createdAt: string;
+}
+
 export interface ProviderPolicy {
   tenantId: "global" | string;
   tier?: string;

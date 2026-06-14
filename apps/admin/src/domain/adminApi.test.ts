@@ -9,9 +9,11 @@ import {
   loadAdminLearningAssets,
   loadAdminOperations,
   loadAdminTenantDetail,
+  loadAdminUsers,
   normalizeAdminAccessPayload,
   normalizeAdminDashboardPayload,
   normalizeAdminLearningAssetsPayload,
+  normalizeAdminUsersPayload,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
   startAdminImpersonationSession,
@@ -861,5 +863,66 @@ describe("loadAdminLearningAssets", () => {
     expect(calledUrl).toContain("/v1/admin/learning-assets?");
     expect(calledUrl).toContain("tenant_scope=parent_1");
     expect(calledUrl).toContain("media_status=ready");
+  });
+});
+
+describe("loadAdminUsers", () => {
+  it("normalizes the users payload", () => {
+    const result = normalizeAdminUsersPayload({
+      tenant_scope: "all",
+      items: [
+        {
+          child_id: "child_1",
+          child_name: "Tom",
+          age: 6,
+          level: "starter",
+          learning_goal: "稳定复习",
+          preferred_review_duration_minutes: 10,
+          parent_notes: "动物主题",
+          tenant_id: "parent_1",
+          parent_name: "Emily",
+          materials_count: 4,
+          speaking_attempts: 6,
+          latest_weekly_report_id: "report_1",
+          created_at: "2026-03-18T08:00:00+00:00"
+        }
+      ],
+      total: 1
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({
+      childId: "child_1",
+      childName: "Tom",
+      age: 6,
+      level: "starter",
+      learningGoal: "稳定复习",
+      preferredReviewDurationMinutes: 10,
+      tenantId: "parent_1",
+      parentName: "Emily",
+      materialsCount: 4,
+      speakingAttempts: 6,
+      latestWeeklyReportId: "report_1"
+    });
+  });
+
+  it("requests the endpoint with tenant scope and level filter", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ tenant_scope: "parent_1", items: [], total: 0 })
+    });
+
+    await loadAdminUsers({
+      apiBaseUrl: "http://api.test/",
+      adminToken: "tok",
+      tenantScope: "parent_1",
+      level: "mover",
+      fetchImpl: fetchImpl as unknown as typeof fetch
+    });
+
+    const calledUrl = fetchImpl.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/v1/admin/users?");
+    expect(calledUrl).toContain("tenant_scope=parent_1");
+    expect(calledUrl).toContain("level=mover");
   });
 });

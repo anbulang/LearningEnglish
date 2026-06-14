@@ -58,6 +58,7 @@ from app.services.admin.read_models import (
     build_admin_dashboard,
     build_admin_learning_assets,
     build_admin_tenant_detail,
+    build_admin_users,
 )
 from app.services.admin.scope import (
     audit_scope_filter as _audit_scope_filter,
@@ -211,6 +212,42 @@ def list_admin_learning_assets(
     )
     return {
         "required_permission": ADMIN_DASHBOARD_READ,
+        **payload,
+        "audit_event": _audit_event_payload(audit_event),
+    }
+
+
+@router.get("/users")
+def list_admin_users(
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    level: str = "",
+    limit: str = Query("200"),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    require_permission(actor, ADMIN_TENANT_READ)
+
+    _ensure_admin_user(db, actor)
+    payload = build_admin_users(
+        db,
+        tenant_scope,
+        level=level.strip(),
+        limit=_learning_assets_limit(limit),
+    )
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant_scope,
+        action="admin.users.read",
+        resource_type="admin_users",
+        resource_id="users",
+        risk_level="low",
+        result="success",
+        trace_id=_trace_id(request),
+    )
+    return {
+        "required_permission": ADMIN_TENANT_READ,
         **payload,
         "audit_event": _audit_event_payload(audit_event),
     }

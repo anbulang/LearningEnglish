@@ -6,6 +6,7 @@ import type {
   AdminOperationsData,
   AdminTenantDetailData,
   AdminUser,
+  AdminUserAccount,
   ModuleKey,
   ProviderPolicy,
   SourcePage,
@@ -183,6 +184,54 @@ export const mockMaterials: AdminMaterial[] = [
     slaMinutes: 0,
     updatedAt: "2026-05-21 18:30",
     warnings: ["Archived by parent request"]
+  }
+];
+
+export const mockUsers: AdminUserAccount[] = [
+  {
+    childId: "child_tom_zhang",
+    childName: "Tom Zhang",
+    age: 6,
+    level: "starter",
+    learningGoal: "课后稳定复习",
+    preferredReviewDurationMinutes: 10,
+    parentNotes: "喜欢动物主题。",
+    tenantId: "tenant_bright_future",
+    parentName: "Emily Zhang",
+    materialsCount: 4,
+    speakingAttempts: 6,
+    latestWeeklyReportId: "report_tom_0610",
+    createdAt: "2026-03-18T08:00:00Z"
+  },
+  {
+    childId: "child_ivy_lin",
+    childName: "Ivy Lin",
+    age: 7,
+    level: "mover",
+    learningGoal: "提升口语流利度",
+    preferredReviewDurationMinutes: 15,
+    parentNotes: "",
+    tenantId: "tenant_maple_pilot",
+    parentName: "Grace Lin",
+    materialsCount: 2,
+    speakingAttempts: 3,
+    latestWeeklyReportId: "report_ivy_0609",
+    createdAt: "2026-09-02T09:00:00Z"
+  },
+  {
+    childId: "child_leo_star",
+    childName: "Leo",
+    age: 5,
+    level: "starter",
+    learningGoal: "建立字母与发音认知",
+    preferredReviewDurationMinutes: 8,
+    parentNotes: "注意力时间较短。",
+    tenantId: "tenant_little_star",
+    parentName: "Family Pilot",
+    materialsCount: 1,
+    speakingAttempts: 0,
+    latestWeeklyReportId: "",
+    createdAt: "2026-01-06T10:00:00Z"
   }
 ];
 
