@@ -26,7 +26,7 @@
 
 ### 复查入口
 
-- 项目级现状与缺口：`docs/project/2026-06-10-status-and-todo.md`
+- 项目级现状与缺口：`docs/project/2026-06-13-status-and-todo.md`
 - 主链 / 真机回归入口：`docs/harness/device-regression-runbook.md`
 - 真实 provider 入口：`docs/harness/provider-readiness-runbook.md`
 - evidence 归档规则：`docs/harness/evidence-archive-policy.md`

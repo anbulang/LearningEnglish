@@ -1,6 +1,6 @@
 # LearningEnglish Admin
 
-LearningEnglish Admin 是 production-shaped 多租户后台。当前已进入 Phase 3：在保留 LearningEnglish 温暖品牌识别的前提下，开始消费后端 admin operations、tenant detail、audit events 和 impersonation session 合同。
+LearningEnglish Admin 是面向多租户运营场景的后台原型。当前已进入 Phase 3：在保留 LearningEnglish 温暖品牌识别的前提下，开始消费后端 admin operations、tenant detail、audit events 和 impersonation session 合同。
 
 ## 范围
 
@@ -41,7 +41,7 @@ ADMIN_API_BASE_URL=http://127.0.0.1:8000 ADMIN_API_TOKEN=local-admin-token make 
 - Provider Ops
 - Audit & Access：Phase 3 已接入 `/v1/admin/audit-events` filters / cursor pagination、`/v1/admin/impersonation-sessions` 列表和 end flow。
 
-## 目标态占位页面
+## 当前仍是占位的页面
 
 - Users & Children
 - Learning Assets

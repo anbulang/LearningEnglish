@@ -244,7 +244,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 适用人群 / 用途 | 文档 |
 | --- | --- | --- |
-| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-06-10-status-and-todo.md`](docs/project/2026-06-10-status-and-todo.md) |
+| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-06-13-status-and-todo.md`](docs/project/2026-06-13-status-and-todo.md) |
 | 系统总览 | 新成员 / 快速理解系统边界与默认技术路径 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | 后端 / 数据层设计核对 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | API、worker 开发 / 服务边界核对 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
@@ -255,6 +255,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 | MVP readiness | 需要判断当前是否可交付 / 可验收的成员 | [`docs/harness/mvp-readiness-checklist.md`](docs/harness/mvp-readiness-checklist.md) |
 | 上传识别链路 | 需要理解 HN-008~HN-019 背景与当前入口的成员 | [`docs/harness/upload-recognition-loop.md`](docs/harness/upload-recognition-loop.md) |
 | 非技术试点指南 | 产品、测试、内部试用同学 / 非开发试用流程 | [`docs/harness/non-technical-pilot-guide.md`](docs/harness/non-technical-pilot-guide.md) |
+| 家长试用验收 | 产品、测试、陪跑开发 / HN-020 验收清单与修复批次 | [`docs/harness/hn020-parent-pilot-acceptance.md`](docs/harness/hn020-parent-pilot-acceptance.md) |
 | API 服务 | API 开发 / admin 与 parent 接口真相源 | [`services/api/README.md`](services/api/README.md) |
 | Worker 服务 | 异步任务开发 / provider 与任务边界真相源 | [`services/workers/README.md`](services/workers/README.md) |
 

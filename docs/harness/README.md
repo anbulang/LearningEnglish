@@ -1,6 +1,6 @@
 # Harness 文档索引
 
-更新时间：2026-06-10
+更新时间：2026-06-13
 
 ## 这份目录的作用
 
@@ -18,7 +18,7 @@
 - `Makefile`
 - `docs/architecture/*`
 - `docs/harness/*`
-- `docs/project/2026-06-10-status-and-todo.md`
+- `docs/project/2026-06-13-status-and-todo.md`
 - `services/api/README.md`
 - `services/workers/README.md`
 - `infra/env/local.example.env`
@@ -39,6 +39,7 @@ HARNESS_RESET=1 make harness-mvp-readiness
 make harness-main-chain-smoke
 make harness-doubao-smoke
 API_BASE_URL=http://<current-host-ip>:8000/v1 SOURCE_IMAGE_URLS=https://example.com/page-1.jpg,https://example.com/page-2.jpg make harness-hn019-real-device-main-chain
+make harness-hn020-parent-pilot-template
 make harness-evidence-index
 make harness-reset-ios-sim
 make harness-capture-ios-screen SCREEN=login-screen
@@ -52,6 +53,7 @@ make harness-capture-ios-screen SCREEN=login-screen
 - `device-regression-runbook.md`：R0/R1/R2/R3 真机回归路径。
 - `evidence-archive-policy.md`：`dist/harness/` 证据保留、脱敏和索引规则。
 - `non-technical-pilot-guide.md`：给产品或内部测试同学的试用说明。
+- `hn020-parent-pilot-acceptance.md`：家长试用验收清单、问题分级和修复批次入口。
 
 ## Evidence 目录
 
@@ -66,6 +68,7 @@ make harness-capture-ios-screen SCREEN=login-screen
 | `dist/harness/HN-017/` | 口语评分 | `dashscope-worker-smoke-summary.json`、`public-uploads-tunnel-smoke-summary.json`、`real-device-speaking-summary.json`、真机结果页截图 | `docs/harness/hn017-speaking-readiness-summary.md`、`docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-018/` | 独立报告页 | `weekly-report.json`、`summary.json`、`reports-screen.png` | `docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-019/` | 真机回归与 evidence 治理 | `real-device-main-chain-summary.json`、`real-device-main-chain-material.json`、`real-device-main-chain-job.json`、`real-device-main-chain-media-summary.json`、主链 API/worker 日志；历史证据仍保留 `device-main-chain-summary.json` 等 | `docs/harness/device-regression-runbook.md`、`docs/harness/evidence-archive-policy.md` |
+| `dist/harness/HN-020/` | 家长试用与非技术验收闭环 | `parent-pilot-summary.json`、`parent-pilot-notes.md`、上传 / AI 校对 / 课程详情 / 复习 / 报告截图 | `docs/harness/hn020-parent-pilot-acceptance.md`、`docs/harness/non-technical-pilot-guide.md` |
 | `dist/harness/screens/` | 标准截图路径 | `login-screen.png`、`phone-binding-screen.png`、`upload-screen.png`、`ai-review-screen.png`、`lesson-detail-screen.png`、`report-screen.png` | `docs/harness/mvp-readiness-checklist.md` |
 
 ## 当前结论
@@ -74,9 +77,10 @@ make harness-capture-ios-screen SCREEN=login-screen
 - 当前默认真实 provider 路径是 `qwen + DashScope media + DashScope speech`。
 - `HN-017` 真机 speaking evidence 已存在；`HN-019` 已完成至少一轮真机安装和主链回归证据归档。
 - `HN-019` 现在不只是 runbook 入口；`scripts/harness/run_hn019_real_device_main_chain.py` 已形成独立真机 harness，并带有针对局域网 `healthz` no-proxy 探测的 focused test。
-- 当前剩余问题主要在 Android / iOS 交付手册收口、R0/R1/R2/R3 固定复跑纪律、admin 原型向可运营边界收口，以及对非开发成员更短的交付入口。
+- `HN-020` 已作为下一批家长试用验收入口，用来把主链可用性问题拆成面向真实家长的清单和修复批次。
+- 当前剩余问题主要在 Android / iOS 交付手册收口、R0/R1/R2/R3 固定复跑纪律、admin 原型向可运营边界收口，以及家长试用闭环执行。
 - `Makefile` 默认 `IOS_API_BASE_URL` 已回到 `http://127.0.0.1:8000/v1`；真机导包必须显式覆盖为当前局域网 API 地址，不能假设某个历史 `192.168.*` 仍然有效。
-- 最新项目级进度与 ToDo 统一以 `docs/project/2026-06-10-status-and-todo.md` 为准；旧快照不再并存。
+- 最新项目级进度与 ToDo 统一以 `docs/project/2026-06-13-status-and-todo.md` 为准；旧快照不再并存。
 
 ## 使用约定
 
@@ -85,6 +89,6 @@ make harness-capture-ios-screen SCREEN=login-screen
 - 交付或文档治理收尾时，至少执行一次：
 
 ```bash
-rg -n "2026-06-08-status-and-todo|2026-06-07-status-and-todo|2026-06-06-status-and-todo|2026-06-05-status-and-todo|2026-06-04-status-and-todo|2026-06-03-status-and-todo|2026-06-02-status-and-todo|2026-06-01-status-and-todo|2026-05-31-status-and-todo|待生成|预期目录|待补真机证据|infra/\\.env\\.example" README.md docs apps services infra --glob '!docs/superpowers/**'
+rg -n "2026-06-12-status-and-todo|2026-06-11-status-and-todo|2026-06-10-status-and-todo|2026-06-09-status-and-todo|2026-06-08-status-and-todo|2026-06-07-status-and-todo|2026-06-06-status-and-todo|2026-06-05-status-and-todo|2026-06-04-status-and-todo|2026-06-03-status-and-todo|2026-06-02-status-and-todo|2026-06-01-status-and-todo|2026-05-31-status-and-todo|待生成|预期目录|待补真机证据|infra/\\.env\\.example" README.md docs apps services infra --glob '!docs/superpowers/**'
 git diff --check
 ```

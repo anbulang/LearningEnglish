@@ -1,6 +1,6 @@
 # LearningEnglish MVP Readiness Checklist
 
-更新时间：2026-06-10
+更新时间：2026-06-13
 
 ## 目的
 
@@ -44,7 +44,7 @@
 ### D. Harness / 文档入口
 
 - [x] `README.md` 提供项目入口和常用命令。
-- [x] `docs/project/2026-06-10-status-and-todo.md` 提供当前项目级快照。
+- [x] `docs/project/2026-06-13-status-and-todo.md` 提供当前项目级快照。
 - [x] `docs/harness/device-regression-runbook.md` 提供 `R0/R1/R2/R3` 真机回归分级。
 - [x] `docs/harness/provider-readiness-runbook.md` 提供真实 provider 运行入口。
 - [x] `docs/harness/evidence-archive-policy.md` 说明 evidence 归档规则。
@@ -57,6 +57,7 @@
 - `apps/admin` 当前是可 live 读取、可执行部分受控 mutation 的运营控制台原型，不应再写成只有 dashboard/access 的旧状态。
 - `IOS_API_BASE_URL` 默认仍是 `http://127.0.0.1:8000/v1`；真机导包时必须显式覆盖当前局域网地址。
 - `HN-019` 真机主链 harness 已有独立脚本和 focused test；当前缺的不是入口存在性，而是截图清单和团队执行纪律。
+- `HN-020` 已定义家长试用验收清单和修复批次；当前缺的是用真实家长或非技术试用者跑一轮并归档证据。
 
 ## 当前未在本轮重新验证的事项
 
@@ -89,6 +90,11 @@
 - 历史验收记录仍容易被误读成当前 readiness 结论。
 - 当前仍需持续把长文改成“当前入口 / 当前结论 / 历史 evidence”结构。
 
+### 4. 家长试用闭环未执行
+
+- `HN-020` 已有验收入口，但还没有一轮真实家长或非技术试用者的 `dist/harness/HN-020/` 证据。
+- 当前仍需要把上传、AI 校对、课程详情、复习和报告页的可用性问题按 `P0/P1/P2` 和 Batch 0-4 记录下来。
+
 ## 建议作为当前 gate 的最小命令
 
 ### 仓库级
@@ -102,6 +108,14 @@ make admin-test
 make admin-build
 make harness-evidence-index
 git diff --check
+```
+
+### 家长试用级
+
+```bash
+# 先按 docs/harness/non-technical-pilot-guide.md 准备设备和服务
+# 再生成 HN-020 记录模板并按 docs/harness/hn020-parent-pilot-acceptance.md 记录试用结果
+make harness-hn020-parent-pilot-template
 ```
 
 ### 真机级
