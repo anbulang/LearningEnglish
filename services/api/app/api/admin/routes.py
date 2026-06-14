@@ -54,7 +54,11 @@ from app.services.admin.permissions import (
     require_permission,
 )
 from app.services.admin.operations import build_admin_operations
-from app.services.admin.read_models import build_admin_dashboard, build_admin_tenant_detail
+from app.services.admin.read_models import (
+    build_admin_dashboard,
+    build_admin_learning_assets,
+    build_admin_tenant_detail,
+)
 from app.services.admin.scope import (
     audit_scope_filter as _audit_scope_filter,
     ensure_admin_tenant_scope as _ensure_admin_tenant_scope,
@@ -171,6 +175,44 @@ def get_admin_operations_snapshot(
         **operations,
         "audit_event": _audit_event_payload(audit_event),
         "access_context": _access_context_payload(actor, []),
+    }
+
+
+@router.get("/learning-assets")
+def list_admin_learning_assets(
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    material_id: str = "",
+    media_status: str = "",
+    limit: str = Query("200"),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    require_permission(actor, ADMIN_DASHBOARD_READ)
+
+    _ensure_admin_user(db, actor)
+    payload = build_admin_learning_assets(
+        db,
+        tenant_scope,
+        material_id=material_id.strip(),
+        media_status=media_status.strip(),
+        limit=_learning_assets_limit(limit),
+    )
+    audit_event = _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant_scope,
+        action="admin.learning_assets.read",
+        resource_type="admin_learning_assets",
+        resource_id="learning-assets",
+        risk_level="low",
+        result="success",
+        trace_id=_trace_id(request),
+    )
+    return {
+        "required_permission": ADMIN_DASHBOARD_READ,
+        **payload,
+        "audit_event": _audit_event_payload(audit_event),
     }
 
 
@@ -751,6 +793,14 @@ def end_admin_impersonation_session(
         ),
         "audit_event": _audit_event_payload(audit_event),
     }
+
+
+def _learning_assets_limit(value: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return 200
+    return max(1, min(parsed, 500))
 
 
 def _operations_read_permission(actor: AdminActor) -> str:
