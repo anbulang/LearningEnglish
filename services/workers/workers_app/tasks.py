@@ -674,26 +674,38 @@ def aggregate_weekly_report(child_id: str) -> dict[str, str]:
         db.close()
 
 
+# --- 预留任务(Reserved placeholders)---
+# 以下任务名为历史预留,当前未实现真实逻辑,仅返回固定的占位状态。
+# 真实的讲义处理链路已整合在 process_material_job 与 process_learning_asset_media,
+# 不会调度这些任务。保留任务名是为了向后兼容已注册的 Celery 路由;
+# 调用方不应依赖它们产生任何副作用。契约见 tests/test_reserved_placeholder_tasks.py。
+
+
 @shared_task(name="materials.enhance_images")
 def enhance_images(material_id: str) -> dict[str, str]:
+    """预留任务,未实现:图片增强已不在独立任务中处理。"""
     return {"material_id": material_id, "status": "enhanced"}
 
 
 @shared_task(name="materials.run_ocr")
 def run_ocr(material_id: str) -> dict[str, str]:
+    """预留任务,未实现:真实 OCR 在 process_material_job 中完成。"""
     return {"material_id": material_id, "status": "ocr_complete"}
 
 
 @shared_task(name="knowledge.parse_material")
 def parse_material(material_id: str) -> dict[str, str]:
+    """预留任务,未实现:结构化解析在 process_material_job 中完成。"""
     return {"material_id": material_id, "status": "parsed"}
 
 
 @shared_task(name="review.generate_tasks")
 def generate_review_tasks(material_id: str) -> dict[str, str]:
+    """预留任务,未实现:复习任务在 process_learning_asset_media 回填阶段生成。"""
     return {"material_id": material_id, "status": "review_tasks_generated"}
 
 
 @shared_task(name="speaking.generate_tts")
 def generate_tts(material_id: str) -> dict[str, str]:
+    """预留任务,未实现:学习资产 TTS 在 process_learning_asset_media 中补齐。"""
     return {"material_id": material_id, "status": "tts_generated"}

@@ -68,7 +68,7 @@
   - 回写 transcript、维度分、逐词反馈和中文建议
   - 评分成功后累计 `WeeklyReport.speaking_attempts`
 
-以下任务名已预留，但当前仍是占位：
+以下任务名已预留，但当前仍是占位（带 `未实现` docstring，并由 `services/workers/tests/test_reserved_placeholder_tasks.py` 锁定契约，调用方不应依赖其副作用）：
 
 - `materials.enhance_images`
 - `materials.run_ocr`

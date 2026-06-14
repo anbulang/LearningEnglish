@@ -22,7 +22,9 @@ Celery worker 服务，负责处理讲义识别、学习资产媒体补齐和轻
   - 回写 transcript、维度分、逐词反馈和中文建议
   - 评分成功后累计 `WeeklyReport.speaking_attempts`
 
-### 仍是占位
+### 预留任务（未实现）
+
+以下任务名为历史预留，仅返回固定占位状态，真实链路已整合在 `process_material_job` 与 `process_learning_asset_media`，不会调度它们。各任务带 `未实现` docstring，并由 `tests/test_reserved_placeholder_tasks.py` 锁定契约，防止被误当成真实链路。
 
 - `materials.enhance_images`
 - `materials.run_ocr`

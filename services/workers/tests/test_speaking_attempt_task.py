@@ -117,6 +117,56 @@ def test_score_speaking_attempt_uses_public_audio_base_url(monkeypatch) -> None:
     _configure_storage_env()
 
 
+def test_score_speaking_attempt_marks_failed_when_provider_errors(monkeypatch) -> None:
+    _configure_storage_env()
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    _seed_speaking_attempt()
+
+    class FailingProvider:
+        def assess(self, **kwargs):
+            raise RuntimeError("dashscope ASR 503")
+
+    monkeypatch.setattr(
+        "workers_app.tasks.build_speech_assessment_provider", lambda: FailingProvider()
+    )
+
+    result = score_speaking_attempt("attempt_test")
+
+    assert result == {"attempt_id": "attempt_test", "status": "failed"}
+    with SessionLocal() as db:
+        attempt = db.get(SpeakingAttemptModel, "attempt_test")
+        assert attempt is not None
+        assert attempt.status == SpeakingAttemptStatus.failed.value
+        assert "dashscope ASR 503" in attempt.failure_reason
+        # 评分失败不应污染周报计数
+        report = db.scalar(
+            select(WeeklyReportModel).where(WeeklyReportModel.child_id == "child_test")
+        )
+        assert report is None
+
+
+def test_score_speaking_attempt_is_idempotent_on_already_scored() -> None:
+    # 至少一次投递语义下,重复投递已评分的 attempt 不应重复累加周报。
+    _configure_storage_env()
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    _seed_speaking_attempt()
+
+    first = score_speaking_attempt("attempt_test")
+    assert first == {"attempt_id": "attempt_test", "status": "scored"}
+
+    second = score_speaking_attempt("attempt_test")
+    assert second == {"attempt_id": "attempt_test", "status": "scored"}
+
+    with SessionLocal() as db:
+        report = db.scalar(
+            select(WeeklyReportModel).where(WeeklyReportModel.child_id == "child_test")
+        )
+        assert report is not None
+        assert report.speaking_attempts == 1
+
+
 def _seed_speaking_attempt(*, status: str = SpeakingAttemptStatus.recording_uploaded.value) -> None:
     _configure_storage_env()
     uploads_root = os.environ["LOCAL_STORAGE_PATH"]
