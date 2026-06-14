@@ -125,14 +125,20 @@ mobile-ios-testflight-ipa:
 
 # Upload to TestFlight. Needs an App Store Connect API key (your Apple account):
 #   export ASC_API_KEY_ID=...  ASC_API_ISSUER_ID=...  (key .p8 in ~/.appstoreconnect/private_keys)
+# altool is deprecated on Xcode 15+; see runbook for the Transporter (iTMSTransporter) alternative.
 mobile-ios-testflight-upload:
 	@if [ -z "$(ASC_API_KEY_ID)" ] || [ -z "$(ASC_API_ISSUER_ID)" ]; then \
 		echo "BLOCKED: set ASC_API_KEY_ID and ASC_API_ISSUER_ID (App Store Connect API key) before uploading."; \
 		echo "See docs/harness/ios-testflight-runbook.md."; \
 		exit 1; \
 	fi
-	xcrun altool --upload-app -f $(IOS_APPSTORE_EXPORT_PATH)/learning_english_mobile.ipa \
-		-t ios --apiKey $(ASC_API_KEY_ID) --apiIssuer $(ASC_API_ISSUER_ID)
+	@ipa=$$(ls $(IOS_APPSTORE_EXPORT_PATH)/*.ipa 2>/dev/null | head -1); \
+	if [ -z "$$ipa" ]; then \
+		echo "BLOCKED: no .ipa in $(IOS_APPSTORE_EXPORT_PATH). Run 'make mobile-ios-testflight-ipa' first."; \
+		exit 1; \
+	fi; \
+	echo "Uploading $$ipa to App Store Connect..."; \
+	xcrun altool --upload-app -f "$$ipa" -t ios --apiKey $(ASC_API_KEY_ID) --apiIssuer $(ASC_API_ISSUER_ID)
 
 harness-main-chain-smoke:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_main_chain_smoke.sh

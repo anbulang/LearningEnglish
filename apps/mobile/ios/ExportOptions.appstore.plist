@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>compileBitcode</key>
-	<false/>
 	<key>destination</key>
 	<string>export</string>
 	<key>method</key>
@@ -17,6 +15,6 @@
 	<key>stripSwiftSymbols</key>
 	<true/>
 	<key>manageAppVersionAndBuildNumber</key>
-	<false/>
+	<true/>
 </dict>
 </plist>

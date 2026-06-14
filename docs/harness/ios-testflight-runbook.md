@@ -25,9 +25,11 @@
 make mobile-ios-testflight-ipa
 ```
 
-它会：用 Release 配置归档（`dist/ios/LearningEnglish-AppStore.xcarchive`），再用 `ExportOptions.appstore.plist`（`app-store-connect`）导出到 `dist/ios/export-appstore/`。
+它会：用 Release 配置归档（`dist/ios/LearningEnglish-AppStore.xcarchive`），再用 `ExportOptions.appstore.plist`（`app-store-connect`）导出到 `dist/ios/export-appstore/`。导出的 IPA 文件名由 Xcode scheme 决定（可能是 `Runner.ipa` 或 `learning_english_mobile.ipa`，取决于项目配置），因此上传目标用通配符匹配该目录下的 `*.ipa`，不依赖固定文件名。
 
 > 如需指向非本机 API，沿用 `IOS_API_BASE_URL=http://<lan-ip>:8000/v1`（仅影响 app 内置默认；TestFlight 包通常指向可公网访问的 API）。
+
+> 构建号：`ExportOptions.appstore.plist` 设了 `manageAppVersionAndBuildNumber=true`，让 Xcode 自动递增构建号，避免同一构建号被 App Store Connect 当作重复上传拒绝。
 
 ## 上传 TestFlight（需 Apple 账号凭据）
 
@@ -37,9 +39,11 @@ export ASC_API_ISSUER_ID=<your-issuer-id>
 make mobile-ios-testflight-upload
 ```
 
-未设置上述环境变量时该目标会打印 `BLOCKED` 并退出，不会尝试上传。上传成功后构建会出现在 App Store Connect → TestFlight，可分配给内部/外部测试者。
+缺少凭据或目标目录无 `.ipa` 时,该目标会打印 `BLOCKED` 并退出,不会尝试上传。上传成功后构建会出现在 App Store Connect → TestFlight,可分配给内部/外部测试者。
 
-> 也可用 Xcode Organizer（Window → Organizer → Distribute App → App Store Connect → Upload）做图形化上传，等效于上述命令。
+> **altool 废弃提示**:`xcrun altool --upload-app` 在 Xcode 15+ 已废弃,部分版本会拒绝执行。若本机 altool 不可用,改用以下任一等效方式上传同一 IPA:
+> - **Xcode Organizer**(图形化):Window → Organizer → Distribute App → App Store Connect → Upload。
+> - **Transporter app**(Mac App Store 免费)或 **iTMSTransporter** CLI。
 
 ## 验证
 
@@ -51,5 +55,5 @@ make mobile-ios-testflight-upload
 
 - ✅ 已加入仓库：`ExportOptions.appstore.plist`、`make mobile-ios-testflight-ipa`、`make mobile-ios-testflight-upload`、本 runbook。
 - ⏳ 需人工一次性完成：ASC App 条目、API Key、分发证书确认（依赖你的 Apple 账号）。
-- 未做自动化：build number 自增、release notes 自动化、CI 集成（后续按需）。
-- `xcrun altool --upload-app` 为当前可用上传方式；若 Apple 后续仅保留 Transporter，可改用 Transporter app 上传同一 IPA。
+- build number 由 `manageAppVersionAndBuildNumber=true` 交给 Xcode 自动递增；release notes 自动化、CI 集成仍未做（后续按需）。
+- 上传命令默认用 `xcrun altool --upload-app`；Xcode 15+ 上该命令已废弃,如不可用请改用 Xcode Organizer 或 Transporter（见上）。
