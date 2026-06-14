@@ -1,6 +1,6 @@
 # LearningEnglish MVP Readiness Checklist
 
-更新时间：2026-06-12
+更新时间：2026-06-13
 
 ## 目的
 
@@ -44,7 +44,7 @@
 ### D. Harness / 文档入口
 
 - [x] `README.md` 提供项目入口和常用命令。
-- [x] `docs/project/2026-06-12-status-and-todo.md` 提供当前项目级快照。
+- [x] `docs/project/2026-06-13-status-and-todo.md` 提供当前项目级快照。
 - [x] `docs/harness/device-regression-runbook.md` 提供 `R0/R1/R2/R3` 真机回归分级。
 - [x] `docs/harness/provider-readiness-runbook.md` 提供真实 provider 运行入口。
 - [x] `docs/harness/evidence-archive-policy.md` 说明 evidence 归档规则。
