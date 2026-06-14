@@ -52,6 +52,28 @@ export interface AdminMaterial {
   warnings: string[];
 }
 
+export interface AdminLearningAsset {
+  id: string;
+  materialId: string;
+  materialTitle: string;
+  materialStatus: MaterialStatus;
+  tenantId: string;
+  parentName: string;
+  childName: string;
+  text: string;
+  kind: string;
+  translation: string;
+  primaryAccent: string;
+  mediaStatus: MediaStatus;
+  generatedImageStatus: string;
+  generatedImageUrl: string;
+  ttsUsStatus: string;
+  ttsUsUrl: string;
+  ttsUkStatus: string;
+  ttsUkUrl: string;
+  updatedAt: string;
+}
+
 export interface ProviderPolicy {
   tenantId: "global" | string;
   tier?: string;

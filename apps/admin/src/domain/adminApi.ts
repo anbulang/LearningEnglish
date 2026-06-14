@@ -5,6 +5,7 @@ import type {
   AdminAuditEventsData,
   AdminImpersonationSession,
   AdminImpersonationSessionsData,
+  AdminLearningAsset,
   AdminMaterial,
   AdminOperationsData,
   AdminOperationsIssue,
@@ -801,4 +802,73 @@ function appendOptionalParam(params: URLSearchParams, key: string, value: string
   if (value) {
     params.set(key, value);
   }
+}
+
+export interface AdminLearningAssetsData {
+  tenantScope: string;
+  items: AdminLearningAsset[];
+  total: number;
+}
+
+interface AdminLearningAssetsOptions extends AdminTenantScopedOptions {
+  materialId?: string;
+  mediaStatus?: string;
+  limit?: number;
+}
+
+type AdminLearningAssetsPayload = {
+  tenant_scope?: unknown;
+  items?: Array<Record<string, unknown>>;
+  total?: unknown;
+};
+
+export async function loadAdminLearningAssets(options: AdminLearningAssetsOptions): Promise<AdminLearningAssetsData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const params = new URLSearchParams();
+  params.set("tenant_scope", options.tenantScope);
+  appendOptionalParam(params, "material_id", options.materialId);
+  appendOptionalParam(params, "media_status", options.mediaStatus);
+  if (options.limit !== undefined) {
+    params.set("limit", String(options.limit));
+  }
+  const response = await fetchImpl(`${apiBaseUrl}/v1/admin/learning-assets?${params.toString()}`, {
+    headers: { "X-Admin-Token": options.adminToken }
+  });
+  if (!response.ok) {
+    throw new Error(`Admin learning assets request failed: ${response.status}`);
+  }
+  return normalizeAdminLearningAssetsPayload((await response.json()) as AdminLearningAssetsPayload);
+}
+
+export function normalizeAdminLearningAssetsPayload(payload: AdminLearningAssetsPayload): AdminLearningAssetsData {
+  return {
+    tenantScope: stringValue(payload.tenant_scope),
+    items: (payload.items ?? []).map((item) => normalizeAdminLearningAssetPayload(item)),
+    total: numberValue(payload.total)
+  };
+}
+
+function normalizeAdminLearningAssetPayload(asset: Record<string, unknown>): AdminLearningAsset {
+  return {
+    id: stringValue(asset.id),
+    materialId: stringValue(asset.material_id),
+    materialTitle: stringValue(asset.material_title),
+    materialStatus: stringValue(asset.material_status) as MaterialStatus,
+    tenantId: stringValue(asset.tenant_id),
+    parentName: stringValue(asset.parent_name),
+    childName: stringValue(asset.child_name),
+    text: stringValue(asset.text),
+    kind: stringValue(asset.kind),
+    translation: stringValue(asset.translation),
+    primaryAccent: stringValue(asset.primary_accent),
+    mediaStatus: stringValue(asset.media_status) as MediaStatus,
+    generatedImageStatus: stringValue(asset.generated_image_status),
+    generatedImageUrl: stringValue(asset.generated_image_url),
+    ttsUsStatus: stringValue(asset.tts_us_status),
+    ttsUsUrl: stringValue(asset.tts_us_url),
+    ttsUkStatus: stringValue(asset.tts_uk_status),
+    ttsUkUrl: stringValue(asset.tts_uk_url),
+    updatedAt: stringValue(asset.updated_at)
+  };
 }

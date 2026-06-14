@@ -7,6 +7,7 @@ import {
   loadAdminAuditEvents,
   loadAdminDashboard,
   loadAdminImpersonationSessions,
+  loadAdminLearningAssets,
   loadAdminOperations,
   loadAdminTenantDetail,
   overrideAdminProviderPolicy,
@@ -14,9 +15,17 @@ import {
   startAdminImpersonationSession,
   toggleAdminTenantModule,
   type AdminAccessData,
-  type AdminDashboardData
+  type AdminDashboardData,
+  type AdminLearningAssetsData
 } from "./domain/adminApi";
-import { mockMaterials, mockModuleSettings, mockOperationsData, mockProviderPolicies, mockTenants } from "./domain/mockData";
+import {
+  mockLearningAssets,
+  mockMaterials,
+  mockModuleSettings,
+  mockOperationsData,
+  mockProviderPolicies,
+  mockTenants
+} from "./domain/mockData";
 import type {
   AdminAuditEvent,
   AdminAuditEventsData,
@@ -32,6 +41,7 @@ import type { MessageKey } from "./i18n/messages";
 import { AuditAccess, type AuditEventFilters } from "./pages/AuditAccess";
 import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
+import { LearningAssets } from "./pages/LearningAssets";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { ProviderOps, type ProviderPolicyOverrideInput } from "./pages/ProviderOps";
 import { TenantDetail, type TenantModuleToggleInput } from "./pages/TenantDetail";
@@ -81,6 +91,11 @@ export function App() {
   const [impersonationSessions, setImpersonationSessions] = useState<AdminImpersonationSessionsData | null>(null);
   const [accessData, setAccessData] = useState<AdminAccessData | null>(null);
   const [dataMode, setDataMode] = useState<"mock" | "live">("mock");
+  const [learningAssetsData, setLearningAssetsData] = useState<AdminLearningAssetsData>({
+    tenantScope: "all",
+    items: mockLearningAssets,
+    total: mockLearningAssets.length
+  });
   const t = createTranslator(language);
   const selectedTenantId = tenantScope === "all" ? dashboardData.tenants[0]?.id ?? "" : tenantScope;
 
@@ -245,6 +260,37 @@ export function App() {
           }
         });
       await Promise.all([auditRequest, sessionsRequest]);
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, tenantScope]);
+
+  useEffect(() => {
+    if (activePage !== "assets") {
+      return;
+    }
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      try {
+        const assets = await loadAdminLearningAssets({
+          apiBaseUrl,
+          adminToken,
+          tenantScope
+        });
+        if (!isCancelled) {
+          setLearningAssetsData(assets);
+        }
+      } catch {
+        if (!isCancelled) {
+          setLearningAssetsData({ tenantScope, items: [], total: 0 });
+        }
+      }
     })();
     return () => {
       isCancelled = true;
@@ -618,6 +664,15 @@ export function App() {
           onRetryMaterialJob={dataMode === "live" ? handleRetryMaterialJob : undefined}
         />
       )}
+      {activePage === "assets" && (
+        <LearningAssets
+          language={language}
+          tenantScope={tenantScope}
+          tenants={dashboardData.tenants}
+          assets={dataMode === "live" ? learningAssetsData.items : mockLearningAssets}
+          dataMode={dataMode}
+        />
+      )}
       {activePage === "audit" && (
         <AuditAccess
           language={language}
@@ -646,6 +701,7 @@ export function App() {
       {activePage !== "command" &&
         activePage !== "tenants" &&
         activePage !== "pipeline" &&
+        activePage !== "assets" &&
         activePage !== "audit" &&
         activePage !== "providers" && (
         <PlaceholderPage language={language} title={t(pageTitles[activePage])} />

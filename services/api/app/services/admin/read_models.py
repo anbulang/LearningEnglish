@@ -149,6 +149,80 @@ def build_admin_tenant_detail(db: Session, tenant_scope: str, tenant_id: str) ->
     }
 
 
+LEARNING_ASSETS_DEFAULT_LIMIT = 200
+LEARNING_ASSETS_MAX_LIMIT = 500
+
+
+def build_admin_learning_assets(
+    db: Session,
+    tenant_scope: str,
+    *,
+    material_id: str = "",
+    media_status: str = "",
+    limit: int = LEARNING_ASSETS_DEFAULT_LIMIT,
+) -> dict[str, Any]:
+    """把各讲义里的 learning_assets JSON 扁平成带 material/tenant 上下文的资产列表。
+
+    供 admin Learning Assets 页只读消费。归档讲义的资产不再展示。
+    """
+    tenant_ids = set(db.scalars(select(ParentAccountModel.id)).all())
+    if tenant_scope != "all" and tenant_scope not in tenant_ids:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant scope not found")
+
+    stmt = (
+        select(CourseMaterialModel, ChildProfileModel, ParentAccountModel)
+        .join(ChildProfileModel, ChildProfileModel.id == CourseMaterialModel.child_id)
+        .join(ParentAccountModel, ParentAccountModel.id == ChildProfileModel.parent_account_id)
+        .where(CourseMaterialModel.status != MaterialStatus.archived.value)
+        .order_by(CourseMaterialModel.updated_at.desc(), CourseMaterialModel.id.desc())
+    )
+    if tenant_scope != "all":
+        stmt = stmt.where(ChildProfileModel.parent_account_id == tenant_scope)
+    if material_id:
+        stmt = stmt.where(CourseMaterialModel.id == material_id)
+
+    items: list[dict] = []
+    for material, child, parent in db.execute(stmt).all():
+        for asset in list(material.learning_assets or []):
+            payload = _admin_learning_asset_payload(asset, material, child, parent)
+            if media_status and payload["media_status"] != media_status:
+                continue
+            items.append(payload)
+
+    capped = items[: max(1, min(limit, LEARNING_ASSETS_MAX_LIMIT))]
+    return {"tenant_scope": tenant_scope, "items": capped, "total": len(items)}
+
+
+def _admin_learning_asset_payload(
+    asset: dict,
+    material: CourseMaterialModel,
+    child: ChildProfileModel,
+    parent: ParentAccountModel,
+) -> dict:
+    updated_at = material.updated_at or material.created_at
+    return {
+        "id": str(asset.get("id", "")),
+        "material_id": material.id,
+        "material_title": material.title,
+        "material_status": material.status,
+        "tenant_id": parent.id,
+        "parent_name": parent.display_name or _fallback_parent_name(parent),
+        "child_name": child.name,
+        "text": asset.get("text", ""),
+        "kind": asset.get("kind", ""),
+        "translation": asset.get("translation", ""),
+        "primary_accent": asset.get("primary_accent", ""),
+        "media_status": _media_status([asset]),
+        "generated_image_status": str(asset.get("generated_image_status", "pending")),
+        "generated_image_url": asset.get("generated_image_url", ""),
+        "tts_us_status": str(asset.get("tts_us_status", "pending")),
+        "tts_us_url": asset.get("tts_us_url", ""),
+        "tts_uk_status": str(asset.get("tts_uk_status", "pending")),
+        "tts_uk_url": asset.get("tts_uk_url", ""),
+        "updated_at": _iso(updated_at),
+    }
+
+
 def serialize_admin_tenant(parent: ParentAccountModel, child_count: int, materials: list[dict]) -> dict:
     return _admin_tenant_payload(parent, child_count, materials)
 
