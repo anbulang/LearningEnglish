@@ -7,6 +7,9 @@ IOS_FLUTTER_MODE ?= profile
 IOS_ARCHIVE_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/LearningEnglish-Internal.xcarchive
 IOS_EXPORT_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/export
 IOS_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.internal.plist
+IOS_APPSTORE_EXPORT_OPTIONS ?= /Users/chaucermini/Code/LearningEnglish/apps/mobile/ios/ExportOptions.appstore.plist
+IOS_APPSTORE_ARCHIVE_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/LearningEnglish-AppStore.xcarchive
+IOS_APPSTORE_EXPORT_PATH ?= /Users/chaucermini/Code/LearningEnglish/dist/ios/export-appstore
 # Real-device builds must override this with the current LAN host IP.
 IOS_API_BASE_URL ?= http://127.0.0.1:8000/v1
 IOS_PREFLIGHT_URL ?= $(subst /v1,,$(IOS_API_BASE_URL))/healthz
@@ -15,7 +18,7 @@ API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0
 ADMIN_API_BASE_URL ?= http://127.0.0.1:8000
 ADMIN_API_TOKEN ?= local-admin-token
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-hn020-preflight harness-hn020-validate harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa mobile-ios-testflight-ipa mobile-ios-testflight-upload harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-hn020-preflight harness-hn020-validate harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -103,6 +106,33 @@ mobile-ios-ipa: mobile-ios-archive
 		-archivePath $(IOS_ARCHIVE_PATH) \
 		-exportPath $(IOS_EXPORT_PATH) \
 		-exportOptionsPlist $(IOS_EXPORT_OPTIONS)
+
+# TestFlight: Release archive + App Store Connect export. Requires the bundle id
+# com.anbulang.learningenglish to exist in App Store Connect (one-time manual ops).
+mobile-ios-testflight-ipa:
+	$(MAKE) mobile-ios-archive \
+		IOS_CONFIGURATION=Release \
+		IOS_FLUTTER_MODE=release \
+		IOS_ARCHIVE_PATH=$(IOS_APPSTORE_ARCHIVE_PATH)
+	rm -rf $(IOS_APPSTORE_EXPORT_PATH)
+	mkdir -p $(IOS_APPSTORE_EXPORT_PATH)
+	xcodebuild \
+		-exportArchive \
+		-allowProvisioningUpdates \
+		-archivePath $(IOS_APPSTORE_ARCHIVE_PATH) \
+		-exportPath $(IOS_APPSTORE_EXPORT_PATH) \
+		-exportOptionsPlist $(IOS_APPSTORE_EXPORT_OPTIONS)
+
+# Upload to TestFlight. Needs an App Store Connect API key (your Apple account):
+#   export ASC_API_KEY_ID=...  ASC_API_ISSUER_ID=...  (key .p8 in ~/.appstoreconnect/private_keys)
+mobile-ios-testflight-upload:
+	@if [ -z "$(ASC_API_KEY_ID)" ] || [ -z "$(ASC_API_ISSUER_ID)" ]; then \
+		echo "BLOCKED: set ASC_API_KEY_ID and ASC_API_ISSUER_ID (App Store Connect API key) before uploading."; \
+		echo "See docs/harness/ios-testflight-runbook.md."; \
+		exit 1; \
+	fi
+	xcrun altool --upload-app -f $(IOS_APPSTORE_EXPORT_PATH)/learning_english_mobile.ipa \
+		-t ios --apiKey $(ASC_API_KEY_ID) --apiIssuer $(ASC_API_ISSUER_ID)
 
 harness-main-chain-smoke:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_main_chain_smoke.sh
