@@ -6,10 +6,12 @@ import {
   loadAdminAccess,
   loadAdminDashboard,
   loadAdminImpersonationSessions,
+  loadAdminLearningAssets,
   loadAdminOperations,
   loadAdminTenantDetail,
   normalizeAdminAccessPayload,
   normalizeAdminDashboardPayload,
+  normalizeAdminLearningAssetsPayload,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
   startAdminImpersonationSession,
@@ -792,5 +794,72 @@ describe("admin API client", () => {
       tenantId: "parent_1"
     });
     expect(result.auditEvent.action).toBe("admin.impersonation.end");
+  });
+});
+
+describe("loadAdminLearningAssets", () => {
+  it("normalizes the learning asset payload", () => {
+    const result = normalizeAdminLearningAssetsPayload({
+      tenant_scope: "all",
+      items: [
+        {
+          id: "asset_1",
+          material_id: "material_1",
+          material_title: "Colors",
+          material_status: "ready",
+          tenant_id: "parent_1",
+          parent_name: "Emily",
+          child_name: "Tom",
+          text: "queen",
+          kind: "word",
+          translation: "女王",
+          primary_accent: "us",
+          media_status: "ready",
+          generated_image_status: "ready",
+          generated_image_url: "http://testserver/img.png",
+          tts_us_status: "ready",
+          tts_us_url: "http://testserver/us.mp3",
+          tts_uk_status: "ready",
+          tts_uk_url: "http://testserver/uk.mp3",
+          updated_at: "2026-06-10T08:00:00+00:00"
+        }
+      ],
+      total: 1
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({
+      id: "asset_1",
+      materialId: "material_1",
+      materialTitle: "Colors",
+      tenantId: "parent_1",
+      childName: "Tom",
+      text: "queen",
+      kind: "word",
+      translation: "女王",
+      primaryAccent: "us",
+      mediaStatus: "ready",
+      ttsUkUrl: "http://testserver/uk.mp3"
+    });
+  });
+
+  it("requests the endpoint with tenant scope and media filter", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ tenant_scope: "parent_1", items: [], total: 0 })
+    });
+
+    await loadAdminLearningAssets({
+      apiBaseUrl: "http://api.test/",
+      adminToken: "tok",
+      tenantScope: "parent_1",
+      mediaStatus: "ready",
+      fetchImpl: fetchImpl as unknown as typeof fetch
+    });
+
+    const calledUrl = fetchImpl.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/v1/admin/learning-assets?");
+    expect(calledUrl).toContain("tenant_scope=parent_1");
+    expect(calledUrl).toContain("media_status=ready");
   });
 });
