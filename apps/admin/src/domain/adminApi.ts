@@ -7,6 +7,7 @@ import type {
   AdminImpersonationSessionsData,
   AdminLearningAsset,
   AdminMaterial,
+  AdminUserAccount,
   AdminOperationsData,
   AdminOperationsIssue,
   AdminTenantChild,
@@ -870,5 +871,66 @@ function normalizeAdminLearningAssetPayload(asset: Record<string, unknown>): Adm
     ttsUkStatus: stringValue(asset.tts_uk_status),
     ttsUkUrl: stringValue(asset.tts_uk_url),
     updatedAt: stringValue(asset.updated_at)
+  };
+}
+
+export interface AdminUsersData {
+  tenantScope: string;
+  items: AdminUserAccount[];
+  total: number;
+}
+
+interface AdminUsersOptions extends AdminTenantScopedOptions {
+  level?: string;
+  limit?: number;
+}
+
+type AdminUsersPayload = {
+  tenant_scope?: unknown;
+  items?: Array<Record<string, unknown>>;
+  total?: unknown;
+};
+
+export async function loadAdminUsers(options: AdminUsersOptions): Promise<AdminUsersData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const params = new URLSearchParams();
+  params.set("tenant_scope", options.tenantScope);
+  appendOptionalParam(params, "level", options.level);
+  if (options.limit !== undefined) {
+    params.set("limit", String(options.limit));
+  }
+  const response = await fetchImpl(`${apiBaseUrl}/v1/admin/users?${params.toString()}`, {
+    headers: { "X-Admin-Token": options.adminToken }
+  });
+  if (!response.ok) {
+    throw new Error(`Admin users request failed: ${response.status}`);
+  }
+  return normalizeAdminUsersPayload((await response.json()) as AdminUsersPayload);
+}
+
+export function normalizeAdminUsersPayload(payload: AdminUsersPayload): AdminUsersData {
+  return {
+    tenantScope: stringValue(payload.tenant_scope),
+    items: (payload.items ?? []).map((item) => normalizeAdminUserAccountPayload(item)),
+    total: numberValue(payload.total)
+  };
+}
+
+function normalizeAdminUserAccountPayload(row: Record<string, unknown>): AdminUserAccount {
+  return {
+    childId: stringValue(row.child_id),
+    childName: stringValue(row.child_name),
+    age: numberValue(row.age),
+    level: stringValue(row.level),
+    learningGoal: stringValue(row.learning_goal),
+    preferredReviewDurationMinutes: numberValue(row.preferred_review_duration_minutes),
+    parentNotes: stringValue(row.parent_notes),
+    tenantId: stringValue(row.tenant_id),
+    parentName: stringValue(row.parent_name),
+    materialsCount: numberValue(row.materials_count),
+    speakingAttempts: numberValue(row.speaking_attempts),
+    latestWeeklyReportId: stringValue(row.latest_weekly_report_id),
+    createdAt: stringValue(row.created_at)
   };
 }

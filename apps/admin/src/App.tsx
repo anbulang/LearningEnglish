@@ -10,13 +10,15 @@ import {
   loadAdminLearningAssets,
   loadAdminOperations,
   loadAdminTenantDetail,
+  loadAdminUsers,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
   startAdminImpersonationSession,
   toggleAdminTenantModule,
   type AdminAccessData,
   type AdminDashboardData,
-  type AdminLearningAssetsData
+  type AdminLearningAssetsData,
+  type AdminUsersData
 } from "./domain/adminApi";
 import {
   mockLearningAssets,
@@ -24,7 +26,8 @@ import {
   mockModuleSettings,
   mockOperationsData,
   mockProviderPolicies,
-  mockTenants
+  mockTenants,
+  mockUsers
 } from "./domain/mockData";
 import type {
   AdminAuditEvent,
@@ -43,6 +46,7 @@ import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
 import { LearningAssets } from "./pages/LearningAssets";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { UsersChildren } from "./pages/UsersChildren";
 import { ProviderOps, type ProviderPolicyOverrideInput } from "./pages/ProviderOps";
 import { TenantDetail, type TenantModuleToggleInput } from "./pages/TenantDetail";
 
@@ -95,6 +99,11 @@ export function App() {
     tenantScope: "all",
     items: mockLearningAssets,
     total: mockLearningAssets.length
+  });
+  const [usersData, setUsersData] = useState<AdminUsersData>({
+    tenantScope: "all",
+    items: mockUsers,
+    total: mockUsers.length
   });
   const t = createTranslator(language);
   const selectedTenantId = tenantScope === "all" ? dashboardData.tenants[0]?.id ?? "" : tenantScope;
@@ -289,6 +298,33 @@ export function App() {
       } catch {
         if (!isCancelled) {
           setLearningAssetsData({ tenantScope, items: [], total: 0 });
+        }
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, tenantScope]);
+
+  useEffect(() => {
+    if (activePage !== "users") {
+      return;
+    }
+    const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL?.trim();
+    if (!apiBaseUrl || typeof fetch === "undefined") {
+      return;
+    }
+    let isCancelled = false;
+    const adminToken = import.meta.env.VITE_ADMIN_API_TOKEN?.trim() || "local-admin-token";
+    void (async () => {
+      try {
+        const users = await loadAdminUsers({ apiBaseUrl, adminToken, tenantScope });
+        if (!isCancelled) {
+          setUsersData(users);
+        }
+      } catch {
+        if (!isCancelled) {
+          setUsersData({ tenantScope, items: [], total: 0 });
         }
       }
     })();
@@ -664,6 +700,15 @@ export function App() {
           onRetryMaterialJob={dataMode === "live" ? handleRetryMaterialJob : undefined}
         />
       )}
+      {activePage === "users" && (
+        <UsersChildren
+          language={language}
+          tenantScope={tenantScope}
+          tenants={dashboardData.tenants}
+          users={dataMode === "live" ? usersData.items : mockUsers}
+          dataMode={dataMode}
+        />
+      )}
       {activePage === "assets" && (
         <LearningAssets
           language={language}
@@ -700,6 +745,7 @@ export function App() {
       )}
       {activePage !== "command" &&
         activePage !== "tenants" &&
+        activePage !== "users" &&
         activePage !== "pipeline" &&
         activePage !== "assets" &&
         activePage !== "audit" &&
