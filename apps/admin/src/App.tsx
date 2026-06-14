@@ -44,6 +44,7 @@ import type { MessageKey } from "./i18n/messages";
 import { AuditAccess, type AuditEventFilters } from "./pages/AuditAccess";
 import { CommandCenter } from "./pages/CommandCenter";
 import { ContentPipeline } from "./pages/ContentPipeline";
+import { Infrastructure } from "./pages/Infrastructure";
 import { LearningAssets } from "./pages/LearningAssets";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { UsersChildren } from "./pages/UsersChildren";
@@ -718,6 +719,14 @@ export function App() {
           dataMode={dataMode}
         />
       )}
+      {activePage === "infrastructure" && (
+        <Infrastructure
+          language={language}
+          tenantScope={tenantScope}
+          operationsData={dataMode === "live" ? operationsData : mockOperationsData}
+          dataMode={dataMode}
+        />
+      )}
       {activePage === "audit" && (
         <AuditAccess
           language={language}
@@ -748,6 +757,7 @@ export function App() {
         activePage !== "users" &&
         activePage !== "pipeline" &&
         activePage !== "assets" &&
+        activePage !== "infrastructure" &&
         activePage !== "audit" &&
         activePage !== "providers" && (
         <PlaceholderPage language={language} title={t(pageTitles[activePage])} />

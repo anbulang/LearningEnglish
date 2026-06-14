@@ -392,6 +392,7 @@ export const mockOperationsData: AdminOperationsData = {
     total: 18,
     failed: 1,
     pending: 2,
+    stale_pending: 1,
     latest_failed: []
   },
   providerConfiguration: {
@@ -412,7 +413,10 @@ export const mockOperationsData: AdminOperationsData = {
   moduleToggleCoverage: {
     tenant_count: mockTenants.length,
     module_keys: moduleKeys,
-    disabled: 1
+    total: mockTenants.length * moduleKeys.length,
+    enabled: mockTenants.length * moduleKeys.length - 1,
+    disabled: 1,
+    overrides: 1
   },
   issues: [
     {
