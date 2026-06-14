@@ -1092,3 +1092,73 @@ def test_process_learning_asset_media_skips_if_archived_before_processing_write(
         assert "generated_image_status" not in asset
         assert "tts_us_status" not in asset
         assert "tts_uk_status" not in asset
+
+
+def test_process_material_job_is_idempotent_once_needs_review(monkeypatch) -> None:
+    # 至少一次投递语义下,已 needs_review 的 job 再次投递应直接早返回,
+    # 不重新跑 pipeline(否则会覆盖家长正在校对的草稿)。
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        parent = ParentAccountModel(
+            id="parent_idem",
+            display_name="家长",
+            wechat_union_id="wechat_union_idem",
+            wechat_open_id="wechat_open_idem",
+        )
+        child = ChildProfileModel(
+            id="child_idem",
+            parent_account_id=parent.id,
+            name="Mia",
+            age=6,
+            level="starter",
+            learning_goal="稳定复习",
+            preferred_review_duration_minutes=10,
+            parent_notes="",
+        )
+        material = CourseMaterialModel(
+            id="material_idem",
+            child_id=child.id,
+            teacher_name="Emma",
+            lesson_date=date(2026, 5, 15),
+            title="Animals Around Me",
+            topic="动物",
+            status=MaterialStatus.needs_review.value,
+            uploaded_at=datetime.now(timezone.utc),
+            tags=["动物"],
+        )
+        job = MaterialParseJobModel(
+            id="job_idem",
+            material_id=material.id,
+            status=JobStatus.needs_review.value,
+            confidence_summary="已识别,等待家长确认。",
+            draft_title=material.title,
+            draft_topic=material.topic,
+            draft_vocabulary=["cat"],
+            draft_sentences=[],
+        )
+        db.add_all([parent, child, material, job])
+        db.commit()
+    finally:
+        db.close()
+
+    class GuardPipeline:
+        def prepare_job(self, *args, **kwargs):
+            raise AssertionError("needs_review 的 job 不应重新跑 pipeline")
+
+    monkeypatch.setattr("workers_app.tasks.build_pipeline_service", lambda: GuardPipeline())
+
+    result = process_material_job("job_idem")
+
+    assert result == {"job_id": "job_idem", "status": "needs_review"}
+    with SessionLocal() as db:
+        job = db.get(MaterialParseJobModel, "job_idem")
+        material = db.get(CourseMaterialModel, "material_idem")
+        assert job is not None
+        assert material is not None
+        assert job.status == JobStatus.needs_review.value
+        assert material.status == MaterialStatus.needs_review.value
+        # 草稿保持不变,没有被二次投递覆盖
+        assert job.draft_vocabulary == ["cat"]
