@@ -223,6 +223,70 @@ def _admin_learning_asset_payload(
     }
 
 
+def build_admin_users(
+    db: Session,
+    tenant_scope: str,
+    *,
+    level: str = "",
+    limit: int = LEARNING_ASSETS_DEFAULT_LIMIT,
+) -> dict[str, Any]:
+    """列出租户下的孩子档案(带家长上下文与快速统计),供 admin Users & Children 页只读消费。"""
+    tenant_ids = set(db.scalars(select(ParentAccountModel.id)).all())
+    if tenant_scope != "all" and tenant_scope not in tenant_ids:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant scope not found")
+
+    stmt = (
+        select(ChildProfileModel, ParentAccountModel)
+        .join(ParentAccountModel, ParentAccountModel.id == ChildProfileModel.parent_account_id)
+        .order_by(ChildProfileModel.created_at.desc(), ChildProfileModel.id.desc())
+    )
+    if tenant_scope != "all":
+        stmt = stmt.where(ChildProfileModel.parent_account_id == tenant_scope)
+    rows = db.execute(stmt).all()
+
+    child_ids = [child.id for child, _ in rows]
+    materials_by_child = _material_counts_by_child(db, child_ids)
+    attempts_by_child = _speaking_attempt_counts_by_child(db, child_ids)
+    latest_report_by_child = _latest_report_by_child(db, child_ids)
+
+    items: list[dict] = []
+    for child, parent in rows:
+        if level and child.level != level:
+            continue
+        report = latest_report_by_child.get(child.id)
+        items.append(
+            {
+                "child_id": child.id,
+                "child_name": child.name,
+                "age": child.age,
+                "level": child.level,
+                "learning_goal": child.learning_goal,
+                "preferred_review_duration_minutes": child.preferred_review_duration_minutes,
+                "parent_notes": child.parent_notes,
+                "tenant_id": parent.id,
+                "parent_name": parent.display_name or _fallback_parent_name(parent),
+                "materials_count": materials_by_child.get(child.id, 0),
+                "speaking_attempts": attempts_by_child.get(child.id, 0),
+                "latest_weekly_report_id": report.id if report else "",
+                "created_at": _iso(child.created_at),
+            }
+        )
+
+    capped = items[: max(1, min(limit, LEARNING_ASSETS_MAX_LIMIT))]
+    return {"tenant_scope": tenant_scope, "items": capped, "total": len(items)}
+
+
+def _material_counts_by_child(db: Session, child_ids: list[str]) -> dict[str, int]:
+    if not child_ids:
+        return {}
+    rows = db.execute(
+        select(CourseMaterialModel.child_id, func.count(CourseMaterialModel.id))
+        .where(CourseMaterialModel.child_id.in_(child_ids))
+        .group_by(CourseMaterialModel.child_id)
+    ).all()
+    return {child_id: int(count) for child_id, count in rows}
+
+
 def serialize_admin_tenant(parent: ParentAccountModel, child_count: int, materials: list[dict]) -> dict:
     return _admin_tenant_payload(parent, child_count, materials)
 
