@@ -15,7 +15,7 @@ API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0
 ADMIN_API_BASE_URL ?= http://127.0.0.1:8000
 ADMIN_API_TOKEN ?= local-admin-token
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-hn020-preflight harness-hn020-validate harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -118,6 +118,12 @@ harness-hn019-real-device-main-chain:
 
 harness-hn020-parent-pilot-template:
 	$(PYTHON) scripts/harness/generate_hn020_parent_pilot_template.py
+
+harness-hn020-preflight:
+	$(PYTHON) scripts/harness/run_hn020_pilot_preflight.py
+
+harness-hn020-validate:
+	$(PYTHON) scripts/harness/validate_hn020_pilot_summary.py
 
 harness-reset-ios-sim:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/reset_ios_simulator_app.sh

@@ -71,6 +71,26 @@ dist/harness/HN-020/
 make harness-hn020-parent-pilot-template
 ```
 
+试用开始前先跑一次环境 preflight，确认环境就绪、避免把环境问题误判成产品问题：
+
+```bash
+make harness-hn020-preflight
+```
+
+它会探测 API 健康、public uploads 公网根、provider 声明，把结果写入 `dist/harness/HN-020/preflight.json`；`status` 为 `ready` 才开始试用，`env_blocked` 时先修环境。默认连本机 API，可用环境变量覆盖：
+
+```bash
+API_BASE_URL=http://<current-host-ip>:8000/v1 make harness-hn020-preflight
+```
+
+一轮试用记录填写完成后，跑校验确认证据可归档：
+
+```bash
+make harness-hn020-validate
+```
+
+`result` 为 `PASS` 表示 summary、notes 与 5 张截图齐全且已脱离模板态；`INCOMPLETE` 会列出缺失项。
+
 推荐文件名：
 
 - `parent-pilot-summary.json`
@@ -249,14 +269,16 @@ make harness-hn020-parent-pilot-template
 
 内容：
 
-- [ ] 固定 `dist/harness/HN-020/` 证据文件命名。
-- [ ] 准备一份试用记录模板。
+- [x] 固定 `dist/harness/HN-020/` 证据文件命名。（`generate_hn020_parent_pilot_template.py`）
+- [x] 准备一份试用记录模板。（`make harness-hn020-parent-pilot-template`）
 - [ ] 明确试用设备、API 地址、provider 配置和讲义素材。
-- [ ] 试用前跑一次最小 smoke，避免把环境问题误判成产品问题。
+- [x] 试用前跑一次最小 preflight，避免把环境问题误判成产品问题。（`make harness-hn020-preflight`）
+- [x] 试用后用 `make harness-hn020-validate` 确认证据齐全再归档。
 
 完成标准：
 
 - 陪跑人可以在 5 分钟内开始一次试用记录。
+- preflight `ready` 才开始试用；归档前 validate 为 `PASS`。
 
 ### Batch 1：上传与 AI 校对可理解
 
