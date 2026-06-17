@@ -244,14 +244,14 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 适用人群 / 用途 | 文档 |
 | --- | --- | --- |
-| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-06-13-status-and-todo.md`](docs/project/2026-06-13-status-and-todo.md) |
+| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-06-15-status-and-todo.md`](docs/project/2026-06-15-status-and-todo.md) |
 | 系统总览 | 新成员 / 快速理解系统边界与默认技术路径 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | 后端 / 数据层设计核对 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | API、worker 开发 / 服务边界核对 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
 | 移动端架构 | Flutter 开发 / 主链页面与状态结构核对 | [`docs/architecture/mobile-architecture.md`](docs/architecture/mobile-architecture.md) |
 | Harness 文档索引 | 所有人 / 找当前验收入口与真相源 | [`docs/harness/README.md`](docs/harness/README.md) |
 | 真机回归 Runbook | iOS 真机回归执行者 / R0-R3 分层复跑 | [`docs/harness/device-regression-runbook.md`](docs/harness/device-regression-runbook.md) |
-| iOS TestFlight 分发 | iOS 发布执行者 / development+UDID 转 TestFlight | [`docs/harness/ios-testflight-runbook.md`](docs/harness/ios-testflight-runbook.md) |
+| iOS TestFlight 分发（停泊，未启用） | iOS 发布执行者 / 当前仍走 UDID，TestFlight 脚手架备查 | [`docs/harness/ios-testflight-runbook.md`](docs/harness/ios-testflight-runbook.md) |
 | Evidence 归档策略 | 需要整理 `dist/harness/` 的成员 / 证据治理 | [`docs/harness/evidence-archive-policy.md`](docs/harness/evidence-archive-policy.md) |
 | MVP readiness | 需要判断当前是否可交付 / 可验收的成员 | [`docs/harness/mvp-readiness-checklist.md`](docs/harness/mvp-readiness-checklist.md) |
 | 上传识别链路 | 需要理解 HN-008~HN-019 背景与当前入口的成员 | [`docs/harness/upload-recognition-loop.md`](docs/harness/upload-recognition-loop.md) |
