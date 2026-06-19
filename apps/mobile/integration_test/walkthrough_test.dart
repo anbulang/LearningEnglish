@@ -106,12 +106,19 @@ void main() {
     // Wait for the startup bootstrap to settle first: if a refresh is still in
     // flight, clearSession() could be undone when bootstrap() later persists the
     // refreshed session, and the login/binding screens would be skipped anyway.
-    final bootEnd = DateTime.now().add(const Duration(seconds: 10));
+    // The Dio client uses 30s timeouts, so allow the refresh to finish before
+    // giving up.
+    final bootEnd = DateTime.now().add(const Duration(seconds: 35));
     while (DateTime.now().isBefore(bootEnd) &&
         container.read(sessionControllerProvider).stage ==
             SessionStage.bootstrapping) {
       await tester.pump(const Duration(milliseconds: 200));
     }
+    expect(
+        container.read(sessionControllerProvider).stage ==
+            SessionStage.bootstrapping,
+        isFalse,
+        reason: 'bootstrap did not finish before clearing the session');
     await container.read(sessionControllerProvider.notifier).clearSession();
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
@@ -194,9 +201,12 @@ void main() {
     });
 
     await step('07-review-editable', () async {
-      // Real qwen OCR runs server-side, then the review screen appears.
+      // Real qwen OCR runs server-side, then the review screen appears. Allow
+      // at least the backend's AI_REQUEST_TIMEOUT_SECONDS (default 180s) plus
+      // queue/startup overhead so a healthy-but-slow OCR run doesn't fail here
+      // before the worker would.
       await waitFor(find.text('AI 识别结果'),
-          timeout: const Duration(seconds: 90));
+          timeout: const Duration(seconds: 220));
       await shot('07-review-editable');
       // Showcase editable proof-reading: delete a word chip if present (optional).
       final dog = find.descendant(
@@ -281,5 +291,5 @@ void main() {
     // lesson_media_ready_test (--dart-define=MATERIAL_ID=...).
     debugPrint('WALKTHROUGH material_id: $lessonMaterialId');
     debugPrint('WALKTHROUGH screenshots: ${shots.join(", ")}');
-  }, timeout: const Timeout(Duration(minutes: 8)));
+  }, timeout: const Timeout(Duration(minutes: 12)));
 }

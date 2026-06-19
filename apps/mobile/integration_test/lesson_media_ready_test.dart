@@ -69,10 +69,12 @@ void main() {
     // accent ready, so the "ready" capture shows real audio + image instead of a
     // "生成中"/failed placeholder. Real media can finish partial (only TTS or
     // only the image), so requiring a single fully-ready asset is what makes the
-    // hero shot trustworthy. Real DashScope generation can take 2-3 minutes.
+    // hero shot trustworthy. The worker only commits learning_assets after it
+    // has processed every asset (image polling up to ~180s + TTS per asset), so
+    // allow a generous window that covers a multi-asset material.
     final repo = container.read(appRepositoryProvider);
     var mediaReady = false;
-    final deadline = DateTime.now().add(const Duration(seconds: 240));
+    final deadline = DateTime.now().add(const Duration(seconds: 360));
     while (DateTime.now().isBefore(deadline)) {
       try {
         final material = await repo.getMaterial(materialId);
@@ -97,17 +99,20 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
     await binding.takeScreenshot('08b-lesson-media-ready');
 
-    // Scroll to reveal the generated image + 美式/英式 audio controls.
-    final scrollable = find.byType(Scrollable);
-    if (scrollable.evaluate().isNotEmpty) {
-      await tester.drag(scrollable.first, const Offset(0, -420));
-      await tester.pumpAndSettle(const Duration(seconds: 1));
-      await binding.takeScreenshot('08c-lesson-assets');
-    }
+    // Bring the actual ready asset tile ('已生成' status) on-screen so the
+    // capture shows real generated media. find.textContaining matches even
+    // off-screen tiles, so use ensureVisible to scroll the ready one into view
+    // (on partial-media runs the first tile can still be failed/pending).
+    final readyTile = find.textContaining('已生成');
+    expect(readyTile, findsWidgets,
+        reason: 'no 已生成 media tile present to capture');
+    await tester.ensureVisible(readyTile.first);
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await binding.takeScreenshot('08c-lesson-assets');
 
     container.read(appRouterProvider).go('/review/speaking/$materialId');
     await waitFor(find.text('口语陪练'), timeout: const Duration(seconds: 15));
     await tester.pumpAndSettle(const Duration(seconds: 2));
     await binding.takeScreenshot('11b-speaking-ready');
-  }, timeout: const Timeout(Duration(minutes: 6)));
+  }, timeout: const Timeout(Duration(minutes: 8)));
 }
