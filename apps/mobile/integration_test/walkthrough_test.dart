@@ -246,6 +246,9 @@ void main() {
       container.invalidate(parentCoachingScriptProvider(lessonMaterialId));
       container.invalidate(materialsProvider);
       container.invalidate(reviewTasksProvider);
+      // HomeScreen also caches an (empty) weekly report before upload; refresh it
+      // too so the reports screen isn't pinned to stale "no data".
+      container.invalidate(weeklyReportProvider);
       container.read(appRouterProvider).go('/lessons/$lessonMaterialId');
       await waitFor(find.text('课程详情'), timeout: const Duration(seconds: 25));
       await shot('08-lesson-detail');
@@ -259,6 +262,10 @@ void main() {
       for (var i = 0; i < 20; i++) {
         await tester.pump(const Duration(seconds: 2));
       }
+      // materialProvider is a FutureProvider that won't refetch on pumps alone;
+      // refresh it so the shot reflects the latest server-side media progress.
+      container.invalidate(materialProvider(lessonMaterialId));
+      await tester.pumpAndSettle(const Duration(seconds: 2));
       await shot('09-lesson-media');
     });
 

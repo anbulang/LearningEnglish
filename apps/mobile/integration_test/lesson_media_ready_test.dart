@@ -73,16 +73,18 @@ void main() {
     // has processed every asset (image polling up to ~180s + TTS per asset), so
     // allow a generous window that covers a multi-asset material.
     final repo = container.read(appRepositoryProvider);
-    var mediaReady = false;
+    String? readyAssetText;
     final deadline = DateTime.now().add(const Duration(seconds: 360));
     while (DateTime.now().isBefore(deadline)) {
       try {
         final material = await repo.getMaterial(materialId);
-        final ready = material.learningAssets.any((a) =>
+        final ready = material.learningAssets.where((a) =>
             a.generatedImageStatus == 'ready' &&
             (a.ttsUsStatus == 'ready' || a.ttsUkStatus == 'ready'));
-        if (ready) {
-          mediaReady = true;
+        if (ready.isNotEmpty) {
+          // Remember which asset is fully ready so the capture targets that tile
+          // (not an earlier partial one) on partial-media runs.
+          readyAssetText = ready.first.text;
           break;
         }
       } catch (_) {
@@ -90,7 +92,7 @@ void main() {
       }
       await tester.pump(const Duration(seconds: 3));
     }
-    expect(mediaReady, isTrue,
+    expect(readyAssetText, isNotNull,
         reason: 'no asset reached fully-ready media (image + audio) for '
             '$materialId within timeout');
 
@@ -99,14 +101,13 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
     await binding.takeScreenshot('08b-lesson-media-ready');
 
-    // Bring the actual ready asset tile ('已生成' status) on-screen so the
-    // capture shows real generated media. find.textContaining matches even
-    // off-screen tiles, so use ensureVisible to scroll the ready one into view
-    // (on partial-media runs the first tile can still be failed/pending).
-    final readyTile = find.textContaining('已生成');
-    expect(readyTile, findsWidgets,
-        reason: 'no 已生成 media tile present to capture');
-    await tester.ensureVisible(readyTile.first);
+    // Bring the specific fully-ready asset's tile (its word is the tile title)
+    // on-screen so the capture shows real generated media — on partial-media
+    // runs an earlier tile can still be failed/pending.
+    final assetTile = find.text(readyAssetText!);
+    expect(assetTile, findsWidgets,
+        reason: 'ready asset "$readyAssetText" tile not found on the lesson');
+    await tester.ensureVisible(assetTile.first);
     await tester.pumpAndSettle(const Duration(seconds: 1));
     await binding.takeScreenshot('08c-lesson-assets');
 
