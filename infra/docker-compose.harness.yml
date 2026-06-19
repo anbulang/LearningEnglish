@@ -1,0 +1,17 @@
+services:
+  postgres:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
+  minio:
+    restart: unless-stopped
+  api:
+    restart: unless-stopped
+    environment:
+      PUBLIC_BASE_URL: "http://127.0.0.1:8010"
+    ports:
+      - "8010:8000"
+  worker:
+    restart: unless-stopped
+    environment:
+      PUBLIC_BASE_URL: "http://127.0.0.1:8010"
