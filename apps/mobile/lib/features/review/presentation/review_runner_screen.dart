@@ -113,49 +113,66 @@ class _ReviewTaskStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        IllustratedHeroCard(
-          eyebrow: '复习进行中',
-          title: task.contentJson['prompt'] as String? ?? '复习任务',
-          description: '第 ${currentIndex + 1} 题，共 $totalCount 题。一步一步完成就好。',
-          accent: _taskAccent(task.taskType),
-          illustration: _taskIcon(task.taskType),
-          assetPath: _taskAsset(task),
-          badge: StickerBadge(
-            label: '任务 ${currentIndex + 1}/$totalCount',
-            icon: Icons.flag_rounded,
-            color: _taskAccent(task.taskType).withValues(alpha: 0.55),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('任务 ${currentIndex + 1} / $totalCount',
-                  style: AppTextStyles.helper),
-              const SizedBox(height: AppSpacing.xs),
-              LinearProgressIndicator(
-                value: (currentIndex + 1) / totalCount,
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(AppRadii.pill),
+    // Keep the action button pinned to the bottom when the task fits, but let a
+    // tall task (large flashcard image + text) scroll instead of overflowing.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  IllustratedHeroCard(
+                    eyebrow: '复习进行中',
+                    title: task.contentJson['prompt'] as String? ?? '复习任务',
+                    description:
+                        '第 ${currentIndex + 1} 题，共 $totalCount 题。一步一步完成就好。',
+                    accent: _taskAccent(task.taskType),
+                    illustration: _taskIcon(task.taskType),
+                    assetPath: _taskAsset(task),
+                    badge: StickerBadge(
+                      label: '任务 ${currentIndex + 1}/$totalCount',
+                      icon: Icons.flag_rounded,
+                      color: _taskAccent(task.taskType).withValues(alpha: 0.55),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('任务 ${currentIndex + 1} / $totalCount',
+                            style: AppTextStyles.helper),
+                        const SizedBox(height: AppSpacing.xs),
+                        LinearProgressIndicator(
+                          value: (currentIndex + 1) / totalCount,
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _TaskSurface(task: task),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Spacer(),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: FilledButton(
+                      onPressed: onNext,
+                      child: Text(currentIndex + 1 == totalCount
+                          ? '完成本次复习'
+                          : '继续下一题'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              _TaskSurface(task: task),
-            ],
+            ),
           ),
-        ),
-        const Spacer(),
-        Align(
-          alignment: Alignment.bottomRight,
-          child: FilledButton(
-            onPressed: onNext,
-            child: Text(currentIndex + 1 == totalCount ? '完成本次复习' : '继续下一题'),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -293,7 +310,8 @@ class _ReviewFinishedState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SingleChildScrollView(
+      child: Column(
       children: <Widget>[
         const IllustratedHeroCard(
           eyebrow: '完成啦',
@@ -336,6 +354,7 @@ class _ReviewFinishedState extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }
