@@ -4,7 +4,7 @@ import { messages, type MessageKey } from "./messages";
 
 describe("i18n", () => {
   it("translates navigation labels", () => {
-    expect(createTranslator("zh")("nav.commandCenter")).toBe("指挥台");
+    expect(createTranslator("zh")("nav.commandCenter")).toBe("指挥中心");
     expect(createTranslator("en")("nav.commandCenter")).toBe("Command Center");
   });
 

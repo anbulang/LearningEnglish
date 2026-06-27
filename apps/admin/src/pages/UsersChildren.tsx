@@ -1,248 +1,414 @@
 import { useMemo, useState } from "react";
-import { StatusChip } from "../components/ui";
-import type { AdminUserAccount, Language, Tenant, TenantScope } from "../domain/types";
+import {
+  FAMILY_STATUS_META,
+  consoleFamilies,
+  type ConsoleChild,
+  type ConsoleFamily
+} from "../domain/consoleData";
+import { usersToFamilies } from "../domain/liveMappers";
+import { StatusBadge } from "../components/ui";
+import { useConfirm, useToast } from "../components/providers";
+import { createTranslator, localize } from "../i18n/i18n";
+import { PageHeader, PageRoot } from "./shared";
+import type { UsersChildrenProps } from "./contracts";
 
-interface UsersChildrenProps {
-  language: Language;
-  tenantScope: TenantScope;
-  tenants: Tenant[];
-  users: AdminUserAccount[];
-  dataMode?: "mock" | "live";
+const copy = {
+  zh: {
+    eyebrow: "内容 / 用户与家庭",
+    title: "用户与家庭",
+    subtitle: "家长账号与名下孩子拼读档案 · 代登录等敏感操作需二次确认并审计",
+    searchPlaceholder: "搜索手机号 / 家庭",
+    searchAria: "搜索家庭",
+    reg: "注册时间",
+    kids: "名下孩子",
+    usage: "知识包/复习/发音",
+    kidUnit: "名",
+    materialsUnit: "讲义",
+    imperTitle: "代登录排查 · Impersonation",
+    imperDescLead: "以该家长身份只读进入 App 排查问题 · ",
+    imperDescWarn: "受审计的敏感操作",
+    imperBtn: "发起代登录",
+    childrenTitle: "名下孩子档案",
+    phonics: "拼读进度",
+    lastActive: "最近活跃 · ",
+    confirmTitle: "确认发起代登录？",
+    confirmLead: "你将以 ",
+    confirmMid: " 的身份只读进入家长 App。此操作属于",
+    confirmWarn: "受审计的敏感操作",
+    confirmTail: "，将完整记录到审计日志。",
+    confirmOk: "确认并记录",
+    confirmCancel: "取消",
+    imperReason: "运维台只读排查",
+    toastOk: "代登录会话已开启并记入审计"
+  },
+  en: {
+    eyebrow: "Content / Users & Families",
+    title: "Users & Families",
+    subtitle:
+      "Parent accounts and their children's phonics profiles · impersonation and other sensitive actions require confirmation and are audited",
+    searchPlaceholder: "Search phone / family",
+    searchAria: "Search families",
+    reg: "Registered",
+    kids: "Children",
+    usage: "Packs / Reviews / Pronunciation",
+    kidUnit: "kids",
+    materialsUnit: "materials",
+    imperTitle: "Impersonation triage · 代登录",
+    imperDescLead: "Enter the parent App read-only as this parent to triage issues · ",
+    imperDescWarn: "audited sensitive action",
+    imperBtn: "Start impersonation",
+    childrenTitle: "Children profiles",
+    phonics: "Phonics progress",
+    lastActive: "Last active · ",
+    confirmTitle: "Start impersonation?",
+    confirmLead: "You will enter the parent App read-only as ",
+    confirmMid: ". This is an ",
+    confirmWarn: "audited sensitive action",
+    confirmTail: " and will be fully recorded to the audit log.",
+    confirmOk: "Confirm & record",
+    confirmCancel: "Cancel",
+    imperReason: "console read-only triage",
+    toastOk: "Impersonation session opened and recorded to audit"
+  }
+};
+
+function childBarColor(progress: number): string {
+  if (progress > 70) return "var(--success)";
+  if (progress > 40) return "var(--brand)";
+  return "var(--warning)";
 }
 
-export function UsersChildren({ language, tenantScope, tenants, users, dataMode = "mock" }: UsersChildrenProps) {
-  const [levelFilter, setLevelFilter] = useState<string>("all");
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
-  const copy = language === "zh" ? zhCopy : enCopy;
-  const tenantNameById = useMemo(() => new Map(tenants.map((tenant) => [tenant.id, tenant.name])), [tenants]);
-  const scopedUsers = useMemo(
-    () => (tenantScope === "all" ? users : users.filter((user) => user.tenantId === tenantScope)),
-    [users, tenantScope]
-  );
-  const levelOptions = useMemo(
-    () => ["all", ...Array.from(new Set(scopedUsers.map((user) => user.level))).sort()],
-    [scopedUsers]
-  );
-  const filteredUsers = useMemo(
-    () => (levelFilter === "all" ? scopedUsers : scopedUsers.filter((user) => user.level === levelFilter)),
-    [scopedUsers, levelFilter]
-  );
-  const selectedUser = filteredUsers.find((user) => user.childId === selectedChildId) ?? filteredUsers[0] ?? null;
+export function UsersChildren({ language, tenantScope, dataMode, liveUsers, onStartImpersonation }: UsersChildrenProps) {
+  const t = createTranslator(language);
+  const c = localize(language, copy);
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  function handleLevelFilterChange(value: string) {
-    setLevelFilter(value);
-    setSelectedChildId(null);
+  const families = useMemo<ConsoleFamily[]>(() => {
+    const source = dataMode === "live" && liveUsers ? usersToFamilies(liveUsers) : consoleFamilies();
+    return tenantScope === "all" ? source : source.filter((family) => family.tenant === tenantScope);
+  }, [dataMode, liveUsers, tenantScope]);
+
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const query = search.trim().toLowerCase();
+  const listFamilies = query
+    ? families.filter((family) => family.name.toLowerCase().includes(query) || family.phone.toLowerCase().includes(query))
+    : families;
+
+  const selected: ConsoleFamily | undefined = families.find((family) => family.id === selectedId) ?? families[0];
+
+  function startImpersonation(family: ConsoleFamily) {
+    confirm({
+      title: c.confirmTitle,
+      body: (
+        <>
+          {c.confirmLead}
+          <span style={{ fontWeight: 600, color: "var(--text)" }}>
+            {family.name}（{family.phone}）
+          </span>
+          {c.confirmMid}
+          <span style={{ color: "var(--danger)", fontWeight: 600 }}>{c.confirmWarn}</span>
+          {c.confirmTail}
+        </>
+      ),
+      confirmLabel: c.confirmOk,
+      cancelLabel: c.confirmCancel,
+      onConfirm: () => {
+        if (onStartImpersonation) {
+          onStartImpersonation({ tenantId: family.tenant, targetParentId: family.parentId, reason: c.imperReason }).catch(
+            (error: unknown) => toast(error instanceof Error ? error.message : String(error))
+          );
+        } else {
+          toast(c.toastOk);
+        }
+      }
+    });
   }
 
   return (
-    <div className="page-grid">
-      <section className="page-header wide">
-        <p className="eyebrow">ParentAccount / ChildProfile</p>
-        <h1>{copy.title}</h1>
-        <p>{copy.subtitle}</p>
-      </section>
+    <PageRoot screen="users">
+      <PageHeader eyebrow={c.eyebrow} title={c.title} subtitle={c.subtitle} language={language} tenantScope={tenantScope} />
 
-      <section className="surface wide filter-bar" aria-label={copy.filters}>
-        <label>
-          <span>{copy.level}</span>
-          <select aria-label={copy.levelFilter} value={levelFilter} onChange={(event) => handleLevelFilterChange(event.target.value)}>
-            {levelOptions.map((option) => (
-              <option key={option} value={option}>
-                {option === "all" ? copy.all : option}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="filter-summary">{dataMode === "live" ? copy.liveHint : copy.mockHint}</span>
-      </section>
-
-      <section className="surface table-panel span-8">
-        <div className="section-title">
+      <div style={{ display: "grid", gridTemplateColumns: "400px 1fr", gap: 16, alignItems: "start" }}>
+        {/* LEFT — family list */}
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            boxShadow: "var(--shadow-sm)",
+            overflow: "hidden"
+          }}
+        >
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
+            <input
+              className="le-input"
+              aria-label={c.searchAria}
+              placeholder={c.searchPlaceholder}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              style={{
+                width: "100%",
+                height: 32,
+                border: "1px solid var(--border)",
+                borderRadius: 7,
+                background: "var(--bg-subtle)",
+                padding: "0 12px",
+                fontSize: 12.5,
+                color: "var(--text)",
+                outline: "none",
+                fontFamily: "inherit",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
           <div>
-            <h2>{copy.roster}</h2>
-            <p>
-              {filteredUsers.length} / {scopedUsers.length} {copy.childrenInScope}
-            </p>
+            {listFamilies.map((family) => {
+              const meta = FAMILY_STATUS_META[family.status];
+              const active = selected?.id === family.id;
+              return (
+                <button
+                  key={family.id}
+                  type="button"
+                  onClick={() => setSelectedId(family.id)}
+                  className={active ? undefined : "le-hover-soft"}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 11,
+                    padding: "12px 14px",
+                    borderBottom: "1px solid var(--border)",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    border: "none",
+                    background: active ? "var(--brand-subtle)" : "transparent"
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 9,
+                      flex: "none",
+                      background: "var(--bg-subtle)",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "var(--text-2)"
+                    }}
+                  >
+                    {family.name.slice(0, 1)}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{family.name}</span>
+                    <span style={{ display: "block", fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", marginTop: 1 }}>
+                      {family.phone}
+                    </span>
+                  </span>
+                  <StatusBadge tone={meta.tone}>{t(meta.labelKey)}</StatusBadge>
+                </button>
+              );
+            })}
           </div>
         </div>
-        {filteredUsers.length > 0 ? (
-          <div className="table-scroll">
-            <table className="pipeline-table">
-              <thead>
-                <tr>
-                  <th>{copy.tenant}</th>
-                  <th>{copy.parent}</th>
-                  <th>{copy.child}</th>
-                  <th>{copy.age}</th>
-                  <th>{copy.level}</th>
-                  <th>{copy.materials}</th>
-                  <th>{copy.speaking}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.childId} className={selectedUser?.childId === user.childId ? "selected-row" : ""}>
-                    <td>{tenantNameById.get(user.tenantId) ?? user.tenantId}</td>
-                    <td>{user.parentName}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="table-link-button"
-                        aria-label={`${copy.inspect} ${user.childName}`}
-                        onClick={() => setSelectedChildId(user.childId)}
+
+        {/* RIGHT — identity + children */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {selected && (
+            <>
+              {/* Identity card */}
+              <div
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                  boxShadow: "var(--shadow-sm)",
+                  padding: 18
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      flex: "none",
+                      background: "var(--brand-subtle)",
+                      border: "1px solid var(--brand-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 19,
+                      fontWeight: 700,
+                      color: "var(--brand)"
+                    }}
+                  >
+                    {selected.name.slice(0, 1)}
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{selected.name}</span>
+                      <StatusBadge tone={FAMILY_STATUS_META[selected.status].tone}>
+                        {t(FAMILY_STATUS_META[selected.status].labelKey)}
+                      </StatusBadge>
+                    </div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--text-3)", marginTop: 3 }}>
+                      {selected.id} · {selected.phone} · {selected.tenant}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3,1fr)",
+                    gap: 1,
+                    background: "var(--border)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 9,
+                    overflow: "hidden",
+                    marginTop: 16
+                  }}
+                >
+                  <div style={{ background: "var(--surface)", padding: "11px 13px" }}>
+                    <div style={{ fontSize: 11, color: "var(--text-3)" }}>{c.reg}</div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 12.5, color: "var(--text)", marginTop: 3 }}>{selected.reg}</div>
+                  </div>
+                  <div style={{ background: "var(--surface)", padding: "11px 13px" }}>
+                    <div style={{ fontSize: 11, color: "var(--text-3)" }}>{c.kids}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--text)", marginTop: 3 }}>
+                      {selected.children.length} {c.kidUnit}
+                    </div>
+                  </div>
+                  <div style={{ background: "var(--surface)", padding: "11px 13px" }}>
+                    <div style={{ fontSize: 11, color: "var(--text-3)" }}>{c.usage}</div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 12.5, color: "var(--text)", marginTop: 3 }}>{selected.usage}</div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 16,
+                    border: "1px dashed var(--border-strong)",
+                    borderRadius: 9,
+                    padding: "13px 15px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 13
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{c.imperTitle}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 2 }}>
+                      {c.imperDescLead}
+                      <span style={{ color: "var(--warning)", fontWeight: 600 }}>{c.imperDescWarn}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => startImpersonation(selected)}
+                    className="le-hover-danger"
+                    style={{
+                      height: 32,
+                      padding: "0 14px",
+                      border: "1px solid var(--danger)",
+                      borderRadius: 7,
+                      background: "transparent",
+                      color: "var(--danger)",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    {c.imperBtn}
+                  </button>
+                </div>
+              </div>
+
+              {/* Children profiles */}
+              <div
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                  boxShadow: "var(--shadow-sm)",
+                  padding: 18
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>{c.childrenTitle}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
+                  {selected.children.map((child: ConsoleChild, index) => (
+                    <div
+                      key={`${child.name}-${index}`}
+                      style={{ border: "1px solid var(--border)", borderRadius: 9, padding: 14 }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 11 }}>
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            flex: "none",
+                            background: "linear-gradient(135deg,#6b8cff,#9b6bff)",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          {child.name.slice(0, 1)}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{child.name}</div>
+                          <div style={{ fontSize: 11, color: "var(--text-3)" }}>{child.grade}</div>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          fontSize: 11,
+                          color: "var(--text-3)",
+                          marginBottom: 5
+                        }}
                       >
-                        {user.childName}
-                      </button>
-                      <small>{user.childId}</small>
-                    </td>
-                    <td>{user.age}</td>
-                    <td>{user.level}</td>
-                    <td>{user.materialsCount}</td>
-                    <td>
-                      <StatusChip tone={user.speakingAttempts > 0 ? "success" : "neutral"}>{user.speakingAttempts}</StatusChip>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="pipeline-empty">
-            <strong>{copy.emptyFiltered}</strong>
-            <p>{copy.emptyFilteredDetail}</p>
-          </div>
-        )}
-      </section>
-
-      <aside className="surface span-4 inspector" role="complementary" aria-label={copy.inspectorAria}>
-        <div className="section-title">
-          <div>
-            <h2>{copy.inspector}</h2>
-            <p>{selectedUser ? copy.selectedHint : copy.noSelection}</p>
-          </div>
+                        <span>{c.phonics}</span>
+                        <span style={{ fontFamily: "var(--mono)", color: "var(--text-2)", fontWeight: 600 }}>{child.progress}%</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 4, background: "var(--bg-subtle)", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${child.progress}%`,
+                            background: childBarColor(child.progress),
+                            borderRadius: 4
+                          }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 10 }}>
+                        {c.lastActive}
+                        {child.lastMaterials != null ? `${child.lastMaterials} ${c.materialsUnit}` : child.last}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
-        {selectedUser ? (
-          <ChildInspector user={selectedUser} tenantName={tenantNameById.get(selectedUser.tenantId)} copy={copy} />
-        ) : (
-          <div className="pipeline-empty inspector-empty">
-            <strong>{copy.emptyInspector}</strong>
-            <p>{copy.emptyInspectorDetail}</p>
-          </div>
-        )}
-      </aside>
-    </div>
+      </div>
+    </PageRoot>
   );
 }
-
-function ChildInspector({
-  user,
-  tenantName,
-  copy
-}: {
-  user: AdminUserAccount;
-  tenantName: string | undefined;
-  copy: typeof zhCopy;
-}) {
-  return (
-    <>
-      <h3>{copy.inspectorDetail}</h3>
-      <dl className="detail-list compact">
-        <dt>{copy.child}</dt>
-        <dd>
-          {user.childName}
-          <small>{user.childId}</small>
-        </dd>
-        <dt>{copy.parentChild}</dt>
-        <dd>
-          {user.parentName} / {tenantName ?? user.tenantId}
-        </dd>
-        <dt>{copy.age}</dt>
-        <dd>{user.age}</dd>
-        <dt>{copy.level}</dt>
-        <dd>{user.level}</dd>
-        <dt>{copy.learningGoal}</dt>
-        <dd>{user.learningGoal || copy.none}</dd>
-        <dt>{copy.reviewMinutes}</dt>
-        <dd>{user.preferredReviewDurationMinutes} min</dd>
-        <dt>{copy.parentNotes}</dt>
-        <dd>{user.parentNotes || copy.none}</dd>
-        <dt>{copy.materials}</dt>
-        <dd>{user.materialsCount}</dd>
-        <dt>{copy.speaking}</dt>
-        <dd>{user.speakingAttempts}</dd>
-        <dt>{copy.weeklyReport}</dt>
-        <dd>{user.latestWeeklyReportId || copy.none}</dd>
-      </dl>
-    </>
-  );
-}
-
-const zhCopy = {
-  title: "用户与孩子",
-  subtitle: "按租户浏览家长账户下的孩子档案,以及讲义数量与口语练习等快速统计。",
-  filters: "用户筛选",
-  level: "级别",
-  levelFilter: "级别筛选",
-  all: "全部",
-  liveHint: "live 数据:来自 /v1/admin/users。",
-  mockHint: "mock 数据:未连接 live admin API。",
-  roster: "孩子名册",
-  childrenInScope: "个孩子",
-  tenant: "租户",
-  parent: "家长",
-  child: "孩子",
-  age: "年龄",
-  materials: "讲义数",
-  speaking: "口语练习",
-  inspect: "查看",
-  inspector: "当前选中",
-  inspectorDetail: "孩子详情",
-  inspectorAria: "选中孩子详情",
-  selectedHint: "查看下方孩子档案明细",
-  noSelection: "未选择孩子",
-  parentChild: "家长 / 租户",
-  learningGoal: "学习目标",
-  reviewMinutes: "偏好复习时长",
-  parentNotes: "家长备注",
-  weeklyReport: "最近周报",
-  none: "无",
-  emptyFiltered: "没有符合当前筛选的孩子。",
-  emptyFilteredDetail: "切换级别或租户范围查看其他孩子。",
-  emptyInspector: "当前筛选没有可检查孩子。",
-  emptyInspectorDetail: "Inspector 会在有结果时显示孩子档案与统计。"
-};
-
-const enCopy: typeof zhCopy = {
-  title: "Users & Children",
-  subtitle: "Browse tenant-scoped child profiles under parent accounts, with worksheet counts and speaking-practice stats.",
-  filters: "User filters",
-  level: "Level",
-  levelFilter: "Level filter",
-  all: "All",
-  liveHint: "Live data from /v1/admin/users.",
-  mockHint: "Mock data: live admin API not connected.",
-  roster: "Children roster",
-  childrenInScope: "children in scope",
-  tenant: "Tenant",
-  parent: "Parent",
-  child: "Child",
-  age: "Age",
-  materials: "Worksheets",
-  speaking: "Speaking",
-  inspect: "Inspect",
-  inspector: "Selected child",
-  inspectorDetail: "Child detail",
-  inspectorAria: "Selected child inspector",
-  selectedHint: "See child profile detail below",
-  noSelection: "No child selected",
-  parentChild: "Parent / tenant",
-  learningGoal: "Learning goal",
-  reviewMinutes: "Preferred review duration",
-  parentNotes: "Parent notes",
-  weeklyReport: "Latest weekly report",
-  none: "None",
-  emptyFiltered: "No children match this filter.",
-  emptyFilteredDetail: "Change level or tenant scope to inspect other children.",
-  emptyInspector: "No child is available for inspection.",
-  emptyInspectorDetail: "The inspector shows the child profile and stats when the filter has results."
-};
