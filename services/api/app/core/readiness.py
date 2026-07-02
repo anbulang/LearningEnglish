@@ -118,18 +118,23 @@ def _host_is_non_public(host: str) -> bool:
     return ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_unspecified
 
 
+_PRODUCTION_SAFE_IDENTITY = {"pilot"}
+
+
 def _identity_readiness(s: Settings) -> ComponentReadiness:
     provider = s.identity_provider.strip().lower()
-    # In production a stub identity provider would accept fabricated WeChat codes
-    # and silently collapse families into one account — refuse to boot.
-    if s.app_env.strip().lower() == "production" and provider in {"", "dev"}:
+    # In production the identity provider must be an explicitly-real one. Anything
+    # else — "", "dev", or a typo — falls back to the dev stub in AuthService
+    # (accepts fabricated codes, no family isolation), so refuse to boot.
+    if s.app_env.strip().lower() == "production" and provider not in _PRODUCTION_SAFE_IDENTITY:
         return ComponentReadiness(
             "identity",
             provider or "dev",
             False,
             (),
-            "IDENTITY_PROVIDER must not be a dev stub in production "
-            "(set IDENTITY_PROVIDER=pilot with PILOT_ALLOWLIST_JSON, or a real provider).",
+            f"IDENTITY_PROVIDER must be a real provider in production "
+            f"(one of {sorted(_PRODUCTION_SAFE_IDENTITY)}); got '{provider or 'dev'}', "
+            "which falls back to the dev stub.",
         )
     if provider == "pilot" and not s.pilot_allowlist:
         return ComponentReadiness(

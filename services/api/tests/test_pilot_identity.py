@@ -76,6 +76,23 @@ def test_pilot_without_allowlist_is_not_ready(monkeypatch) -> None:
     assert _component(report, "identity")["ready"] is False
 
 
+def test_production_with_unknown_identity_provider_is_not_ready(monkeypatch) -> None:
+    # A typo'd provider name silently falls back to the dev stub in AuthService,
+    # so the production guard must reject anything that is not explicitly real.
+    report = _report(
+        monkeypatch,
+        APP_ENV="production",
+        IDENTITY_PROVIDER="wehcat",
+        PUBLIC_BASE_URL="https://api.example.com",
+        AI_PROVIDER="stub",
+        MEDIA_PROVIDER="mock",
+        SPEECH_PROVIDER="stub",
+        SPEECH_ASSESSMENT_PROVIDER="stub",
+    )
+    assert _component(report, "identity")["ready"] is False
+    assert report["ready"] is False
+
+
 def test_dev_identity_outside_production_is_ready(monkeypatch) -> None:
     report = _report(monkeypatch, APP_ENV="testing", IDENTITY_PROVIDER="dev")
     assert _component(report, "identity")["ready"] is True
