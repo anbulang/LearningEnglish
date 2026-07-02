@@ -643,6 +643,77 @@ class ProviderBackedPipelineService:
         return knowledge_pack, review_tasks, coaching_script
 
 
+def _normalize_review_text(value: str) -> str:
+    return " ".join(value.lower().split())
+
+
+def _review_asset_kind(text: str) -> str:
+    if text.endswith((".", "?", "!")) or len(text.split()) > 3:
+        return "sentence"
+    if " " in text:
+        return "phrase"
+    return "word"
+
+
+def _fresh_review_asset(text: str) -> LearningAsset:
+    """A media-pending asset for a word/sentence the parent added or corrected
+    during review, so the media pipeline + review tasks pick it up."""
+    return LearningAsset(
+        id=f"asset_{uuid4().hex[:12]}",
+        text=text,
+        kind=_review_asset_kind(text),
+        pronunciation_text=text,
+        image_prompt=f"参考讲义内容，为 {text} 生成清晰彩色儿童插图。",
+        difficulty="easy",
+        generated_image_status=MediaGenerationStatus.pending,
+        tts_us_status=MediaGenerationStatus.pending,
+        tts_uk_status=MediaGenerationStatus.pending,
+        primary_accent=PrimaryAccent.us,
+    )
+
+
+def reconcile_reviewed_learning_assets(
+    assets: list[LearningAsset],
+    vocabulary: list[str],
+    sentences: list[str],
+) -> list[LearningAsset]:
+    """Return learning assets that mirror the parent's reviewed lists.
+
+    - Reused: an existing asset whose text still appears in the reviewed lists
+      keeps its already-generated media (image/TTS/pronunciation).
+    - Created: a reviewed word/sentence with no matching asset (added or
+      corrected during review, e.g. 'cet' -> 'cat') becomes a fresh media-pending
+      asset, so the correction reaches the lesson, media and review tasks.
+    - Dropped: assets whose text the parent removed or changed do not survive.
+
+    Order follows the reviewed vocabulary then sentences. An empty reviewed set
+    (the parent deleted everything) yields an empty list — the deletion is
+    honoured rather than resurrecting the original OCR. When there are no assets
+    to reconcile (a degenerate/stub draft), returns empty and lets the pipeline's
+    stub path build tasks rather than fabricating assets from scratch.
+    """
+    if not assets:
+        return []
+
+    by_text: dict[str, LearningAsset] = {}
+    for asset in assets:
+        key = _normalize_review_text(asset.text)
+        if key and key not in by_text:
+            by_text[key] = asset
+
+    result: list[LearningAsset] = []
+    used: set[str] = set()
+    for text in [*vocabulary, *sentences]:
+        clean = text.strip()
+        key = _normalize_review_text(clean)
+        if not key or key in used:
+            continue
+        used.add(key)
+        existing = by_text.get(key)
+        result.append(existing if existing is not None else _fresh_review_asset(clean))
+    return result
+
+
 def build_pipeline_service() -> ProviderBackedPipelineService:
     settings = get_settings()
     provider_name = settings.ai_provider.lower().strip()

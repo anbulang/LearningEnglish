@@ -18,8 +18,11 @@ def _mark_job_needs_review(material_id: str, job_id: str) -> None:
         job.status = JobStatus.needs_review.value
         job.draft_title = "Animals Around Me"
         job.draft_topic = "动物"
-        job.draft_vocabulary = ["cat", "dog", "bird"]
-        job.draft_sentences = ["What is this?", "It is a cat."]
+        # Realistic draft: the reviewed words/sentences correspond to the
+        # generated learning assets (assets are derived from them), so confirm
+        # reuses those assets instead of rebuilding them.
+        job.draft_vocabulary = ["queen"]
+        job.draft_sentences = ["A queen can sing."]
         job.draft_learning_assets = [
             {
                 "id": "asset_queen",

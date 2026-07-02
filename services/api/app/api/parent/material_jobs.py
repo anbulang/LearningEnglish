@@ -23,7 +23,10 @@ from app.models.contracts import (
     MediaGenerationStatus,
 )
 from app.services.shared.mappers import course_material_from_model, material_job_from_model
-from app.services.shared.pipeline import ProviderBackedPipelineService
+from app.services.shared.pipeline import (
+    ProviderBackedPipelineService,
+    reconcile_reviewed_learning_assets,
+)
 from app.services.shared.job_queue import enqueue_material_job
 from app.services.shared.media_queue import enqueue_learning_asset_media_job
 
@@ -57,14 +60,26 @@ def confirm_material_job(
     if job.status == JobStatus.ready.value:
         return prepared
 
+    # Distinguish "field omitted" (None) from an intentional empty list / blank
+    # string, so a parent who deletes every word or clears the title is honoured
+    # instead of silently reverting to the AI draft.
+    reviewed_vocabulary = payload.draft_vocabulary if payload.draft_vocabulary is not None else prepared.draft_vocabulary
+    reviewed_sentences = payload.draft_sentences if payload.draft_sentences is not None else prepared.draft_sentences
     prepared = prepared.model_copy(
         update={
             "status": JobStatus.ready,
-            "draft_title": payload.draft_title or prepared.draft_title,
-            "draft_topic": payload.draft_topic or prepared.draft_topic,
-            "draft_vocabulary": payload.draft_vocabulary or prepared.draft_vocabulary,
-            "draft_sentences": payload.draft_sentences or prepared.draft_sentences,
-            "draft_learning_assets": prepared.draft_learning_assets,
+            "draft_title": payload.draft_title if payload.draft_title is not None else prepared.draft_title,
+            "draft_topic": payload.draft_topic if payload.draft_topic is not None else prepared.draft_topic,
+            "draft_vocabulary": reviewed_vocabulary,
+            "draft_sentences": reviewed_sentences,
+            # Honour the parent's deletions: drop learning assets whose word/
+            # sentence was removed during review so they don't survive into the
+            # knowledge pack, review tasks or media generation.
+            "draft_learning_assets": reconcile_reviewed_learning_assets(
+                prepared.draft_learning_assets,
+                reviewed_vocabulary,
+                reviewed_sentences,
+            ),
         }
     )
 
