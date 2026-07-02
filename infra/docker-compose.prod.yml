@@ -1,0 +1,100 @@
+# Production stack for a single host (e.g. Tencent Cloud Lighthouse).
+# - api + worker on local-disk storage, sharing one uploads volume
+# - Caddy reverse proxy in front, auto-provisioning free Let's Encrypt HTTPS
+# - no MinIO/OSS (STORAGE_BACKEND=local); /uploads is served by the api
+#
+# Usage (fill infra/env/prod.env first — see infra/env/prod.example.env):
+#   docker compose --env-file infra/env/prod.env -f infra/docker-compose.prod.yml up -d --build
+# The --env-file drives ${VAR} interpolation below; api/worker also inject the
+# whole file via env_file. See docs/harness/public-deploy-runbook.md.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: le-prod-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-learning_english}
+      POSTGRES_USER: ${POSTGRES_USER:-learning_english}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/env/prod.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: le-prod-redis
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../services/api
+    container_name: le-prod-api
+    env_file:
+      - env/prod.env
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-learning_english}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-learning_english}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      STORAGE_BACKEND: local
+      LOCAL_STORAGE_PATH: /data/uploads
+      PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN in infra/env/prod.env}
+      SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN}
+    volumes:
+      - uploads_data:/data/uploads
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').getcode()==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ..
+      dockerfile: services/workers/Dockerfile
+    container_name: le-prod-worker
+    env_file:
+      - env/prod.env
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-learning_english}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-learning_english}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      STORAGE_BACKEND: local
+      LOCAL_STORAGE_PATH: /data/uploads
+      PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN}
+      SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN}
+    volumes:
+      - uploads_data:/data/uploads
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    container_name: le-prod-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN in infra/env/prod.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads_data:
+  caddy_data:
+  caddy_config:

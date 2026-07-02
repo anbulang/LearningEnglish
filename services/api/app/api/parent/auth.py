@@ -33,11 +33,15 @@ def login_with_wechat(
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> AuthLoginResponse:
-    return auth_service.login_with_wechat(
-        db,
-        payload.auth_code,
-        user_agent=request.headers.get("user-agent", ""),
-    )
+    try:
+        return auth_service.login_with_wechat(
+            db,
+            payload.auth_code,
+            user_agent=request.headers.get("user-agent", ""),
+        )
+    except ValueError as exc:
+        # e.g. the pilot allowlist rejecting an unknown code.
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
 
 @router.post("/phone/request-otp", response_model=PhoneOtpResponse)

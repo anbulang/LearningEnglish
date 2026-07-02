@@ -18,7 +18,7 @@ API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0
 ADMIN_API_BASE_URL ?= http://127.0.0.1:8000
 ADMIN_API_TOKEN ?= local-admin-token
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa mobile-ios-testflight-ipa mobile-ios-testflight-upload harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-hn020-preflight harness-hn020-validate harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
+.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset deploy-prod-up deploy-prod-down deploy-prod-logs mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa mobile-ios-testflight-ipa mobile-ios-testflight-upload harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-hn020-preflight harness-hn020-validate harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -64,6 +64,17 @@ infra-down:
 
 infra-reset:
 	docker compose --env-file infra/.env -f infra/docker-compose.yml down -v --remove-orphans
+
+# Production single-host deploy (Tencent Lighthouse + Caddy HTTPS + local disk).
+# Requires a filled infra/env/prod.env — see docs/harness/public-deploy-runbook.md.
+deploy-prod-up:
+	docker compose --env-file infra/env/prod.env -f infra/docker-compose.prod.yml up -d --build
+
+deploy-prod-down:
+	docker compose --env-file infra/env/prod.env -f infra/docker-compose.prod.yml down
+
+deploy-prod-logs:
+	docker compose --env-file infra/env/prod.env -f infra/docker-compose.prod.yml logs -f --tail=100
 
 mobile-bootstrap:
 	cd packages/contracts && $(FLUTTER) pub get

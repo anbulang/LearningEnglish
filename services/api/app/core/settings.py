@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class PilotAllowlistEntry:
+    """A single allowlisted pilot family. `code` is the credential the app sends
+    (in place of a real WeChat auth code); each maps to one isolated account."""
+
+    code: str
+    display_name: str
+    phone: str
 
 
 @dataclass(frozen=True)
@@ -72,6 +83,8 @@ class Settings:
     admin_cors_origins: tuple[str, ...]
     admin_cors_origin_regex: str
     sentry_dsn: str
+    identity_provider: str
+    pilot_allowlist: tuple[PilotAllowlistEntry, ...]
 
 
 @lru_cache
@@ -152,6 +165,8 @@ def get_settings() -> Settings:
         admin_cors_origins=_csv_tuple(os.getenv("ADMIN_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173")),
         admin_cors_origin_regex=os.getenv("ADMIN_CORS_ORIGIN_REGEX", r"^http://(127\.0\.0\.1|localhost):[0-9]+$"),
         sentry_dsn=os.getenv("SENTRY_DSN", ""),
+        identity_provider=os.getenv("IDENTITY_PROVIDER", "dev").strip().lower(),
+        pilot_allowlist=_parse_pilot_allowlist(os.getenv("PILOT_ALLOWLIST_JSON", "")),
     )
 
 
@@ -164,3 +179,34 @@ def ensure_local_paths(settings: Settings) -> None:
 
 def _csv_tuple(value: str) -> tuple[str, ...]:
     return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
+def _parse_pilot_allowlist(raw: str) -> tuple[PilotAllowlistEntry, ...]:
+    """Parse PILOT_ALLOWLIST_JSON defensively. Invalid/missing -> empty tuple
+    (never raises); duplicate or code-less entries are dropped."""
+    raw = (raw or "").strip()
+    if not raw:
+        return ()
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        return ()
+    if not isinstance(data, list):
+        return ()
+    entries: list[PilotAllowlistEntry] = []
+    seen: set[str] = set()
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        code = str(item.get("code", "")).strip()
+        if not code or code in seen:
+            continue
+        seen.add(code)
+        entries.append(
+            PilotAllowlistEntry(
+                code=code,
+                display_name=str(item.get("display_name", "")).strip(),
+                phone=str(item.get("phone", "")).strip(),
+            )
+        )
+    return tuple(entries)

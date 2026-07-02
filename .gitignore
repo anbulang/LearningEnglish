@@ -24,6 +24,8 @@ pubspec.lock
 # Environment
 .env
 *.env.local
+# Filled production secrets — only the *.example.env templates are committed.
+infra/env/prod.env
 
 # Runtime data
 tmp/
