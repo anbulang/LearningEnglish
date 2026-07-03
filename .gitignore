@@ -30,3 +30,5 @@ tmp/
 coverage/
 htmlcov/
 dist/
+# Generated walkthrough screenshots (regenerable harness artifacts)
+apps/mobile/screenshots/

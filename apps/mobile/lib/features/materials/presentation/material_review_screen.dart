@@ -38,10 +38,120 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
   String? _actionError;
   Timer? _pollTimer;
 
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _topicController = TextEditingController();
+  final List<String> _vocabulary = <String>[];
+  final List<String> _sentences = <String>[];
+  String? _editingJobId;
+
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _titleController.dispose();
+    _topicController.dispose();
     super.dispose();
+  }
+
+  /// Seeds the editable fields from [job] once per job so parent edits survive
+  /// provider rebuilds.
+  void _ensureEditingState(MaterialParseJob job) {
+    if (_editingJobId == job.id) {
+      return;
+    }
+    _editingJobId = job.id;
+    _titleController.text = job.draftTitle;
+    _topicController.text = job.draftTopic;
+    _vocabulary
+      ..clear()
+      ..addAll(job.draftVocabulary);
+    _sentences
+      ..clear()
+      ..addAll(job.draftSentences);
+  }
+
+  Future<String?> _promptForText({
+    required String title,
+    String initial = '',
+  }) async {
+    final controller = TextEditingController(text: initial);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  Future<void> _addVocabulary() async {
+    final value = await _promptForText(title: '添加单词');
+    if (!mounted || value == null || value.isEmpty) {
+      return;
+    }
+    setState(() => _vocabulary.add(value));
+  }
+
+  Future<void> _editVocabulary(int index) async {
+    final value =
+        await _promptForText(title: '修改单词', initial: _vocabulary[index]);
+    if (!mounted || value == null) {
+      return;
+    }
+    setState(() {
+      if (value.isEmpty) {
+        _vocabulary.removeAt(index);
+      } else {
+        _vocabulary[index] = value;
+      }
+    });
+  }
+
+  void _removeVocabulary(int index) {
+    setState(() => _vocabulary.removeAt(index));
+  }
+
+  Future<void> _addSentence() async {
+    final value = await _promptForText(title: '添加句子');
+    if (!mounted || value == null || value.isEmpty) {
+      return;
+    }
+    setState(() => _sentences.add(value));
+  }
+
+  Future<void> _editSentence(int index) async {
+    final value =
+        await _promptForText(title: '修改句子', initial: _sentences[index]);
+    if (!mounted || value == null) {
+      return;
+    }
+    setState(() {
+      if (value.isEmpty) {
+        _sentences.removeAt(index);
+      } else {
+        _sentences[index] = value;
+      }
+    });
+  }
+
+  void _removeSentence(int index) {
+    setState(() => _sentences.removeAt(index));
   }
 
   void _syncPolling(JobStatus status) {
@@ -73,12 +183,14 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
     try {
       await ref.read(appRepositoryProvider).confirmMaterialJob(
             jobId: widget.jobId,
-            draftTitle: job.draftTitle,
-            draftTopic: job.draftTopic,
-            draftVocabulary: job.draftVocabulary,
-            draftSentences: job.draftSentences,
+            draftTitle: _titleController.text.trim(),
+            draftTopic: _topicController.text.trim(),
+            draftVocabulary: List<String>.of(_vocabulary),
+            draftSentences: List<String>.of(_sentences),
           );
       ref.invalidate(materialProvider(widget.materialId));
+      ref.invalidate(knowledgePackProvider(widget.materialId));
+      ref.invalidate(parentCoachingScriptProvider(widget.materialId));
       ref.invalidate(materialsProvider);
       ref.invalidate(reviewTasksProvider);
       if (!mounted) {
@@ -102,6 +214,28 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
   }
 
   Future<void> _retryJob() async {
+    if (_editingJobId != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('重新处理讲义？'),
+          content: const Text('会重新识别讲义并清空你当前的修改。'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('重新处理'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) {
+        return;
+      }
+    }
     setState(() {
       _submitting = true;
       _actionError = null;
@@ -110,6 +244,8 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
       await ref
           .read(appRepositoryProvider)
           .retryMaterialJob(jobId: widget.jobId);
+      // Re-seed the editor from the freshly re-identified draft next time.
+      _editingJobId = null;
       ref.invalidate(materialJobProvider(widget.jobId));
       ref.invalidate(materialsProvider);
     } catch (error) {
@@ -224,14 +360,15 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
             ],
           );
         }
+        _ensureEditingState(job);
         return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               const IllustratedHeroCard(
                 eyebrow: '家长校对',
-                title: 'AI 已经整理出草稿，你看一眼就能生成正式课程详情',
-                description: '先确认标题、主题、词汇和句型。低置信度内容会用提醒样式突出显示。',
+                title: 'AI 已经整理出草稿，确认或修改后即可生成正式课程详情',
+                description: '可以直接改正识别错误的标题、主题、词汇和句型，再生成课程。',
                 accent: AppColors.coralJam,
                 illustration: Icons.fact_check_rounded,
                 assetPath: AppIllustrations.heroAiReady,
@@ -241,8 +378,21 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
               const SizedBox(height: AppSpacing.md),
               Text('AI 识别结果', style: AppTextStyles.sectionTitle),
               const SizedBox(height: AppSpacing.sm),
-              Text('课程标题：${job.draftTitle}'),
-              Text('主题：${job.draftTopic}'),
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: '课程标题',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                controller: _topicController,
+                decoration: const InputDecoration(
+                  labelText: '主题',
+                  border: OutlineInputBorder(),
+                ),
+              ),
               if (job.draftImageRecords.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.md),
                 _ImageRecordsSection(records: job.draftImageRecords),
@@ -263,28 +413,28 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
-              if (job.draftVocabulary.isEmpty)
-                const Text('暂未提取到词汇，请家长确认后继续。')
-              else
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: job.draftVocabulary
-                      .map(
-                        (word) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.skyBlue.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(AppRadii.pill),
-                          ),
-                          child: Text(word),
-                        ),
-                      )
-                      .toList(),
-                ),
+              Text('点词条可修改，× 删除识别错误的词。', style: AppTextStyles.helper),
+              const SizedBox(height: AppSpacing.xs),
+              Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: <Widget>[
+                  for (var i = 0; i < _vocabulary.length; i++)
+                    InputChip(
+                      label: Text(_vocabulary[i]),
+                      onPressed: () => _editVocabulary(i),
+                      onDeleted: () => _removeVocabulary(i),
+                      deleteIcon: const Icon(Icons.close_rounded, size: 18),
+                      deleteButtonTooltipMessage: '删除这个词',
+                      backgroundColor: AppColors.skyBlue.withValues(alpha: 0.18),
+                    ),
+                  ActionChip(
+                    avatar: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('添加单词'),
+                    onPressed: _addVocabulary,
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: const <Widget>[
@@ -294,29 +444,45 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
-              if (job.draftSentences.isEmpty)
-                const Text('暂未提取到句型，请家长确认后继续。')
-              else
-                ...job.draftSentences.map(
-                  (sentence) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.softSheet,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          const Icon(Icons.subtitles_rounded,
-                              color: AppColors.cocoaCoral),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(child: Text(sentence)),
-                        ],
-                      ),
+              Text('点句子可修改文本，× 删除。', style: AppTextStyles.helper),
+              const SizedBox(height: AppSpacing.xs),
+              for (var i = 0; i < _sentences.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.softSheet,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.subtitles_rounded,
+                            color: AppColors.cocoaCoral),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => _editSentence(i),
+                            child: Text(_sentences[i]),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          tooltip: '删除这句',
+                          onPressed: () => _removeSentence(i),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _addSentence,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('添加句子'),
+                ),
+              ),
               if (job.warnings.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.md),
                 Container(

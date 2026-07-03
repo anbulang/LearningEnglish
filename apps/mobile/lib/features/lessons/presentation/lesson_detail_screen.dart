@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,13 +10,14 @@ import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/audio_play_button.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/remote_asset_image.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
 
-class LessonDetailScreen extends ConsumerWidget {
+class LessonDetailScreen extends ConsumerStatefulWidget {
   const LessonDetailScreen({
     required this.materialId,
     super.key,
@@ -23,9 +26,54 @@ class LessonDetailScreen extends ConsumerWidget {
   final String materialId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LessonDetailScreen> createState() =>
+      _LessonDetailScreenState();
+}
+
+class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
+  Timer? _mediaPollTimer;
+  int _mediaPollsLeft = 0;
+
+  @override
+  void dispose() {
+    _mediaPollTimer?.cancel();
+    super.dispose();
+  }
+
+  // Right after confirm, generated images / TTS are still being produced, so the
+  // first render has empty audio URLs. Poll (bounded) until media settles so the
+  // 听标准音 buttons light up without the parent re-entering the screen.
+  void _syncMediaPolling(CourseMaterial? material) {
+    final pending = material != null &&
+        material.learningAssets.any(_assetMediaPending);
+    if (!pending) {
+      _mediaPollTimer?.cancel();
+      _mediaPollTimer = null;
+      _mediaPollsLeft = 0;
+      return;
+    }
+    if (_mediaPollTimer != null) {
+      return;
+    }
+    _mediaPollsLeft = 12; // ~1 minute at 5s
+    _mediaPollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!mounted || _mediaPollsLeft <= 0) {
+        timer.cancel();
+        _mediaPollTimer = null;
+        return;
+      }
+      _mediaPollsLeft -= 1;
+      ref.invalidate(materialProvider(widget.materialId));
+      ref.invalidate(knowledgePackProvider(widget.materialId));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final materialId = widget.materialId;
     final materialAsync = ref.watch(materialProvider(materialId));
     final knowledgeAsync = ref.watch(knowledgePackProvider(materialId));
+    _syncMediaPolling(materialAsync.valueOrNull);
     final formFactor = formFactorOf(context);
 
     final detailContent = materialAsync.when(
@@ -91,8 +139,22 @@ class LessonDetailScreen extends ConsumerWidget {
                               ),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: Text('${item.word} · ${item.meaningCn}',
-                                style: AppTextStyles.body),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Flexible(
+                                  child: Text(
+                                      '${item.word} · ${item.meaningCn}',
+                                      style: AppTextStyles.body),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: AppSpacing.xxs),
+                                  child: AudioPlayButton(
+                                      url: item.audioUrl, iconSize: 18),
+                                ),
+                              ],
+                            ),
                           ),
                         )
                         .toList(),
@@ -128,7 +190,17 @@ class LessonDetailScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text(item.sentence, style: AppTextStyles.cardTitle),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Expanded(
+                                  child: Text(item.sentence,
+                                      style: AppTextStyles.cardTitle),
+                                ),
+                                AudioPlayButton(
+                                    url: item.audioUrl, iconSize: 20),
+                              ],
+                            ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(item.meaningCn),
                           ],
@@ -143,19 +215,19 @@ class LessonDetailScreen extends ConsumerWidget {
                     children: <Widget>[
                       FilledButton.icon(
                         onPressed: () =>
-                            context.go('/review/session/$materialId'),
+                            context.push('/review/session/$materialId'),
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: const Text('开始本课复习'),
                       ),
                       OutlinedButton.icon(
                         onPressed: () =>
-                            context.go('/review/speaking/$materialId'),
+                            context.push('/review/speaking/$materialId'),
                         icon: const Icon(Icons.mic_none_rounded),
                         label: const Text('口语陪练'),
                       ),
                       OutlinedButton.icon(
                         onPressed: () =>
-                            context.go('/review/coaching/$materialId'),
+                            context.push('/review/coaching/$materialId'),
                         icon: const Icon(Icons.favorite_border_rounded),
                         label: const Text('亲子陪练'),
                       ),
@@ -213,11 +285,25 @@ class LessonDetailScreen extends ConsumerWidget {
 
     if (!formFactor.isTablet) {
       return Scaffold(
-          appBar: AppBar(title: const Text('课程详情')), body: detailContent);
+          appBar: AppBar(
+        title: const Text('课程详情'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/materials'),
+        ),
+      ), body: detailContent);
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('课程详情')),
+      appBar: AppBar(
+        title: const Text('课程详情'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/materials'),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
@@ -502,6 +588,18 @@ class _LearningAssetDetailTileState
                                 selection.single,
                               ),
                     ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AudioPlayButton(
+                        url: _accentAvailable(asset, selectedAccent)
+                            ? (selectedAccent == 'uk'
+                                ? asset.ttsUkUrl
+                                : asset.ttsUsUrl)
+                            : '',
+                        label: selectedAccent == 'uk' ? '听英式发音' : '听美式发音',
+                      ),
+                    ),
                     if (_accentError != null &&
                         !_mediaFailureReasons(asset)
                             .contains(_accentError)) ...<Widget>[
@@ -583,6 +681,14 @@ class _GeneratedImagePlaceholder extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _assetMediaPending(LearningAsset asset) {
+  bool pending(String status) =>
+      status == 'processing' || status == 'pending' || status == 'queued';
+  return pending(asset.generatedImageStatus) ||
+      pending(asset.ttsUsStatus) ||
+      pending(asset.ttsUkStatus);
 }
 
 String _assetKindLabel(String kind) {

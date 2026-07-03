@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/assets/app_illustrations.dart';
@@ -105,6 +106,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ? Icons.wifi_find_rounded
                                 : Icons.wifi_off_rounded,
                             assetPath: AppIllustrations.stateEmpty,
+                            action: _isCheckingNetworkPermission
+                                ? null
+                                : FilledButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isCheckingNetworkPermission = true;
+                                        _networkPermissionMessage = null;
+                                      });
+                                      _preflightNetworkPermission();
+                                    },
+                                    icon: const Icon(Icons.refresh_rounded),
+                                    label: const Text('重新检查网络'),
+                                  ),
                           ),
                           const SizedBox(height: AppSpacing.md),
                         ],
@@ -127,11 +141,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           label: Text(session.isBusy ? '登录中...' : '微信登录'),
                         ),
                         const SizedBox(height: AppSpacing.md),
-                        Text(
-                          '当前 API：${ApiClient.defaultBaseUrl}',
-                          style: AppTextStyles.helper.copyWith(
-                            color: AppColors.dustBrown,
-                          ),
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                '当前 API：${ref.watch(apiClientProvider).baseUrl}',
+                                style: AppTextStyles.helper.copyWith(
+                                  color: AppColors.dustBrown,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => context.push('/settings/server'),
+                              child: const Text('修改'),
+                            ),
+                          ],
                         ),
                       ],
                     ),

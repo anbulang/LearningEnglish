@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,28 @@ class SessionController extends StateNotifier<SessionState> {
   static const _childrenKey = 'session.children';
   static const _parentKey = 'session.parent';
   static const _currentChildKey = 'session.currentChildId';
+  static const _deviceWechatCodeKey = 'session.deviceWechatCode';
+
+  /// A stable per-install WeChat auth code so each device maps to its own
+  /// parent account. Without this every device shares one hardcoded code and
+  /// collapses into a single shared account (families would see each other's
+  /// children/materials). Generated once and reused across logins.
+  ///
+  /// NOTE: pilot-grade isolation only — real account identity still requires a
+  /// real WeChat OAuth / SMS gateway on the backend.
+  Future<String> _deviceWechatCode() async {
+    final existing = await _storage.read(_deviceWechatCodeKey);
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+    final random = Random.secure();
+    final suffix = List<int>.generate(16, (_) => random.nextInt(16))
+        .map((value) => value.toRadixString(16))
+        .join();
+    final code = 'mobile-wechat-parent-$suffix';
+    await _storage.write(_deviceWechatCodeKey, code);
+    return code;
+  }
 
   Future<void> bootstrap() async {
     try {
@@ -112,7 +135,7 @@ class SessionController extends StateNotifier<SessionState> {
     state = state.copyWith(isBusy: true, clearError: true);
     try {
       final result =
-          await _authRepository.loginWithWechat('mobile-wechat-parent');
+          await _authRepository.loginWithWechat(await _deviceWechatCode());
       if (result.status == AuthFlowStatus.phoneBindingRequired) {
         state = state.copyWith(
           stage: SessionStage.phoneBindingRequired,
@@ -135,6 +158,7 @@ class SessionController extends StateNotifier<SessionState> {
   Future<String?> requestOtp(String phoneNumber) async {
     final bindToken = state.bindToken;
     if (bindToken == null) {
+      state = state.copyWith(errorMessage: '登录状态已失效，请返回重新登录。');
       return null;
     }
     state = state.copyWith(isBusy: true, clearError: true);
@@ -160,6 +184,7 @@ class SessionController extends StateNotifier<SessionState> {
   }) async {
     final bindToken = state.bindToken;
     if (bindToken == null) {
+      state = state.copyWith(errorMessage: '登录状态已失效，请返回重新登录。');
       return;
     }
     state = state.copyWith(isBusy: true, clearError: true);
@@ -222,8 +247,15 @@ class SessionController extends StateNotifier<SessionState> {
 
   Future<void> _persistAuthenticated(AuthFlowResult result) async {
     final tokens = result.tokens;
-    final currentChildId =
-        result.children.isEmpty ? null : result.children.first.id;
+    // Preserve the parent's currently selected child across refresh/re-login
+    // instead of silently snapping back to children.first.
+    final existingChildId =
+        state.currentChildId ?? await _storage.read(_currentChildKey);
+    final currentChildId = result.children.isEmpty
+        ? null
+        : (result.children.any((child) => child.id == existingChildId)
+            ? existingChildId
+            : result.children.first.id);
     if (tokens != null) {
       await _storage.write(_accessTokenKey, tokens.accessToken);
       await _storage.write(_refreshTokenKey, tokens.refreshToken);

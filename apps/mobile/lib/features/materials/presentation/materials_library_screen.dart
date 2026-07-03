@@ -186,9 +186,15 @@ class _MaterialsLibraryScreenState
             ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: <Widget>[list],
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(materialsProvider);
+            await ref.read(materialsProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: <Widget>[list],
+          ),
         ),
       );
     }

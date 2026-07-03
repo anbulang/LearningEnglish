@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/assets/app_illustrations.dart';
@@ -31,6 +32,23 @@ class _PhoneBindingScreenState extends ConsumerState<PhoneBindingScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(sessionControllerProvider);
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('绑定手机号'),
+        leading: IconButton(
+          tooltip: '返回登录 / 切换账号',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: session.isBusy
+              ? null
+              : () => ref.read(sessionControllerProvider.notifier).clearSession(),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => context.push('/settings/server'),
+            child: const Text('修改服务器'),
+          ),
+        ],
+      ),
       body: DecoratedBox(
         decoration: const BoxDecoration(color: AppColors.warmLinen),
         child: Center(

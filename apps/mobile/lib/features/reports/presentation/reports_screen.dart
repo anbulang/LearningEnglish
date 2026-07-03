@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
@@ -7,6 +8,7 @@ import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
+import '../../../core/widgets/no_child_state_panel.dart';
 import '../../../core/widgets/remote_asset_image.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../profiles/data/demo_data.dart';
@@ -22,10 +24,8 @@ class ReportsScreen extends ConsumerWidget {
         appBar: AppBar(title: const Text('报告')),
         body: const Padding(
           padding: EdgeInsets.all(AppSpacing.md),
-          child: StatePanel(
-            title: '先添加孩子档案',
-            description: '添加孩子姓名、年龄和学习目标后，系统会开始生成每周复习报告。',
-            assetPath: AppIllustrations.stateEmpty,
+          child: NoChildStatePanel(
+            description: '添加孩子档案后，系统会开始生成每周复习报告。',
           ),
         ),
       );
@@ -80,16 +80,27 @@ class ReportsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: StatePanel(
-            title: '报告加载失败',
-            description: describeApiError(error, fallback: '报告暂时不可用，请稍后重试。'),
-            assetPath: AppIllustrations.stateError,
-            action: FilledButton.icon(
-              onPressed: () => ref.invalidate(weeklyReportProvider),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('刷新报告'),
-            ),
-          ),
+          child: isNotFoundApiError(error)
+              ? StatePanel(
+                  title: '还没有报告数据',
+                  description: '上传并确认讲义、完成复习或口语练习后，报告会自动生成。',
+                  assetPath: AppIllustrations.stateEmpty,
+                  action: FilledButton(
+                    onPressed: () => context.go('/materials'),
+                    child: const Text('去上传讲义'),
+                  ),
+                )
+              : StatePanel(
+                  title: '报告加载失败',
+                  description:
+                      describeApiError(error, fallback: '报告暂时不可用，请稍后重试。'),
+                  assetPath: AppIllustrations.stateError,
+                  action: FilledButton.icon(
+                    onPressed: () => ref.invalidate(weeklyReportProvider),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('刷新报告'),
+                  ),
+                ),
         ),
       ),
     );
@@ -263,7 +274,10 @@ class _AssetMasteryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _statusColor(item.masteryStatus);
-    return AppCard(
+    final target = item.masteryStatus == 'needs_practice'
+        ? '/review/speaking/${item.materialId}'
+        : '/lessons/${item.materialId}';
+    final card = AppCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -335,6 +349,13 @@ class _AssetMasteryTile extends StatelessWidget {
         ],
       ),
     );
+    return item.materialId.isEmpty
+        ? card
+        : InkWell(
+            onTap: () => context.push(target),
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            child: card,
+          );
   }
 }
 

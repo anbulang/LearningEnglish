@@ -17,6 +17,7 @@ dependencies:
   flutter_svg: ^2.2.0
   go_router: ^14.8.1
   image_picker: ^1.1.2
+  just_audio: ^0.9.42
   learning_english_contracts:
     path: ../../packages/contracts
   learning_english_design_tokens:

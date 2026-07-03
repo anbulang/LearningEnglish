@@ -7,12 +7,10 @@ import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/assets/app_illustrations.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
-import '../../../core/widgets/state_panel.dart';
+import '../../../core/widgets/no_child_state_panel.dart';
 import '../../../core/widgets/status_chip.dart';
-import '../../materials/data/app_repository.dart';
 import '../../materials/presentation/material_navigation.dart';
 import '../../profiles/data/demo_data.dart';
-import '../../session/data/session_controller.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -28,30 +26,9 @@ class HomeScreen extends ConsumerWidget {
     if (child == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('首页')),
-        body: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: StatePanel(
-            title: '还没有孩子档案',
-            description: '先创建一个孩子档案，再开始上传讲义和生成复习包。',
-            assetPath: AppIllustrations.stateEmpty,
-            action: FilledButton(
-              onPressed: () async {
-                final created =
-                    await ref.read(appRepositoryProvider).createChild(
-                          name: 'Mia',
-                          age: 6,
-                          level: 'starter',
-                          learningGoal: '课后复习更稳定',
-                          preferredReviewDurationMinutes: 10,
-                          parentNotes: '更喜欢看图认词',
-                        );
-                await ref
-                    .read(sessionControllerProvider.notifier)
-                    .addChild(created);
-              },
-              child: const Text('创建默认孩子档案'),
-            ),
-          ),
+        body: const Padding(
+          padding: EdgeInsets.all(AppSpacing.md),
+          child: NoChildStatePanel(),
         ),
       );
     }
@@ -81,13 +58,12 @@ class HomeScreen extends ConsumerWidget {
             ),
             OutlinedButton.icon(
               onPressed: () {
-                final loadedMaterials = materials.valueOrNull;
-                final readyMaterial = firstReadyMaterial(loadedMaterials);
+                final readyMaterial =
+                    firstReadyMaterial(materials.valueOrNull);
+                // Only jump straight into a session for a ready lesson; otherwise
+                // land on the review list rather than a processing/校对/失败 page.
                 if (readyMaterial != null) {
                   context.go('/review/session/${readyMaterial.id}');
-                } else if (loadedMaterials != null &&
-                    loadedMaterials.isNotEmpty) {
-                  context.go(materialDestination(loadedMaterials.first));
                 } else {
                   context.go('/review');
                 }
