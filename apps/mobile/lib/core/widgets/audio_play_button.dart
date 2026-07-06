@@ -35,15 +35,27 @@ class AudioPlayButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasUrl = url.trim().isNotEmpty;
+    // The controller stores the trimmed URL as activeUrl, so match against the
+    // trimmed value (a raw url with stray whitespace would never appear active).
+    final trimmed = url.trim();
+    final hasUrl = trimmed.isNotEmpty;
     final active = enabled && hasUrl;
-    final state = ref.watch(audioPlaybackControllerProvider);
-    final loading = active && state.isLoading(url);
-    final playing = active && state.isPlaying(url);
+    // Watch only THIS clip's (loading, playing) via select, so one tap rebuilds
+    // just the active / previously-active button instead of every AudioPlayButton
+    // on a scroll-heavy page.
+    final playback = ref.watch(
+      audioPlaybackControllerProvider.select(
+        (s) => (loading: s.isLoading(trimmed), playing: s.isPlaying(trimmed)),
+      ),
+    );
+    final loading = active && playback.loading;
+    final playing = active && playback.playing;
 
     Future<void> handleTap() async {
       try {
-        await ref.read(audioPlaybackControllerProvider.notifier).toggle(url);
+        await ref
+            .read(audioPlaybackControllerProvider.notifier)
+            .toggle(trimmed);
       } catch (_) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -65,8 +77,14 @@ class AudioPlayButton extends ConsumerWidget {
       return OutlinedButton.icon(
         onPressed: onPressed,
         icon: loading ? spinner : Icon(glyph),
+        // Reflect the recording-disabled reason (mirrors the icon variant's
+        // tooltip) instead of showing the normal label greyed with no cue.
         label: Text(
-          !hasUrl ? unavailableLabel : (playing ? '停止' : label!),
+          !hasUrl
+              ? unavailableLabel
+              : !enabled
+                  ? '录音时暂不可播放'
+                  : (playing ? '停止' : label!),
         ),
       );
     }

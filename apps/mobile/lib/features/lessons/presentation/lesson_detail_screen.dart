@@ -47,9 +47,20 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
     final pending = material != null &&
         material.learningAssets.any(_assetMediaPending);
     if (!pending) {
+      final wasPolling = _mediaPollTimer != null;
       _mediaPollTimer?.cancel();
       _mediaPollTimer = null;
       _mediaPollsLeft = 0;
+      if (wasPolling) {
+        // Media just settled: refresh the knowledge pack once (it is not polled
+        // in the loop) so pack-derived audio/images pick up their final URLs.
+        // Post-frame to avoid invalidating a provider during build.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.invalidate(knowledgePackProvider(widget.materialId));
+          }
+        });
+      }
       return;
     }
     if (_mediaPollTimer != null) {
@@ -63,8 +74,9 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
         return;
       }
       _mediaPollsLeft -= 1;
+      // Poll only the material — the pending check reads material.learningAssets,
+      // so refetching the knowledge pack every tick just doubled request volume.
       ref.invalidate(materialProvider(widget.materialId));
-      ref.invalidate(knowledgePackProvider(widget.materialId));
     });
   }
 

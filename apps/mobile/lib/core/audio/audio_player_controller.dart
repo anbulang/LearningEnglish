@@ -35,6 +35,10 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
 
   AudioPlayer? _player;
   String? _pendingUrl;
+  // True only while switching clips (stop + setUrl). A trailing `completed`
+  // event from the previous clip arriving during this window must be ignored so
+  // it can't clobber the new target's freshly-set loading state.
+  bool _switching = false;
 
   AudioPlayer _ensurePlayer() {
     final existing = _player;
@@ -51,13 +55,17 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
     if (!mounted) {
       return;
     }
-    final url = state.activeUrl;
     final processing = playerState.processingState;
     if (processing == ProcessingState.completed) {
+      // The previous clip's trailing completed event; ignore mid-switch.
+      if (_switching) {
+        return;
+      }
       unawaited(_player?.stop());
       state = const AudioPlaybackState();
       return;
     }
+    final url = state.activeUrl;
     if (url == null) {
       return;
     }
@@ -85,6 +93,7 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
     }
     _pendingUrl = target;
     state = AudioPlaybackState(activeUrl: target, phase: AudioPhase.loading);
+    _switching = true;
     try {
       await player.stop();
       await player.setUrl(target);
@@ -97,6 +106,8 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
         state = const AudioPlaybackState();
       }
       rethrow;
+    } finally {
+      _switching = false;
     }
   }
 
