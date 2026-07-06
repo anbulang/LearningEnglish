@@ -72,32 +72,15 @@ class _MaterialReviewScreenState extends ConsumerState<MaterialReviewScreen> {
   Future<String?> _promptForText({
     required String title,
     String initial = '',
-  }) async {
-    final controller = TextEditingController(text: initial);
-    final result = await showDialog<String>(
+  }) {
+    // The dialog owns its TextEditingController via a StatefulWidget so it is
+    // disposed only when the route is removed. Disposing it right after
+    // showDialog returns crashes the dialog's exit transition, which still
+    // rebuilds the TextField with the now-disposed controller.
+    return showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
+      builder: (_) => _TextPromptDialog(title: title, initial: initial),
     );
-    controller.dispose();
-    return result;
   }
 
   Future<void> _addVocabulary() async {
@@ -885,4 +868,50 @@ String _assetKindLabel(String kind) {
 
 String _sourceLabel(String sourceType) {
   return sourceType == 'camera' ? '相机拍摄' : '相册选择';
+}
+
+/// Small edit dialog that owns its controller for its own lifetime, so the
+/// controller outlives the dialog's exit transition (returns the trimmed text
+/// on save, null on cancel).
+class _TextPromptDialog extends StatefulWidget {
+  const _TextPromptDialog({required this.title, required this.initial});
+
+  final String title;
+  final String initial;
+
+  @override
+  State<_TextPromptDialog> createState() => _TextPromptDialogState();
+}
+
+class _TextPromptDialogState extends State<_TextPromptDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(border: OutlineInputBorder()),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('保存'),
+        ),
+      ],
+    );
+  }
 }

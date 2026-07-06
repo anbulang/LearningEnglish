@@ -358,9 +358,10 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
         return;
       }
       _pollTicks += 1;
-      if (_pollTicks > 20) {
-        // ~60s wall-clock: stop the otherwise-infinite spinner and let the
-        // parent re-query or re-record instead of being stuck.
+      if (_pollTicks > 60) {
+        // ~180s wall-clock: cover the worker's hard time_limit (150s) so a valid
+        // score that lands late still auto-displays, then stop the otherwise
+        // infinite spinner and let the parent re-query or re-record.
         _pollTimer?.cancel();
         _pollTimer = null;
         if (mounted) {

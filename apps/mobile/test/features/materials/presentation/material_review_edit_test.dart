@@ -73,6 +73,100 @@ void main() {
     expect(repository.confirmedVocabulary, <String>['cat', 'bird']);
     expect(find.text('lesson:material_1'), findsOneWidget);
   });
+
+  testWidgets('parent corrects a mis-recognised word before confirm',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 2200);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _EditReviewRepository();
+    await _pumpReview(tester, repository);
+
+    // Tapping the "cat" chip opens the edit dialog seeded with the current word.
+    await tester.tap(find.widgetWithText(InputChip, 'cat'));
+    await tester.pumpAndSettle();
+    final editField = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(editField, 'cats');
+    await tester.tap(find.widgetWithText(FilledButton, '保存'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(InputChip, 'cats'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, 'cat'), findsNothing);
+
+    await tester.ensureVisible(find.text('确认并生成课程详情'));
+    await tester.tap(find.text('确认并生成课程详情'));
+    await tester.pumpAndSettle();
+
+    // The correction reaches the backend, not the original OCR word.
+    expect(repository.confirmedVocabulary, <String>['cats', 'dog', 'bird']);
+  });
+
+  testWidgets('parent adds a new word before confirm', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 2200);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _EditReviewRepository();
+    await _pumpReview(tester, repository);
+
+    await tester.tap(find.widgetWithText(ActionChip, '添加单词'));
+    await tester.pumpAndSettle();
+    final addField = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(addField, 'fish');
+    await tester.tap(find.widgetWithText(FilledButton, '保存'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(InputChip, 'fish'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('确认并生成课程详情'));
+    await tester.tap(find.text('确认并生成课程详情'));
+    await tester.pumpAndSettle();
+
+    // The added word reaches the backend confirm payload.
+    expect(
+      repository.confirmedVocabulary,
+      <String>['cat', 'dog', 'bird', 'fish'],
+    );
+  });
+}
+
+Future<void> _pumpReview(WidgetTester tester, AppRepository repository) async {
+  final router = GoRouter(
+    initialLocation: '/materials/review/job_1?materialId=material_1',
+    routes: <RouteBase>[
+      GoRoute(
+        path: '/materials/review/:jobId',
+        builder: (context, state) => MaterialReviewScreen(
+          jobId: state.pathParameters['jobId'] ?? '',
+          materialId: state.uri.queryParameters['materialId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: '/lessons/:materialId',
+        builder: (context, state) =>
+            Text('lesson:${state.pathParameters['materialId']}'),
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: <Override>[
+        appRepositoryProvider.overrideWithValue(repository),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 class _EditReviewRepository extends AppRepository {

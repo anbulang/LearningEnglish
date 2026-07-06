@@ -243,10 +243,16 @@ class _TaskSurface extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(task.contentJson['hint'] as String? ?? '点击播放音频并跟读'),
               const SizedBox(height: AppSpacing.md),
-              AudioPlayButton(
-                url: task.contentJson['audio_url'] as String? ?? '',
-                label: '播放发音',
-              ),
+              // Only offer playback when there is a real audio URL. Stub-generated
+              // flashcards carry none, so an empty AudioPlayButton would sit on a
+              // misleading permanent「发音生成中」instead of a clear "no audio" note.
+              if ((task.contentJson['audio_url'] as String? ?? '').isNotEmpty)
+                AudioPlayButton(
+                  url: task.contentJson['audio_url'] as String,
+                  label: '播放发音',
+                )
+              else
+                Text('该词暂无标准音', style: AppTextStyles.helper),
             ],
           ),
         );
