@@ -1,344 +1,462 @@
 import { useState } from "react";
-import { ActionDrawer } from "../components/ActionDrawer";
-import { MetricCard, StatusChip } from "../components/ui";
-import { getLifecycleCounts, getMaterialsForScope, getTenantHealthRows, isBlockedMaterial } from "../domain/selectors";
-import type { AdminMaterial, AdminOperationsData, AdminOperationsIssue, Language, LifecycleCounts, Tenant, TenantScope } from "../domain/types";
+import {
+  PROVIDER_STATUS_META,
+  READY_TREND_SERIES,
+  TONE_TOKENS,
+  commandKpis,
+  consoleAnomalies,
+  consoleJobs,
+  consoleProviders,
+  phaseStats,
+  type ConsoleAnomaly,
+  type PhaseStat,
+  type Tone
+} from "../domain/consoleData";
+import { operationsToKpis, operationsToPhaseStats, providerConfigToProviders } from "../domain/liveMappers";
+import { EmptyState, Modal, Sparkline, MetricCard, bigDotStyle } from "../components/ui";
+import { useToast } from "../components/providers";
+import { createTranslator, localize } from "../i18n/i18n";
+import { PageHeader, PageRoot, PrototypeBadge } from "./shared";
+import type { AdminOperationsIssue } from "../domain/types";
+import type { CommandCenterProps } from "./contracts";
 
-interface CommandCenterProps {
-  language: Language;
-  tenantScope: TenantScope;
-  tenants: Tenant[];
-  materials: AdminMaterial[];
-  operationsData?: AdminOperationsData;
-  adminPermissions?: string[];
-  onSubmitIssueAction?: (issue: AdminOperationsIssue, reason: string) => void | Promise<void>;
-}
-
-type FunnelItem = {
-  key: keyof LifecycleCounts;
-  label: string;
+const copy = {
+  zh: {
+    eyebrow: "主控 / 指挥中心",
+    title: "平台指挥中心",
+    subtitle: "多租户自然拼读内容生产、AI 处理与学习结果统一总览",
+    pipelineTitle: "拼读处理流水线健康度",
+    pipelineSub: "各阶段在处理任务量 · 实时快照",
+    systemOk: "系统正常",
+    trendTitle: "已就绪任务趋势",
+    trendRange: "过去 14 小时",
+    providerTitle: "Provider 运维状态",
+    providerDetails: "详情",
+    anomaliesTitle: "最近异常事件",
+    pendingPill: "待关注",
+    modalTitle: "执行处置动作",
+    reasonLabel: "处置原因（必填）",
+    reasonPlaceholder: "请填写本次处置的原因，将记入审计日志",
+    submit: "提交",
+    cancel: "取消",
+    placeholderToast: "原型演示：已记录处置意向",
+    reasonRequired: "请先填写处置原因",
+    actionFailed: "处置失败，请重试",
+    liveNoData: "实时运营数据加载中或暂不可用（不展示示例数据）"
+  },
+  en: {
+    eyebrow: "Console / Command Center",
+    title: "Platform Command Center",
+    subtitle: "Unified view of multi-tenant phonics content production, AI processing and learning outcomes",
+    pipelineTitle: "Phonics processing pipeline health",
+    pipelineSub: "In-flight task volume per phase · realtime snapshot",
+    systemOk: "System healthy",
+    trendTitle: "Ready-task trend",
+    trendRange: "Past 14 hours",
+    providerTitle: "Provider operations status",
+    providerDetails: "Details",
+    anomaliesTitle: "Recent anomalies",
+    pendingPill: "to review",
+    modalTitle: "Run remediation action",
+    reasonLabel: "Reason (required)",
+    reasonPlaceholder: "Describe why you are taking this action — recorded in the audit log",
+    submit: "Submit",
+    cancel: "Cancel",
+    placeholderToast: "Prototype: remediation intent recorded",
+    reasonRequired: "Please enter a reason first",
+    actionFailed: "Action failed, please retry",
+    liveNoData: "Live operations data is loading or unavailable (no sample data shown)"
+  }
 };
 
-export function CommandCenter({
-  language,
-  tenantScope,
-  tenants,
-  materials,
-  operationsData,
-  adminPermissions = [],
-  onSubmitIssueAction
-}: CommandCenterProps) {
-  const [selectedIssue, setSelectedIssue] = useState<AdminOperationsIssue | null>(null);
-  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
-  const [issueActionError, setIssueActionError] = useState("");
-  const scopedMaterials = getMaterialsForScope(materials, tenantScope);
-  const scopedTenants = tenantScope === "all" ? tenants : tenants.filter((tenant) => tenant.id === tenantScope);
-  const counts = getLifecycleCounts(scopedMaterials);
-  const tenantRows = getTenantHealthRows(scopedTenants, scopedMaterials).slice(0, 4);
-  const riskRows = scopedMaterials.filter(isBlockedMaterial);
-  const operationsDataMatchesScope = operationsData?.tenantScope === tenantScope;
-  const operationIssues = (operationsData?.issues ?? []).filter(
-    (issue) => tenantScope === "all" || issue.relatedResource.tenantId === tenantScope
-  );
-  const usesOperationIssues = operationIssues.length > 0;
-  const providerIncidents = scopedMaterials.filter(hasProviderIncident).length;
-  const copy = language === "zh" ? zhCopy : enCopy;
-  const funnelItems: FunnelItem[] = [
-    { key: "upload", label: copy.stageUpload },
-    { key: "parse", label: copy.stageParse },
-    { key: "parentReview", label: copy.stageParentReview },
-    { key: "knowledgePack", label: copy.stageKnowledgePack },
-    { key: "media", label: copy.stageMedia },
-    { key: "ready", label: copy.stageReady },
-    { key: "failed", label: copy.stageFailed }
-  ];
+const PROVIDER_PREFIX = "DashScope · ";
 
-  return (
-    <div className="page-grid">
-      <section className="page-header wide">
-        <p className="eyebrow">Platform Admin Console</p>
-        <h1>{copy.title}</h1>
-        <p>{copy.subtitle}</p>
-      </section>
+const SEVERITY_TONE: Record<string, Tone> = {
+  critical: "danger",
+  warning: "warning",
+  info: "info",
+  ok: "neutral"
+};
 
-      <div className="metric-row wide">
-        <MetricCard label={copy.activeTenants} value={scopedTenants.length} detail={copy.activeTenantsDetail} />
-        <MetricCard
-          label={copy.blockedJobs}
-          value={usesOperationIssues ? operationIssues.length : riskRows.length}
-          detail={copy.blockedJobsDetail}
-        />
-        <MetricCard
-          label={copy.mediaFailures}
-          value={
-            usesOperationIssues && operationsDataMatchesScope
-              ? numberFromRecord(operationsData?.summary, "media_failures")
-              : scopedMaterials.filter((material) => material.mediaStatus === "failed").length
-          }
-          detail={copy.mediaFailuresDetail}
-        />
-        <MetricCard label={copy.providerIncidents} value={providerIncidents} detail={copy.providerIncidentDetail} />
-      </div>
+function hhmm(iso: string): string {
+  const match = /T(\d{2}:\d{2})/.exec(iso || "");
+  return match ? match[1] : "—";
+}
 
-      <section className="surface table-panel span-7">
-        <div className="section-title">
-          <h2>{copy.inbox}</h2>
-          <StatusChip tone={(usesOperationIssues ? operationIssues.length : riskRows.length) > 0 ? "warning" : "success"}>
-            {usesOperationIssues ? operationIssues.length : riskRows.length} SLA
-          </StatusChip>
-        </div>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              {usesOperationIssues ? (
-                <tr>
-                  <th>{copy.tenant}</th>
-                  <th>{copy.issue}</th>
-                  <th>{copy.scope}</th>
-                  <th>{copy.status}</th>
-                  <th>{copy.action}</th>
-                </tr>
-              ) : (
-                <tr>
-                  <th>{copy.tenant}</th>
-                  <th>{copy.issue}</th>
-                  <th>{copy.scope}</th>
-                  <th>{copy.status}</th>
-                  <th>SLA</th>
-                </tr>
-              )}
-            </thead>
-            <tbody>
-              {usesOperationIssues
-                ? operationIssues.map((issue) => (
-                    <tr key={issue.id}>
-                      <td>{tenantName(tenants, issue.relatedResource.tenantId)}</td>
-                      <td>
-                        <strong className="table-title">{issue.statusLabel}</strong>
-                        <small>{issue.reason}</small>
-                      </td>
-                      <td>{issue.relatedResource.type}</td>
-                      <td>
-                        <StatusChip tone={severityTone(issue.severity)}>{issue.severity}</StatusChip>
-                      </td>
-                      <td>{renderIssueAction(issue)}</td>
-                    </tr>
-                  ))
-                : riskRows.map((material) => (
-                    <tr key={material.id}>
-                      <td>{tenants.find((tenant) => tenant.id === material.tenantId)?.name ?? material.tenantId}</td>
-                      <td>
-                        <strong className="table-title">{material.title}</strong>
-                        <small>{material.warnings[0] ?? material.confidenceSummary}</small>
-                      </td>
-                      <td>{material.childName}</td>
-                      <td>
-                        <StatusChip tone={material.materialStatus === "failed" ? "danger" : "warning"}>{material.materialStatus}</StatusChip>
-                      </td>
-                      <td>{material.slaMinutes}m</td>
-                    </tr>
-                  ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+export function CommandCenter(props: CommandCenterProps) {
+  const { language, tenantScope, dataMode, operations, permissions, onIssueAction, onNavigate } = props;
+  const t = createTranslator(language);
+  const c = localize(language, copy);
+  const toast = useToast();
 
-      <section className="surface span-5">
-        <div className="section-title">
-          <h2>{copy.lifecycle}</h2>
-        </div>
-        <div className="funnel-list">
-          {funnelItems.map((item) => (
-            <div className="funnel-row" key={item.key}>
-              <span>{item.label}</span>
-              <strong>{counts[item.key]}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
+  const live = dataMode === "live" && operations ? operations : null;
 
-      <section className="surface wide">
-        <div className="section-title">
-          <h2>{copy.tenantHealth}</h2>
-        </div>
-        <div className="tenant-health-grid">
-          {tenantRows.map((row) => (
-            <article key={row.tenant.id} className="tenant-health-card">
-              <strong>{row.tenant.name}</strong>
-              <span>{row.tenant.tenantType}</span>
-              <b>{row.healthScore}</b>
-              <small>
-                {row.blockedJobs} {copy.blockedShort} / {row.mediaFailures} {copy.mediaShort}
-              </small>
-            </article>
-          ))}
-        </div>
-      </section>
-      {selectedIssue && (
-        <ActionDrawer
-          language={language}
-          issue={selectedIssue}
-          isOpen={true}
-          isSubmitting={isSubmittingIssue}
-          submitError={issueActionError}
-          onClose={() => {
-            setIssueActionError("");
-            setSelectedIssue(null);
-          }}
-          onSubmit={(reason) => void handleSubmitIssueAction(selectedIssue, reason)}
-        />
-      )}
-    </div>
-  );
-
-  async function handleSubmitIssueAction(issue: AdminOperationsIssue, reason: string) {
-    if (!onSubmitIssueAction) {
-      setSelectedIssue(null);
-      return;
+  const kpis = live ? operationsToKpis(live) : commandKpis();
+  // Mock funnel is scope-aware: when a tenant is selected, recompute the five
+  // phase counts from that tenant's jobs (the design folds parsing into OCR).
+  const mockPhases = (): PhaseStat[] => {
+    const base = phaseStats();
+    if (tenantScope === "all") {
+      return base;
     }
-    setIsSubmittingIssue(true);
-    setIssueActionError("");
-    try {
-      await onSubmitIssueAction(issue, reason);
-      setSelectedIssue(null);
-    } catch (error) {
-      setIssueActionError(error instanceof Error && error.message ? error.message : copy.actionFailed);
-    } finally {
-      setIsSubmittingIssue(false);
-    }
-  }
+    const scoped = consoleJobs().filter((job) => job.tenant === tenantScope);
+    return base.map((phase) => ({
+      ...phase,
+      count: scoped.filter((job) => job.status === phase.statusKey || (phase.statusKey === "ocr" && job.status === "parsing")).length
+    }));
+  };
+  const phases: PhaseStat[] = live ? operationsToPhaseStats(live) : mockPhases();
+  const maxCount = Math.max(1, ...phases.map((p) => p.count));
+  const anomalies: ConsoleAnomaly[] = live ? [] : consoleAnomalies();
+  const issues: AdminOperationsIssue[] = live ? live.issues : [];
+  const providers = live
+    ? providerConfigToProviders(live)
+    : consoleProviders()
+        .filter((p) => p.enabled)
+        .slice(0, 4);
 
-  function renderIssueAction(issue: AdminOperationsIssue) {
-    const canSubmit =
-      Boolean(onSubmitIssueAction) && isSupportedIssueAction(issue) && hasRequiredPermission(adminPermissions, issue.requiredPermission);
-    if (!canSubmit) {
-      return (
-        <span className="table-muted-action" aria-label={`${copy.actionUnavailableFor} ${issue.statusLabel}`}>
-          {issue.recommendedAction}
-        </span>
-      );
-    }
+  const generatedAt = live && typeof live.summary.generated_at === "string" ? hhmm(String(live.summary.generated_at)) : "—";
+
+  const [activeIssue, setActiveIssue] = useState<AdminOperationsIssue | null>(null);
+  const [reason, setReason] = useState("");
+
+  // In live mode, never fall back to fabricated mock seeds when the operations
+  // snapshot is missing (loading, or a failed fetch). Show an honest placeholder
+  // instead of inventing KPIs/providers/anomalies under the "live" badge.
+  if (dataMode === "live" && !operations) {
     return (
-      <button
-        type="button"
-        className="table-link-button"
-        onClick={() => {
-          setIssueActionError("");
-          setSelectedIssue(issue);
-        }}
-        aria-label={`${copy.openActionFor} ${issue.statusLabel}`}
-      >
-        {issue.recommendedAction}
-      </button>
+      <PageRoot screen="command">
+        <PageHeader eyebrow={c.eyebrow} title={c.title} subtitle={c.subtitle} language={language} tenantScope={tenantScope} />
+        <EmptyState>{c.liveNoData}</EmptyState>
+      </PageRoot>
     );
   }
+
+  const issueActionEnabled = (issue: AdminOperationsIssue): boolean =>
+    !!onIssueAction && (!issue.requiredPermission || permissions.includes(issue.requiredPermission));
+
+  const openIssueModal = (issue: AdminOperationsIssue) => {
+    setReason("");
+    setActiveIssue(issue);
+  };
+
+  const closeIssueModal = () => {
+    setActiveIssue(null);
+    setReason("");
+  };
+
+  const submitIssueAction = async () => {
+    if (!activeIssue || !onIssueAction) {
+      return;
+    }
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      toast(c.reasonRequired);
+      return;
+    }
+    const issue = activeIssue;
+    closeIssueModal();
+    try {
+      await onIssueAction(issue, trimmed);
+    } catch {
+      toast(c.actionFailed);
+    }
+  };
+
+  const totalPending = live ? issues.length : anomalies.length;
+
+  return (
+    <PageRoot screen="command">
+      <PageHeader eyebrow={c.eyebrow} title={c.title} subtitle={c.subtitle} language={language} tenantScope={tenantScope} />
+
+      {/* KPI grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(158px,1fr))", gap: 13, marginBottom: 16 }}>
+        {kpis.map((kpi) => (
+          <MetricCard
+            key={kpi.labelKey}
+            label={t(kpi.labelKey)}
+            value={kpi.value}
+            delta={kpi.delta}
+            positive={kpi.positive}
+            sub={t(kpi.subKey)}
+            barTone={kpi.barTone}
+          />
+        ))}
+      </div>
+
+      {/* Pipeline + provider two-col */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 16, alignItems: "stretch", marginBottom: 16 }}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "var(--shadow-sm)", padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{c.pipelineTitle}</div>
+              <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 2 }}>{c.pipelineSub}</div>
+            </div>
+            <div
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11.5,
+                color: "var(--success)",
+                background: "var(--success-subtle)",
+                padding: "3px 10px",
+                borderRadius: 20,
+                fontWeight: 600
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--success)" }} />
+              {c.systemOk}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10, marginBottom: 18 }}>
+            {phases.map((phase) => {
+              const tone = TONE_TOKENS[phase.tone];
+              return (
+                <div key={phase.statusKey} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "11px 12px", background: "var(--surface-2)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 3, flex: "none", background: tone.c }} />
+                    <span style={{ fontSize: 11.5, color: "var(--text-2)" }}>{t(phase.labelKey)}</span>
+                  </div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 19, fontWeight: 600, lineHeight: 1 }}>{phase.count.toLocaleString()}</div>
+                  <div style={{ height: 4, borderRadius: 3, background: "var(--bg-subtle)", marginTop: 8, overflow: "hidden" }}>
+                    <div style={{ height: 4, borderRadius: 3, background: tone.c, width: `${Math.max(4, (phase.count / maxCount) * 100)}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: 12, color: "var(--text-2)", fontWeight: 500 }}>{c.trendTitle}</span>
+              {live && <PrototypeBadge language={language} />}
+              <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)" }}>{c.trendRange}</span>
+            </div>
+            <Sparkline series={READY_TREND_SERIES} />
+          </div>
+        </div>
+
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "var(--shadow-sm)", padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{c.providerTitle}</div>
+            <button
+              type="button"
+              onClick={() => onNavigate("providers")}
+              style={{
+                marginLeft: "auto",
+                border: "none",
+                background: "none",
+                padding: 0,
+                fontSize: 11.5,
+                color: "var(--brand)",
+                cursor: "pointer",
+                fontWeight: 500,
+                fontFamily: "inherit"
+              }}
+            >
+              {c.providerDetails}
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {providers.map((provider) => {
+              const tone = TONE_TOKENS[PROVIDER_STATUS_META[provider.status].tone];
+              return (
+                <div key={provider.id} style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
+                  <span style={bigDotStyle(tone.c, tone.bg)} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {provider.name.replace(PROVIDER_PREFIX, "")}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 1 }}>{provider.use}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flex: "none" }}>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
+                      {provider.success ? `${provider.success.toFixed(1)}%` : "—"}
+                    </div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-3)" }}>
+                      {provider.latency ? `${provider.latency.toLocaleString()} ms` : "—"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Anomalies */}
+      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "var(--shadow-sm)", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "15px 18px 13px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{c.anomaliesTitle}</div>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--danger)", marginLeft: 9, background: "var(--danger-subtle)", padding: "1px 7px", borderRadius: 20 }}>
+            {totalPending} {c.pendingPill}
+          </span>
+        </div>
+        <div>
+          {live
+            ? issues.map((issue) => {
+                const tone = TONE_TOKENS[SEVERITY_TONE[issue.severity] ?? "neutral"];
+                const enabled = issueActionEnabled(issue);
+                return (
+                  <AnomalyRow
+                    key={issue.id}
+                    barColor={tone.c}
+                    title={issue.statusLabel}
+                    meta={issue.reason}
+                    time={generatedAt}
+                    actionLabel={issue.recommendedAction}
+                    actionDisabled={!enabled}
+                    onAction={enabled ? () => openIssueModal(issue) : undefined}
+                  />
+                );
+              })
+            : anomalies.map((anomaly, index) => {
+                const tone = TONE_TOKENS[anomaly.tone];
+                return (
+                  <AnomalyRow
+                    key={`${anomaly.title}-${index}`}
+                    barColor={tone.c}
+                    title={anomaly.title}
+                    meta={anomaly.meta}
+                    time={anomaly.time}
+                    actionLabel={anomaly.action}
+                    onAction={() => toast(c.placeholderToast)}
+                  />
+                );
+              })}
+        </div>
+      </div>
+
+      <Modal open={activeIssue !== null} onClose={closeIssueModal} width={440} ariaLabel={c.modalTitle}>
+        {activeIssue && (
+          <>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{c.modalTitle}</div>
+            <div style={{ fontSize: 13, color: "var(--text-2)", marginTop: 8, lineHeight: 1.6 }}>{activeIssue.statusLabel}</div>
+            <label htmlFor="cc-issue-reason" style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-2)", margin: "16px 0 6px" }}>
+              {c.reasonLabel}
+            </label>
+            <textarea
+              id="cc-issue-reason"
+              aria-label={c.reasonLabel}
+              className="le-input"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder={c.reasonPlaceholder}
+              rows={3}
+              style={{
+                width: "100%",
+                resize: "vertical",
+                minHeight: 72,
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                background: "var(--bg-subtle)",
+                padding: "9px 12px",
+                fontSize: 13,
+                color: "var(--text)",
+                outline: "none",
+                fontFamily: "inherit",
+                boxSizing: "border-box"
+              }}
+            />
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={closeIssueModal}
+                className="le-hover-soft"
+                style={{
+                  flex: 1,
+                  height: 38,
+                  border: "1px solid var(--border-strong)",
+                  borderRadius: 8,
+                  background: "var(--surface)",
+                  color: "var(--text)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "inherit"
+                }}
+              >
+                {c.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={submitIssueAction}
+                disabled={!reason.trim()}
+                style={{
+                  flex: 1,
+                  height: 38,
+                  border: "none",
+                  borderRadius: 8,
+                  background: reason.trim() ? "var(--brand)" : "var(--border-strong)",
+                  color: reason.trim() ? "var(--brand-fg)" : "var(--text-3)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: reason.trim() ? "pointer" : "not-allowed",
+                  fontFamily: "inherit"
+                }}
+              >
+                {c.submit}
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
+    </PageRoot>
+  );
 }
 
-function hasProviderIncident(material: AdminMaterial): boolean {
-  return material.provider !== "stub" && (isBlockedMaterial(material) || material.mediaStatus === "failed" || material.warnings.length > 0);
+function AnomalyRow({
+  barColor,
+  title,
+  meta,
+  time,
+  actionLabel,
+  actionDisabled = false,
+  onAction
+}: {
+  barColor: string;
+  title: string;
+  meta: string;
+  time: string;
+  actionLabel: string;
+  actionDisabled?: boolean;
+  onAction?: () => void;
+}) {
+  const disabled = actionDisabled || !onAction;
+  return (
+    <div className="le-hover-soft" style={{ display: "flex", alignItems: "stretch", gap: 13, padding: "13px 18px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ width: 3, alignSelf: "stretch", borderRadius: 3, flex: "none", background: barColor }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>{title}</div>
+        <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 3 }}>{meta}</div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: "none" }}>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--text-3)" }}>{time}</span>
+        <button
+          type="button"
+          onClick={onAction}
+          disabled={disabled}
+          className={disabled ? undefined : "le-hover-soft"}
+          style={{
+            height: 28,
+            padding: "0 12px",
+            border: "1px solid var(--border-strong)",
+            borderRadius: 7,
+            background: "var(--surface)",
+            color: disabled ? "var(--text-3)" : "var(--text-2)",
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: disabled ? "not-allowed" : "pointer",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap"
+          }}
+        >
+          {actionLabel}
+        </button>
+      </div>
+    </div>
+  );
 }
-
-function severityTone(severity: AdminOperationsIssue["severity"]): "success" | "warning" | "danger" | "neutral" {
-  if (severity === "critical") {
-    return "danger";
-  }
-  if (severity === "warning") {
-    return "warning";
-  }
-  if (severity === "ok") {
-    return "success";
-  }
-  return "neutral";
-}
-
-function tenantName(tenants: Tenant[], tenantId: string | undefined): string {
-  if (!tenantId) {
-    return "";
-  }
-  return tenants.find((tenant) => tenant.id === tenantId)?.name ?? tenantId;
-}
-
-function numberFromRecord(record: Record<string, unknown> | undefined, key: string): number {
-  const value = record?.[key];
-  return typeof value === "number" ? value : 0;
-}
-
-function hasRequiredPermission(adminPermissions: string[], requiredPermission: string | undefined): boolean {
-  return !requiredPermission || adminPermissions.includes("*") || adminPermissions.includes(requiredPermission);
-}
-
-function isSupportedIssueAction(issue: AdminOperationsIssue): boolean {
-  if (issue.recommendedAction === "retry_material_job") {
-    return issue.relatedResource.type === "material_parse_job";
-  }
-  if (issue.recommendedAction === "archive_material") {
-    return Boolean(issue.relatedResource.materialId || issue.relatedResource.id);
-  }
-  return false;
-}
-
-const zhCopy = {
-  title: "平台指挥台",
-  subtitle: "多租户学习内容生产、AI 处理和学习结果的统一运营入口",
-  activeTenants: "活跃租户",
-  activeTenantsDetail: "当前范围内学校、机构与家庭试点",
-  blockedJobs: "阻塞任务",
-  blockedJobsDetail: "超过 SLA 或失败",
-  mediaFailures: "媒体失败",
-  mediaFailuresDetail: "配图或 TTS 失败",
-  providerIncidents: "Provider 事件",
-  providerIncidentDetail: "当前范围内 provider 告警材料",
-  inbox: "今日待处理",
-  tenant: "租户",
-  issue: "问题",
-  scope: "影响范围",
-  status: "状态",
-  action: "操作",
-  openActionFor: "打开操作",
-  actionUnavailableFor: "不可执行的操作",
-  actionFailed: "操作提交失败，请检查权限或稍后重试。",
-  lifecycle: "内容生产生命周期",
-  tenantHealth: "租户健康摘要",
-  stageUpload: "上传",
-  stageParse: "OCR / 解析",
-  stageParentReview: "家长确认",
-  stageKnowledgePack: "知识包",
-  stageMedia: "媒体 / TTS",
-  stageReady: "可学习",
-  stageFailed: "失败",
-  blockedShort: "阻塞",
-  mediaShort: "媒体"
-};
-
-const enCopy = {
-  title: "Platform Command Center",
-  subtitle: "Unified operations for multi-tenant content production, AI processing, and learning outcomes.",
-  activeTenants: "Active tenants",
-  activeTenantsDetail: "Schools, organizations, and family pilots in scope",
-  blockedJobs: "Blocked jobs",
-  blockedJobsDetail: "Failed or over SLA",
-  mediaFailures: "Media failures",
-  mediaFailuresDetail: "Image or TTS failures",
-  providerIncidents: "Provider incidents",
-  providerIncidentDetail: "Provider-warning materials in scope",
-  inbox: "Action inbox",
-  tenant: "Tenant",
-  issue: "Issue",
-  scope: "Scope",
-  status: "Status",
-  action: "Action",
-  openActionFor: "Open action for",
-  actionUnavailableFor: "Unavailable action for",
-  actionFailed: "Action failed. Check permissions or try again later.",
-  lifecycle: "Content lifecycle",
-  tenantHealth: "Tenant health summary",
-  stageUpload: "Upload",
-  stageParse: "OCR / Parse",
-  stageParentReview: "Parent Review",
-  stageKnowledgePack: "Knowledge Pack",
-  stageMedia: "Media / TTS",
-  stageReady: "Ready",
-  stageFailed: "Failed",
-  blockedShort: "blocked",
-  mediaShort: "media"
-};

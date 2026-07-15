@@ -12,3 +12,12 @@ export function createTranslator(language: Language) {
     return translateMessage(language, key);
   };
 }
+
+/**
+ * Pick the matching half of a per-page bilingual copy pack. Pages keep their
+ * screen-specific copy in a local `{ zh: {...}, en: {...} }` object and call
+ * `localize(language, copy)` to get the active language's strings.
+ */
+export function localize<T>(language: Language, pack: Record<Language, T>): T {
+  return pack[language];
+}
