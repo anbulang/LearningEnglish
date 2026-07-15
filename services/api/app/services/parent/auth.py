@@ -16,7 +16,7 @@ from app.core.security import (
     hash_token,
     now_utc,
 )
-from app.core.settings import get_settings
+from app.core.settings import PilotAllowlistEntry, get_settings
 from app.db.models import AuthSessionModel, ChildProfileModel, ParentAccountModel, PhoneBindingModel
 from app.models.contracts import AuthLoginResponse, AuthStatus, AuthTokens, ParentAccount
 from app.services.shared.mappers import child_profile_from_model, parent_account_from_model
@@ -28,6 +28,10 @@ class WechatIdentity:
     open_id: str
     display_name: str
     avatar_url: str
+    # Pilot-only: when an allowlist entry carries a phone and is pre-verified,
+    # the account is created already phone-verified (skips the OTP bind step).
+    phone_number: str = ""
+    phone_pre_verified: bool = False
 
 
 class DevWechatIdentityProvider:
@@ -42,6 +46,29 @@ class DevWechatIdentityProvider:
         )
 
 
+class PilotWhitelistIdentityProvider:
+    """Production-safe identity for a controlled pilot: only allowlisted codes
+    get an account, each mapped to its own isolated, stable union_id. Unknown
+    codes are rejected, so two families can never collapse into one account."""
+
+    def __init__(self, allowlist: tuple[PilotAllowlistEntry, ...]) -> None:
+        self._by_code = {entry.code: entry for entry in allowlist}
+
+    def exchange(self, auth_code: str) -> WechatIdentity:
+        code = (auth_code or "").strip()
+        entry = self._by_code.get(code)
+        if entry is None:
+            raise ValueError("not on pilot allowlist")
+        return WechatIdentity(
+            union_id=f"pilot_{code}",
+            open_id=f"pilot_open_{code}",
+            display_name=entry.display_name or f"试点家长{code}",
+            avatar_url="",
+            phone_number=entry.phone,
+            phone_pre_verified=True,
+        )
+
+
 class DevSmsProvider:
     def send_code(self, phone_number: str, otp_code: str) -> None:
         return None
@@ -50,7 +77,10 @@ class DevSmsProvider:
 class AuthService:
     def __init__(self) -> None:
         self.settings = get_settings()
-        self.wechat_provider = DevWechatIdentityProvider()
+        if self.settings.identity_provider == "pilot":
+            self.wechat_provider = PilotWhitelistIdentityProvider(self.settings.pilot_allowlist)
+        else:
+            self.wechat_provider = DevWechatIdentityProvider()
         self.sms_provider = DevSmsProvider()
 
     def login_with_wechat(self, db: Session, auth_code: str, user_agent: str = "") -> AuthLoginResponse:
@@ -65,6 +95,11 @@ class AuthService:
                 wechat_union_id=identity.union_id,
                 wechat_open_id=identity.open_id,
             )
+            # Pilot allowlist entries arrive already verified — bind the preset
+            # phone at creation so the family skips the OTP step entirely.
+            if identity.phone_pre_verified:
+                parent.phone_number = identity.phone_number or None
+                parent.phone_verified_at = now_utc()
             db.add(parent)
             db.commit()
             db.refresh(parent)

@@ -1,0 +1,16 @@
+# Reverse proxy for the production stack. Caddy automatically provisions and
+# renews a free Let's Encrypt certificate for $PUBLIC_DOMAIN, so the api is
+# served over HTTPS (required by real devices and by DashScope's audio pull of
+# https://$PUBLIC_DOMAIN/uploads/<key>). PUBLIC_DOMAIN is injected by compose.
+#
+# DNS must already point $PUBLIC_DOMAIN at this host, and ports 80 + 443 must be
+# open, before the certificate can be issued.
+
+{$PUBLIC_DOMAIN} {
+	encode zstd gzip
+	# Allow worksheet image / audio uploads through to the api unbuffered.
+	request_body {
+		max_size 25MB
+	}
+	reverse_proxy api:8000
+}

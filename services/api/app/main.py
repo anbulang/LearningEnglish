@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.db import init_db
+from app.core.readiness import readiness_problem_summary, readiness_report
 from app.core.settings import ensure_local_paths, get_settings
 from app.db.models import StoredAssetModel
 from app.services.shared.storage import get_storage_service
@@ -26,6 +27,12 @@ async def lifespan(_: FastAPI):
     settings = get_settings()
     ensure_local_paths(settings)
     init_db()
+    report = readiness_report(settings)
+    if not report["ready"]:
+        summary = readiness_problem_summary(report)
+        if settings.app_env.strip().lower() == "production":
+            raise RuntimeError(f"Provider/runtime configuration not ready for production: {summary}")
+        logger.warning("Provider/runtime configuration not ready (app_env=%s): %s", settings.app_env, summary)
     yield
 
 
@@ -87,6 +94,12 @@ async def request_logging_middleware(request: Request, call_next) -> Response:
 @app.get("/healthz", tags=["health"])
 def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/readyz", tags=["health"])
+def readiness() -> JSONResponse:
+    report = readiness_report(get_settings())
+    return JSONResponse(status_code=200 if report["ready"] else 503, content=report)
 
 
 @app.exception_handler(RequestValidationError)
