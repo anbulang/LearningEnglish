@@ -65,7 +65,9 @@ class AppRepository implements MaterialsRepository {
     );
     final payload = response.data ?? const <String, dynamic>{};
     return KnowledgePack.fromJson(
-        payload['knowledge_pack'] as Map<String, dynamic>);
+      _normalizeKnowledgePackRuntimeUrls(
+          payload['knowledge_pack'] as Map<String, dynamic>),
+    );
   }
 
   @override
@@ -143,7 +145,8 @@ class AppRepository implements MaterialsRepository {
     );
     final payload = response.data ?? const <String, dynamic>{};
     return (payload['items'] as List<dynamic>? ?? const <dynamic>[])
-        .map((item) => ReviewTask.fromJson(item as Map<String, dynamic>))
+        .map((item) => ReviewTask.fromJson(
+            _normalizeReviewTaskRuntimeUrls(item as Map<String, dynamic>)))
         .toList();
   }
 
@@ -302,6 +305,52 @@ class AppRepository implements MaterialsRepository {
     return normalized;
   }
 
+  Map<String, dynamic> _normalizeKnowledgePackRuntimeUrls(
+      Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized['vocabulary_items'] =
+        _normalizeAudioImageUrls(normalized['vocabulary_items']);
+    normalized['sentence_patterns'] =
+        _normalizeAudioImageUrls(normalized['sentence_patterns']);
+    return normalized;
+  }
+
+  Map<String, dynamic> _normalizeReviewTaskRuntimeUrls(
+      Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    final content = normalized['content_json'];
+    if (content is Map<String, dynamic>) {
+      final normalizedContent = Map<String, dynamic>.from(content);
+      for (final key in <String>['audio_url', 'image_url']) {
+        if (normalizedContent.containsKey(key)) {
+          normalizedContent[key] =
+              _publicRuntimeUrl(normalizedContent[key] as String? ?? '');
+        }
+      }
+      normalized['content_json'] = normalizedContent;
+    }
+    return normalized;
+  }
+
+  dynamic _normalizeAudioImageUrls(dynamic value) {
+    if (value is! List) {
+      return value;
+    }
+    return value.map((item) {
+      if (item is! Map<String, dynamic>) {
+        return item;
+      }
+      final normalizedItem = Map<String, dynamic>.from(item);
+      for (final key in <String>['audio_url', 'image_url']) {
+        if (normalizedItem.containsKey(key)) {
+          normalizedItem[key] =
+              _publicRuntimeUrl(normalizedItem[key] as String? ?? '');
+        }
+      }
+      return normalizedItem;
+    }).toList();
+  }
+
   dynamic _normalizeLearningAssetUrls(dynamic value) {
     if (value is! List) {
       return value;
@@ -356,13 +405,17 @@ class AppRepository implements MaterialsRepository {
       if (firstSegment != 'uploads' && firstSegment != 'mock-media') {
         return url;
       }
-      return parsed
-          .replace(
-            scheme: apiBase.scheme,
-            host: apiBase.host,
-            port: apiBase.hasPort ? apiBase.port : null,
-          )
-          .toString();
+      // Rebuild via the Uri constructor: on `replace`, a null port means "keep
+      // the original" — which would leave the stale localhost :9000 on a real
+      // host. The constructor treats null port as "no port" so a portless public
+      // base (https://api.example.com) yields https://api.example.com/uploads/...
+      return Uri(
+        scheme: apiBase.scheme,
+        host: apiBase.host,
+        port: apiBase.hasPort ? apiBase.port : null,
+        path: parsed.path,
+        query: parsed.hasQuery ? parsed.query : null,
+      ).toString();
     }
     return url;
   }

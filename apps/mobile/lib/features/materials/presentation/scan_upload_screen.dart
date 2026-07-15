@@ -10,6 +10,7 @@ import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/no_child_state_panel.dart';
 import '../../profiles/data/demo_data.dart';
 import '../data/app_repository.dart';
 import '../data/scan_draft_controller.dart';
@@ -55,7 +56,11 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
   Future<void> _submit() async {
     final child = ref.read(activeChildProvider);
     final draft = ref.read(scanDraftProvider);
-    if (child == null || draft.pages.isEmpty) {
+    if (child == null) {
+      setState(() => _errorMessage = '请先添加孩子档案，再上传讲义。');
+      return;
+    }
+    if (draft.pages.isEmpty) {
       return;
     }
     setState(() {
@@ -103,6 +108,17 @@ class _ScanUploadScreenState extends ConsumerState<ScanUploadScreen> {
     final formFactor = formFactorOf(context);
     final draft = ref.watch(scanDraftProvider);
     final hasPages = draft.pages.isNotEmpty;
+    final hasChild = ref.watch(activeChildProvider) != null;
+
+    if (!hasChild) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('上传讲义'), centerTitle: false),
+        body: const Padding(
+          padding: EdgeInsets.all(AppSpacing.md),
+          child: NoChildStatePanel(description: '上传讲义前，请先为孩子建立档案。'),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

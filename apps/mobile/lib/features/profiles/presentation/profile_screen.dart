@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/assets/app_illustrations.dart';
@@ -55,6 +56,18 @@ class ProfileScreen extends ConsumerWidget {
                     ? parent!.phoneNumber
                     : '未绑定手机号'),
               ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading:
+                  const Icon(Icons.dns_rounded, color: AppColors.cocoaCoral),
+              title: const Text('服务器地址'),
+              subtitle: const Text('修改连接的后端地址'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push('/settings/server'),
             ),
           ),
           const SizedBox(height: AppSpacing.md),

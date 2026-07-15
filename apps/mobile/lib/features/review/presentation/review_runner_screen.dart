@@ -8,7 +8,9 @@ import '../../../core/analytics/app_analytics.dart';
 import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/audio_play_button.dart';
 import '../../../core/widgets/illustrated_surface.dart';
+import '../../../core/widgets/no_child_state_panel.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
 import '../../profiles/data/demo_data.dart';
@@ -43,8 +45,32 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
             final tasks = items
                 .where((task) => task.materialId == widget.materialId)
                 .toList();
-            if (tasks.isEmpty || child == null) {
-              return const Center(child: Text('当前没有可进行的复习任务'));
+            if (child == null) {
+              return const NoChildStatePanel(description: '复习需要先为孩子建立档案。');
+            }
+            if (tasks.isEmpty) {
+              return StatePanel(
+                title: '这门课暂时没有复习任务',
+                description: '复习任务可能还在生成，可以先回到课程，或换个方式练习。',
+                assetPath: AppIllustrations.stateEmpty,
+                action: Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  alignment: WrapAlignment.center,
+                  children: <Widget>[
+                    FilledButton(
+                      onPressed: () =>
+                          context.go('/lessons/${widget.materialId}'),
+                      child: const Text('回到本课'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () =>
+                          context.go('/review/speaking/${widget.materialId}'),
+                      child: const Text('口语陪练'),
+                    ),
+                  ],
+                ),
+              );
             }
             final isFinished = _currentIndex >= tasks.length;
             return isFinished
@@ -217,7 +243,16 @@ class _TaskSurface extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(task.contentJson['hint'] as String? ?? '点击播放音频并跟读'),
               const SizedBox(height: AppSpacing.md),
-              const Icon(Icons.volume_up_rounded, size: 48),
+              // Only offer playback when there is a real audio URL. Stub-generated
+              // flashcards carry none, so an empty AudioPlayButton would sit on a
+              // misleading permanent「发音生成中」instead of a clear "no audio" note.
+              if ((task.contentJson['audio_url'] as String? ?? '').isNotEmpty)
+                AudioPlayButton(
+                  url: task.contentJson['audio_url'] as String,
+                  label: '播放发音',
+                )
+              else
+                Text('该词暂无标准音', style: AppTextStyles.helper),
             ],
           ),
         );
@@ -337,12 +372,18 @@ class _ReviewFinishedState extends StatelessWidget {
                 runSpacing: AppSpacing.sm,
                 children: <Widget>[
                   FilledButton(
-                    onPressed: () => context.go('/review/speaking/$materialId'),
+                    onPressed: () =>
+                        context.push('/review/speaking/$materialId'),
                     child: const Text('继续口语陪练'),
                   ),
                   OutlinedButton(
-                    onPressed: () => context.go('/review/coaching/$materialId'),
+                    onPressed: () =>
+                        context.push('/review/coaching/$materialId'),
                     child: const Text('进入亲子陪练'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => context.go('/lessons/$materialId'),
+                    child: const Text('回到本课'),
                   ),
                   TextButton(
                     onPressed: () => context.go('/reports'),

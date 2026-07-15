@@ -16,6 +16,7 @@ import '../../features/review/presentation/review_tasks_screen.dart';
 import '../../features/session/data/session_controller.dart';
 import '../../features/session/data/session_models.dart';
 import '../../features/session/presentation/splash_screen.dart';
+import '../../features/settings/presentation/server_settings_screen.dart';
 import '../../features/speaking/presentation/speaking_partner_screen.dart';
 import '../shell/app_shell.dart';
 
@@ -26,6 +27,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.uri.path;
       final isAuthRoute = location.startsWith('/auth');
+      // Server-address settings must stay reachable in every stage (pre-login,
+      // and while stuck on phone binding) so a tester can always repoint the app.
+      if (location == '/settings/server') {
+        return null;
+      }
       if (session.stage == SessionStage.bootstrapping) {
         return location == '/splash' ? null : '/splash';
       }
@@ -53,6 +59,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth/bind',
         builder: (context, state) => const PhoneBindingScreen(),
+      ),
+      GoRoute(
+        path: '/settings/server',
+        builder: (context, state) => const ServerSettingsScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {

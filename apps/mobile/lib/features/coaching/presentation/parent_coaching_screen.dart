@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
@@ -64,6 +65,25 @@ class ParentCoachingScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: <Widget>[
+                FilledButton(
+                  onPressed: () => context.go('/lessons/$materialId'),
+                  child: const Text('回到本课'),
+                ),
+                OutlinedButton(
+                  onPressed: () => context.push('/review/speaking/$materialId'),
+                  child: const Text('去口语陪练'),
+                ),
+                TextButton(
+                  onPressed: () => context.go('/reports'),
+                  child: const Text('查看本周报告'),
+                ),
+              ],
             ),
           ],
         ),

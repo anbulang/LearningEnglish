@@ -3,14 +3,17 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../app/responsive/adaptive_layout.dart';
 import '../../../core/analytics/app_analytics.dart';
+import '../../../core/audio/audio_player_controller.dart';
 import '../../../core/assets/app_illustrations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/audio_play_button.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
@@ -35,23 +38,37 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
   String? _pollingStoppedAttemptId;
   bool _isSubmitting = false;
   String? _errorMessage;
+  int _pollTicks = 0;
+  bool _pollTimedOut = false;
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    // Don't let the standard-pronunciation clip keep playing after leaving.
+    try {
+      ref.read(audioPlaybackControllerProvider.notifier).stop();
+    } catch (_) {}
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final formFactor = formFactorOf(context);
-    final attempt = ref.watch(lastSpeakingAttemptProvider);
+    final rawAttempt = ref.watch(lastSpeakingAttemptProvider);
     final child = ref.watch(activeChildProvider);
+    // lastSpeakingAttemptProvider is global; ignore an attempt that belongs to a
+    // different material or child so this screen never shows a stale result.
+    final attempt = (rawAttempt != null &&
+            rawAttempt.materialId == widget.materialId &&
+            (child == null || rawAttempt.childId == child.id))
+        ? rawAttempt
+        : null;
     final materialAsync = ref.watch(materialProvider(widget.materialId));
     final material = materialAsync.valueOrNull;
     final recorderAsync = ref.watch(speakingRecorderControllerProvider);
     final recorder = recorderAsync.valueOrNull ?? const SpeakingRecorderState();
     final targetText = _targetText(material);
+    final targetAudioUrl = _targetAudioUrl(material);
     _syncPolling(attempt);
 
     final stage = AppCard(
@@ -76,6 +93,16 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
             const Text('正在读取课程内容...')
           else
             Text('跟读内容：$targetText'),
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AudioPlayButton(
+              url: targetAudioUrl,
+              label: '听标准音',
+              unavailableLabel: '标准音生成中',
+              enabled: !recorder.isRecording,
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           Container(
             height: 180,
@@ -101,7 +128,7 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
             recorder: recorder,
             isBusy: _isSubmitting ||
                 recorderAsync.isLoading ||
-                _isAttemptProcessing(attempt),
+                (_isAttemptProcessing(attempt) && !_pollTimedOut),
             onStart: _startRecording,
             onStop: _stopRecording,
             onClear: _clearRecording,
@@ -123,12 +150,21 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
               style: const TextStyle(color: AppColors.coralJam),
             ),
           ],
+          if (_pollTimedOut) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: _refetchAttempt,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('重新查询结果'),
+            ),
+          ],
         ],
       ),
     );
 
     final result = _AttemptResult(
       attempt: attempt,
+      materialId: widget.materialId,
       onRetry: attempt == null ? null : () => _retryAttempt(attempt.id),
     );
 
@@ -164,6 +200,8 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
 
   Future<void> _startRecording() async {
     try {
+      // Hand the audio session to the recorder: stop any standard-音 playback.
+      await ref.read(audioPlaybackControllerProvider.notifier).stop();
       await ref.read(speakingRecorderControllerProvider.notifier).start();
       setState(() => _errorMessage = null);
     } catch (error) {
@@ -268,11 +306,39 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
     }
   }
 
+  Future<void> _refetchAttempt() async {
+    final current = ref.read(lastSpeakingAttemptProvider);
+    if (current == null) {
+      return;
+    }
+    setState(() {
+      _pollTimedOut = false;
+      _pollingStoppedAttemptId = null;
+      _errorMessage = null;
+    });
+    try {
+      final latest =
+          await ref.read(appRepositoryProvider).getSpeakingAttempt(current.id);
+      if (!mounted) {
+        return;
+      }
+      ref.read(lastSpeakingAttemptProvider.notifier).state = latest;
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = describeApiError(error, fallback: '查询结果失败，请稍后再试。');
+      });
+    }
+  }
+
   void _syncPolling(SpeakingAttempt? attempt) {
     if (!_isAttemptProcessing(attempt)) {
       _pollTimer?.cancel();
       _pollTimer = null;
       _pollingStoppedAttemptId = null;
+      _pollTimedOut = false;
       return;
     }
     if (_pollingStoppedAttemptId == attempt?.id) {
@@ -280,11 +346,31 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
       _pollTimer = null;
       return;
     }
-    _pollTimer ??= Timer.periodic(const Duration(seconds: 3), (_) async {
+    if (_pollTimer != null) {
+      return;
+    }
+    _pollTicks = 0;
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       final current = ref.read(lastSpeakingAttemptProvider);
       if (!_isAttemptProcessing(current)) {
         _pollTimer?.cancel();
         _pollTimer = null;
+        return;
+      }
+      _pollTicks += 1;
+      if (_pollTicks > 60) {
+        // ~180s wall-clock: cover the worker's hard time_limit (150s) so a valid
+        // score that lands late still auto-displays, then stop the otherwise
+        // infinite spinner and let the parent re-query or re-record.
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        if (mounted) {
+          setState(() {
+            _pollingStoppedAttemptId = current?.id;
+            _pollTimedOut = true;
+            _errorMessage = '评分用时较长，可稍后重新查询结果，或重新录音评分。';
+          });
+        }
         return;
       }
       try {
@@ -376,10 +462,12 @@ class _RecordingActions extends StatelessWidget {
 class _AttemptResult extends StatelessWidget {
   const _AttemptResult({
     required this.attempt,
+    required this.materialId,
     required this.onRetry,
   });
 
   final SpeakingAttempt? attempt;
+  final String materialId;
   final VoidCallback? onRetry;
 
   @override
@@ -413,12 +501,26 @@ class _AttemptResult extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(current.failureReason.isNotEmpty
                 ? current.failureReason
-                : '请稍后重新评分。'),
+                : '请稍后重新评分，或先跳过口语继续其它练习。'),
             const SizedBox(height: AppSpacing.md),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('重新评分'),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: <Widget>[
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('重新评分'),
+                ),
+                OutlinedButton(
+                  onPressed: () => context.push('/review/coaching/$materialId'),
+                  child: const Text('跳过口语，继续亲子陪练'),
+                ),
+                TextButton(
+                  onPressed: () => context.go('/lessons/$materialId'),
+                  child: const Text('返回课程'),
+                ),
+              ],
             ),
           ],
         ),
@@ -455,6 +557,25 @@ class _AttemptResult extends StatelessWidget {
             for (final suggestion in current.suggestions)
               Text('建议：$suggestion'),
           ],
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: <Widget>[
+              FilledButton(
+                onPressed: () => context.go('/reports'),
+                child: const Text('查看本周报告'),
+              ),
+              OutlinedButton(
+                onPressed: () => context.push('/review/coaching/$materialId'),
+                child: const Text('进入亲子陪练'),
+              ),
+              TextButton(
+                onPressed: () => context.go('/lessons/$materialId'),
+                child: const Text('回到课程'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -491,6 +612,32 @@ String _targetText(CourseMaterial? material) {
     }
   }
   return material?.title.trim().isNotEmpty == true ? material!.title : '跟读这句话。';
+}
+
+/// Standard-pronunciation audio URL for the same asset [_targetText] picks,
+/// preferring the asset's primary accent and falling back to the other accent.
+String _targetAudioUrl(CourseMaterial? material) {
+  for (final asset in material?.learningAssets ?? const <LearningAsset>[]) {
+    final text = asset.pronunciationText.trim().isNotEmpty
+        ? asset.pronunciationText.trim()
+        : asset.text.trim();
+    if (text.isEmpty) {
+      continue;
+    }
+    final preferUk = asset.primaryAccent == 'uk';
+    final primaryUrl = preferUk ? asset.ttsUkUrl : asset.ttsUsUrl;
+    final primaryStatus = preferUk ? asset.ttsUkStatus : asset.ttsUsStatus;
+    if (primaryUrl.isNotEmpty && primaryStatus != 'failed') {
+      return primaryUrl;
+    }
+    final altUrl = preferUk ? asset.ttsUsUrl : asset.ttsUkUrl;
+    final altStatus = preferUk ? asset.ttsUsStatus : asset.ttsUkStatus;
+    if (altUrl.isNotEmpty && altStatus != 'failed') {
+      return altUrl;
+    }
+    return '';
+  }
+  return '';
 }
 
 String _scoreLine(SpeakingAttempt attempt) {

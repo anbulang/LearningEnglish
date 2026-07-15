@@ -97,6 +97,15 @@ class AppShell extends StatelessWidget {
   }
 
   int _selectedIndex(String currentLocation) {
+    // Lesson detail lives outside the shell route table but belongs to the
+    // materials section, so keep the 资料库 tab highlighted there.
+    if (currentLocation.startsWith('/lessons')) {
+      final materialsIndex =
+          _destinations.indexWhere((item) => item.route == '/materials');
+      if (materialsIndex != -1) {
+        return materialsIndex;
+      }
+    }
     final index = _destinations.indexWhere(
       (item) => currentLocation == item.route || currentLocation.startsWith('${item.route}/'),
     );
