@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l2_u1",
+  "unit_code": "L2-U1",
+  "sequence_order": 7,
+  "level": "2",
+  "content_version": "1",
+  "title": "双辅音 sh 与 ch",
+  "subtitle": "两个字母读一个音：学会 sh、ch，拼读 ship、chip 这样的单词",
+  "vowel_focus": "digraph_sh_ch",
+  "letters": ["sh", "ch"],
+  "sound_card_ids": ["card_sh", "card_ch"],
+  "heart_words": [
+    {"text": "said", "cn": "说（过去式）"},
+    {"text": "was", "cn": "是（过去式）"}
+  ],
+  "decodable_words": [
+    {"id": "w_ship", "text": "ship", "segments": ["sh", "i", "p"], "cn": "船", "kind": "real"},
+    {"id": "w_shop", "text": "shop", "segments": ["sh", "o", "p"], "cn": "商店", "kind": "real"},
+    {"id": "w_fish2", "text": "fish", "segments": ["f", "i", "sh"], "cn": "鱼", "kind": "real"},
+    {"id": "w_chip", "text": "chip", "segments": ["ch", "i", "p"], "cn": "薯片", "kind": "real"},
+    {"id": "w_chat", "text": "chat", "segments": ["ch", "a", "t"], "cn": "聊天", "kind": "real"},
+    {"id": "w_rich", "text": "rich", "segments": ["r", "i", "ch"], "cn": "富有的", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "The fish is in the ship.", "cn": "鱼在船上。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_ship", "word_id": "w_ship", "answer": "sh", "options": ["sh", "s", "p"]},
+    {"id": "fs_chip", "word_id": "w_chip", "answer": "ch", "options": ["ch", "c", "p"]},
+    {"id": "fs_chat", "word_id": "w_chat", "answer": "ch", "options": ["ch", "sh", "t"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "两个字母手拉手只读一个音。听一听 sh 和 ch，跟着读一遍。",
+      "card_ids": ["card_sh", "card_ch"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它开头的音。注意分清 sh 和 ch。",
+      "item_ids": ["fs_ship", "fs_chip", "fs_chat"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "sh、ch 是一个整体音。依次点每块听发音，再连起来读，然后录下你的声音。",
+      "word_ids": ["w_ship", "w_chip", "w_fish2"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。记得 sh、ch 是一整块。",
+      "word_ids": ["w_ship", "w_chip", "w_fish2"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_ship", "w_chip", "w_fish2"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["said", "was"]
+    }
+  ]
+}

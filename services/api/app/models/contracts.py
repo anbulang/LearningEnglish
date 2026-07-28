@@ -104,6 +104,7 @@ class ChildProfile(BaseModel):
     learning_goal: str
     preferred_review_duration_minutes: int
     parent_notes: str = ""
+    accent: str = "us"  # "us" (American) | "uk" (British) — phonics audio accent
 
 
 class ChildProfileCreate(BaseModel):
@@ -113,6 +114,17 @@ class ChildProfileCreate(BaseModel):
     learning_goal: str
     preferred_review_duration_minutes: int = 10
     parent_notes: str = ""
+    accent: str = "us"
+
+
+class ChildProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    age: Optional[int] = None
+    level: Optional[str] = None
+    learning_goal: Optional[str] = None
+    preferred_review_duration_minutes: Optional[int] = None
+    parent_notes: Optional[str] = None
+    accent: Optional[str] = None
 
 
 class CourseMaterial(BaseModel):
@@ -461,3 +473,208 @@ class WeeklyReportResponse(BaseModel):
 
 class WeeklyReportResponse(BaseModel):
     report: WeeklyReport
+
+
+# --------------------------------------------------------------------------- #
+# Phonics (自然拼读) — a fixed, authored curriculum decoupled from CourseMaterial.
+# --------------------------------------------------------------------------- #
+
+
+class PhonicsUnitStatus(str, Enum):
+    locked = "locked"
+    unlocked = "unlocked"
+    in_progress = "in_progress"
+    mastered = "mastered"
+
+
+class PhonicsPracticeType(str, Enum):
+    none = "none"
+    first_sound_tap = "first_sound_tap"
+    blend_word_asr = "blend_word_asr"
+    heart_word_asr = "heart_word_asr"
+    tile_build = "tile_build"
+    dictation = "dictation"
+
+
+class PhonicsAttemptStatus(str, Enum):
+    queued = "queued"
+    recording_uploaded = "recording_uploaded"
+    transcribing = "transcribing"
+    scored = "scored"
+    no_match = "no_match"
+    failed = "failed"
+
+
+class PhonicsExampleWord(BaseModel):
+    text: str
+    cn: str = ""
+
+
+class PhonicsSoundCard(BaseModel):
+    id: str
+    card_type: str
+    letter: str
+    phoneme: str = ""
+    keyword: str = ""
+    keyword_cn: str = ""
+    articulation_cue: str = ""
+    common_spellings: list[str] = Field(default_factory=list)
+    speakable_sound: str = ""
+    example_words: list[PhonicsExampleWord] = Field(default_factory=list)
+    sound_audio_url: str = ""
+    sound_tts_status: MediaGenerationStatus = MediaGenerationStatus.pending
+    keyword_audio_url: str = ""
+    keyword_tts_status: MediaGenerationStatus = MediaGenerationStatus.pending
+
+
+class PhonicsWord(BaseModel):
+    id: str
+    text: str
+    segments: list[str] = Field(default_factory=list)
+    cn: str = ""
+    kind: str = "real"
+    audio_url: str = ""
+    tts_status: MediaGenerationStatus = MediaGenerationStatus.pending
+
+
+class PhonicsSentence(BaseModel):
+    id: str
+    text: str
+    cn: str = ""
+    audio_url: str = ""
+    tts_status: MediaGenerationStatus = MediaGenerationStatus.pending
+
+
+class PhonicsHeartWord(BaseModel):
+    text: str
+    cn: str = ""
+    audio_url: str = ""
+    tts_status: MediaGenerationStatus = MediaGenerationStatus.pending
+
+
+class PhonicsFirstSoundItem(BaseModel):
+    id: str
+    word_id: str
+    text: str = ""
+    cn: str = ""
+    answer: str
+    options: list[str] = Field(default_factory=list)
+    audio_url: str = ""
+
+
+class PhonicsLessonStep(BaseModel):
+    key: str
+    practice_type: PhonicsPracticeType = PhonicsPracticeType.none
+    title: str = ""
+    instruction: str = ""
+    card_ids: list[str] = Field(default_factory=list)
+    word_ids: list[str] = Field(default_factory=list)
+    item_ids: list[str] = Field(default_factory=list)
+    heart_words: list[str] = Field(default_factory=list)
+
+
+class PhonicsUnitProgress(BaseModel):
+    unit_id: str
+    status: PhonicsUnitStatus = PhonicsUnitStatus.unlocked
+    decoding_accuracy: float = 0.0
+    first_sound_accuracy: float = 0.0
+    grapheme_scores: dict[str, float] = Field(default_factory=dict)
+    attempts_count: int = 0
+    blended_words: list[str] = Field(default_factory=list)
+    mastered: bool = False
+
+
+class PhonicsUnitSummary(BaseModel):
+    id: str
+    unit_code: str
+    sequence_order: int
+    title: str
+    subtitle: str = ""
+    level: str = "1"
+    media_status: MediaGenerationStatus = MediaGenerationStatus.pending
+    status: PhonicsUnitStatus = PhonicsUnitStatus.locked
+    decoding_accuracy: float = 0.0
+
+
+class PhonicsCourseInfo(BaseModel):
+    id: str
+    title: str
+    description: str = ""
+
+
+class PhonicsUnitListResponse(BaseModel):
+    course: PhonicsCourseInfo
+    units: list[PhonicsUnitSummary] = Field(default_factory=list)
+    next_unit_id: str = ""
+
+
+class PhonicsUnitDetail(BaseModel):
+    id: str
+    unit_code: str
+    sequence_order: int
+    title: str
+    subtitle: str = ""
+    level: str = "1"
+    vowel_focus: str = ""
+    letters: list[str] = Field(default_factory=list)
+    media_status: MediaGenerationStatus = MediaGenerationStatus.pending
+
+
+class PhonicsUnitDetailResponse(BaseModel):
+    unit: PhonicsUnitDetail
+    sound_cards: list[PhonicsSoundCard] = Field(default_factory=list)
+    decodable_words: list[PhonicsWord] = Field(default_factory=list)
+    sentences: list[PhonicsSentence] = Field(default_factory=list)
+    heart_words: list[PhonicsHeartWord] = Field(default_factory=list)
+    first_sound_items: list[PhonicsFirstSoundItem] = Field(default_factory=list)
+    steps: list[PhonicsLessonStep] = Field(default_factory=list)
+    progress: PhonicsUnitProgress
+
+
+class PhonicsAttemptItemResult(BaseModel):
+    prompt: str = ""
+    expected: str = ""
+    given: str = ""
+    correct: bool = False
+
+
+class PhonicsAttempt(BaseModel):
+    id: str
+    child_id: str
+    unit_id: str
+    step: str = ""
+    practice_type: PhonicsPracticeType
+    target_text: str = ""
+    item_results: list[PhonicsAttemptItemResult] = Field(default_factory=list)
+    accuracy_score: Optional[float] = None
+    passed: bool = False
+    transcript: str = ""
+    feedback: str = ""
+    audio_url: str = ""
+    provider: str = ""
+    failure_reason: str = ""
+    status: PhonicsAttemptStatus
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class PhonicsTapAttemptCreate(BaseModel):
+    child_id: str
+    unit_id: str
+    step: str = ""
+    practice_type: PhonicsPracticeType = PhonicsPracticeType.first_sound_tap
+    target_text: str = ""
+    item_results: list[PhonicsAttemptItemResult] = Field(default_factory=list)
+
+
+class PhonicsAttemptResponse(BaseModel):
+    attempt: PhonicsAttempt
+    progress: PhonicsUnitProgress
+
+
+class PhonicsProgressResponse(BaseModel):
+    course: PhonicsCourseInfo
+    units: list[PhonicsUnitProgress] = Field(default_factory=list)
+    next_unit_id: str = ""
+    mastered_count: int = 0
+    total_units: int = 0

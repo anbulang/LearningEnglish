@@ -228,6 +228,22 @@ class SessionController extends StateNotifier<SessionState> {
     state = state.copyWith(children: children, currentChildId: child.id);
   }
 
+  /// Replaces an existing child (matched by id) with an updated profile, e.g.
+  /// after a PATCH that changed the accent. No-op when the id is unknown.
+  Future<void> updateChild(ChildProfile child) async {
+    final index = state.children.indexWhere((item) => item.id == child.id);
+    if (index < 0) {
+      return;
+    }
+    final children = <ChildProfile>[...state.children];
+    children[index] = child;
+    await _storage.write(
+      _childrenKey,
+      jsonEncode(children.map((item) => item.toJson()).toList()),
+    );
+    state = state.copyWith(children: children);
+  }
+
   Future<void> clearSession() async {
     await _storage.deleteMany(const <String>[
       _accessTokenKey,

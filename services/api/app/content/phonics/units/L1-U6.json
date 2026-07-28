@@ -1,0 +1,78 @@
+{
+  "unit_id": "phonics_l1_u6",
+  "unit_code": "L1-U6",
+  "sequence_order": 6,
+  "level": "1",
+  "content_version": "1",
+  "title": "字母 v w x y z 与尾音复习",
+  "subtitle": "认识 v、w、x、y、z 的发音，复习把字母音连起来拼读",
+  "vowel_focus": "review",
+  "letters": ["v", "w", "x", "y", "z"],
+  "sound_card_ids": ["card_v", "card_w", "card_x", "card_y", "card_z"],
+  "heart_words": [
+    {"text": "they", "cn": "他们"},
+    {"text": "are", "cn": "是（复数）"}
+  ],
+  "decodable_words": [
+    {"id": "w_van", "text": "van", "segments": ["v", "a", "n"], "cn": "面包车", "kind": "real"},
+    {"id": "w_wig", "text": "wig", "segments": ["w", "i", "g"], "cn": "假发", "kind": "real"},
+    {"id": "w_yes", "text": "yes", "segments": ["y", "e", "s"], "cn": "是的", "kind": "real"},
+    {"id": "w_zip", "text": "zip", "segments": ["z", "i", "p"], "cn": "拉链", "kind": "real"},
+    {"id": "w_box", "text": "box", "segments": ["b", "o", "x"], "cn": "盒子", "kind": "real"},
+    {"id": "w_fox", "text": "fox", "segments": ["f", "o", "x"], "cn": "狐狸", "kind": "real"},
+    {"id": "w_six", "text": "six", "segments": ["s", "i", "x"], "cn": "六", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "The fox is in a box.", "cn": "狐狸在盒子里。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_van", "word_id": "w_van", "answer": "v", "options": ["v", "a", "n"]},
+    {"id": "fs_wig", "word_id": "w_wig", "answer": "w", "options": ["w", "i", "g"]},
+    {"id": "fs_yes", "word_id": "w_yes", "answer": "y", "options": ["y", "e", "s"]},
+    {"id": "fs_zip", "word_id": "w_zip", "answer": "z", "options": ["z", "i", "p"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "听一听每个字母的发音，跟着读一遍。字母 x 常出现在单词末尾，读作 “ks”。",
+      "card_ids": ["card_v", "card_w", "card_x", "card_y", "card_z"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它的第一个音是哪个字母。",
+      "item_ids": ["fs_van", "fs_wig", "fs_yes", "fs_zip"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "依次点每个字母听发音，再把它们连起来读，然后录下你的声音。注意 box、six 里 x 的 “ks” 尾音。",
+      "word_ids": ["w_van", "w_zip", "w_box"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。",
+      "word_ids": ["w_van", "w_zip", "w_box"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_van", "w_zip", "w_box"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["they", "are"]
+    }
+  ]
+}

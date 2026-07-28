@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LearningEnglish 架构（移动版）</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 1rem;
+      color: white;
+    }
+    .container { max-width: 540px; margin: 0 auto; }
+    .header { margin-bottom: 1rem; }
+    .header-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+    .pulse-dot { width: 11px; height: 11px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+    .subtitle { color: #94a3b8; font-size: 0.72rem; margin-left: 1.55rem; line-height: 1.4; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.85rem;
+      border: 1px solid #1e293b;
+      padding: 0.6rem;
+    }
+    svg { width: 100%; height: auto; display: block; }
+    .cards { display: grid; grid-template-columns: 1fr; gap: 0.85rem; margin-top: 1.25rem; }
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.7rem;
+      border: 1px solid #1e293b;
+      padding: 1rem 1.1rem;
+    }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.85rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.74rem; }
+    .card li { margin-bottom: 0.4rem; line-height: 1.45; }
+    .footer { text-align: center; margin-top: 1.2rem; color: #475569; font-size: 0.7rem; line-height: 1.5; }
+    .toolbar { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; align-items: center; }
+    .toolbar-toggle { background: transparent; border: none; color: #475569; cursor: pointer; font-size: 1.2rem; line-height: 1; padding: 0.2rem 0.45rem; border-radius: 0.35rem; }
+    .toolbar-toggle:hover { color: #94a3b8; background: rgba(30, 41, 59, 0.5); }
+    .toolbar-actions { display: none; gap: 0.4rem; }
+    .toolbar.expanded .toolbar-actions { display: flex; }
+    .toolbar-actions button { background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; color: #94a3b8; padding: 0.3rem 0.6rem; border-radius: 0.35rem; font-family: inherit; font-size: 0.72rem; cursor: pointer; white-space: nowrap; }
+    .toolbar-actions button:hover { background: rgba(51, 65, 85, 0.8); color: white; }
+    @media print { body { background: #020617; } .toolbar { display: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="container" id="report-container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>LearningEnglish · 架构（移动版）</h1>
+        <div class="toolbar">
+          <div class="toolbar-actions">
+            <button onclick="copyAsImage(this)">📋</button>
+            <button onclick="downloadPNG(this)">🖼️</button>
+            <button onclick="downloadPDF(this)">📄</button>
+          </div>
+          <button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" aria-label="导出">⋯</button>
+        </div>
+      </div>
+      <p class="subtitle">拍照讲义 → AI 识别 → 校对 → 课程包 → 复习/口语 → 周报</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 440 1180">
+        <defs>
+          <marker id="m-slate" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto"><polygon points="0 0, 8 3.5, 0 7" fill="#64748b"/></marker>
+          <marker id="m-cyan" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto"><polygon points="0 0, 8 3.5, 0 7" fill="#22d3ee"/></marker>
+          <marker id="m-violet" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto"><polygon points="0 0, 8 3.5, 0 7" fill="#a78bfa"/></marker>
+          <marker id="m-orange" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto"><polygon points="0 0, 8 3.5, 0 7" fill="#fb923c"/></marker>
+          <marker id="m-rose" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto"><polygon points="0 0, 8 3.5, 0 7" fill="#fb7185"/></marker>
+          <marker id="m-amber" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto"><polygon points="0 0, 8 3.5, 0 7" fill="#fbbf24"/></marker>
+          <pattern id="g" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#g)"/>
+
+        <!-- FastAPI boundary -->
+        <rect x="16" y="232" width="408" height="336" rx="10" fill="rgba(6,78,59,0.06)" stroke="#34d399" stroke-width="1" stroke-dasharray="7,4"/>
+
+        <!-- ===== Section titles ===== -->
+        <text x="16" y="44" fill="#22d3ee" font-size="12" font-weight="700">① 客户端 Clients</text>
+        <text x="28" y="252" fill="#34d399" font-size="11" font-weight="700">② FastAPI 模块化单体 · :8000 · parent/admin/shared</text>
+        <text x="16" y="596" fill="#a78bfa" font-size="12" font-weight="700">③ 数据 · 队列 · 异步 Worker</text>
+        <text x="16" y="884" fill="#fbbf24" font-size="12" font-weight="700">④ 外部 AI / 语音 Providers</text>
+
+        <!-- ===== ARROWS (behind boxes) ===== -->
+        <!-- clients -> api -->
+        <line x1="114" y1="160" x2="116" y2="259" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#m-cyan)"/>
+        <text x="122" y="206" fill="#94a3b8" font-size="8">/v1 · Bearer · 轮询3s</text>
+        <line x1="326" y1="160" x2="324" y2="259" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#m-cyan)"/>
+        <text x="318" y="206" fill="#94a3b8" font-size="8" text-anchor="end">/v1/admin · Token</text>
+        <!-- internal -->
+        <line x1="118" y1="320" x2="118" y2="332" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#m-rose)"/>
+        <line x1="322" y1="320" x2="322" y2="332" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#m-rose)"/>
+        <line x1="220" y1="384" x2="220" y2="398" stroke="#64748b" stroke-width="1.3" marker-end="url(#m-slate)"/>
+        <line x1="87" y1="466" x2="87" y2="478" stroke="#64748b" stroke-width="1.3" marker-end="url(#m-slate)"/>
+        <line x1="218" y1="466" x2="218" y2="478" stroke="#64748b" stroke-width="1.3" marker-end="url(#m-slate)"/>
+        <line x1="351" y1="466" x2="351" y2="478" stroke="#64748b" stroke-width="1.3" marker-end="url(#m-slate)"/>
+        <!-- fastapi -> data (aligned columns) -->
+        <line x1="83" y1="542" x2="80" y2="605" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#m-amber)"/>
+        <text x="40" y="577" fill="#94a3b8" font-size="7">存/读</text>
+        <line x1="212" y1="542" x2="212" y2="605" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#m-violet)"/>
+        <text x="245" y="577" fill="#94a3b8" font-size="7" text-anchor="end">ORM·JSON</text>
+        <line x1="351" y1="542" x2="350" y2="605" stroke="#fb923c" stroke-width="1.6" marker-end="url(#m-orange)"/>
+        <text x="392" y="577" fill="#fb923c" font-size="7" text-anchor="end">send_task</text>
+        <!-- data internal + worker -->
+        <line x1="350" y1="688" x2="350" y2="699" stroke="#fb923c" stroke-width="1.6" marker-end="url(#m-orange)"/>
+        <line x1="240" y1="700" x2="240" y2="690" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#m-violet)"/>
+        <text x="248" y="697" fill="#94a3b8" font-size="7">写结果</text>
+        <line x1="92" y1="700" x2="88" y2="690" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#m-amber)"/>
+        <text x="98" y="697" fill="#94a3b8" font-size="7">媒体</text>
+        <!-- worker -> providers -->
+        <line x1="214" y1="850" x2="214" y2="895" stroke="#fbbf24" stroke-width="1.7" marker-end="url(#m-amber)"/>
+        <text x="222" y="876" fill="#94a3b8" font-size="8">OCR·TTS·ASR</text>
+        <line x1="120" y1="850" x2="108" y2="992" stroke="#fbbf24" stroke-width="1.3" marker-end="url(#m-amber)"/>
+        <line x1="300" y1="850" x2="320" y2="992" stroke="#fbbf24" stroke-width="1.3" marker-end="url(#m-amber)"/>
+
+        <!-- ===== BOXES ===== -->
+        <!-- Mobile -->
+        <rect x="16" y="56" width="196" height="104" rx="7" fill="#0f172a"/>
+        <rect x="16" y="56" width="196" height="104" rx="7" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="114" y="84" fill="white" font-size="12" font-weight="600" text-anchor="middle">Mobile App · 家长端</text>
+        <text x="114" y="103" fill="#94a3b8" font-size="9" text-anchor="middle">Flutter · Riverpod</text>
+        <text x="114" y="119" fill="#94a3b8" font-size="9" text-anchor="middle">go_router · dio</text>
+        <text x="114" y="135" fill="#94a3b8" font-size="9" text-anchor="middle">3s 轮询 · 无本地库/推送</text>
+        <text x="114" y="152" fill="#22d3ee" font-size="8" text-anchor="middle">+ contracts/design_tokens</text>
+        <!-- Admin -->
+        <rect x="228" y="56" width="196" height="104" rx="7" fill="#0f172a"/>
+        <rect x="228" y="56" width="196" height="104" rx="7" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="326" y="84" fill="white" font-size="12" font-weight="600" text-anchor="middle">Admin Console</text>
+        <text x="326" y="103" fill="#94a3b8" font-size="9" text-anchor="middle">Vite · React 18 · TS</text>
+        <text x="326" y="119" fill="#94a3b8" font-size="9" text-anchor="middle">多租户运维 SPA</text>
+        <text x="326" y="135" fill="#94a3b8" font-size="9" text-anchor="middle">mock ↔ live 切换</text>
+        <text x="326" y="152" fill="#22d3ee" font-size="8" text-anchor="middle">apps/admin</text>
+
+        <!-- Parent API -->
+        <rect x="28" y="262" width="180" height="58" rx="6" fill="#0f172a"/>
+        <rect x="28" y="262" width="180" height="58" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="118" y="287" fill="white" font-size="11" font-weight="600" text-anchor="middle">Parent API</text>
+        <text x="118" y="305" fill="#94a3b8" font-size="8.5" text-anchor="middle">/v1/* · api/parent</text>
+        <!-- Admin API -->
+        <rect x="232" y="262" width="180" height="58" rx="6" fill="#0f172a"/>
+        <rect x="232" y="262" width="180" height="58" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="322" y="287" fill="white" font-size="11" font-weight="600" text-anchor="middle">Admin API</text>
+        <text x="322" y="305" fill="#94a3b8" font-size="8.5" text-anchor="middle">/v1/admin/*</text>
+        <!-- Auth -->
+        <rect x="28" y="334" width="384" height="50" rx="6" fill="#0f172a"/>
+        <rect x="28" y="334" width="384" height="50" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="220" y="356" fill="white" font-size="11" font-weight="600" text-anchor="middle">Auth / Identity</text>
+        <text x="220" y="374" fill="#94a3b8" font-size="8" text-anchor="middle">Bearer JWT（家长） · X-Admin-Token + RBAC · 租户隔离 · 审计</text>
+        <!-- Shared -->
+        <rect x="28" y="400" width="384" height="66" rx="6" fill="#0f172a"/>
+        <rect x="28" y="400" width="384" height="66" rx="6" fill="rgba(6,78,59,0.55)" stroke="#34d399" stroke-width="2"/>
+        <text x="220" y="422" fill="white" font-size="11" font-weight="600" text-anchor="middle">Shared services（API 与 Worker 共用）</text>
+        <text x="220" y="440" fill="#94a3b8" font-size="8.5" text-anchor="middle">pipeline · storage · mappers · media · TTS</text>
+        <text x="220" y="456" fill="#94a3b8" font-size="8.5" text-anchor="middle">speaking assess · Celery enqueue</text>
+        <!-- Provider pipeline -->
+        <rect x="28" y="480" width="118" height="62" rx="6" fill="#0f172a"/>
+        <rect x="28" y="480" width="118" height="62" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="87" y="500" fill="white" font-size="9.5" font-weight="600" text-anchor="middle">Provider pipeline</text>
+        <text x="87" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">OCR + LLM 解析</text>
+        <text x="87" y="531" fill="#34d399" font-size="7.5" text-anchor="middle">stub·qwen·doubao</text>
+        <!-- Domain models -->
+        <rect x="159" y="480" width="118" height="62" rx="6" fill="#0f172a"/>
+        <rect x="159" y="480" width="118" height="62" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="218" y="500" fill="white" font-size="9.5" font-weight="600" text-anchor="middle">Domain models</text>
+        <text x="218" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">Pydantic +</text>
+        <text x="218" y="530" fill="#94a3b8" font-size="8" text-anchor="middle">SQLAlchemy ORM</text>
+        <!-- Celery enqueue -->
+        <rect x="290" y="480" width="122" height="62" rx="6" fill="#0f172a"/>
+        <rect x="290" y="480" width="122" height="62" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="351" y="500" fill="white" font-size="9.5" font-weight="600" text-anchor="middle">Celery enqueue</text>
+        <text x="351" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">send_task→queue</text>
+        <text x="351" y="531" fill="#34d399" font-size="7" text-anchor="middle">material·media·speaking</text>
+
+        <!-- Object Storage -->
+        <rect x="16" y="606" width="124" height="82" rx="6" fill="#0f172a"/>
+        <rect x="16" y="606" width="124" height="82" rx="6" fill="rgba(120,53,15,0.32)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="78" y="628" fill="white" font-size="10" font-weight="600" text-anchor="middle">Object Storage</text>
+        <text x="78" y="645" fill="#94a3b8" font-size="8" text-anchor="middle">MinIO/S3 :9000</text>
+        <text x="78" y="659" fill="#94a3b8" font-size="8" text-anchor="middle">或本地 FS</text>
+        <text x="78" y="678" fill="#fbbf24" font-size="7.5" text-anchor="middle">经 /uploads 提供</text>
+        <!-- Postgres -->
+        <rect x="152" y="606" width="124" height="82" rx="6" fill="#0f172a"/>
+        <rect x="152" y="606" width="124" height="82" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="214" y="628" fill="white" font-size="10" font-weight="600" text-anchor="middle">PostgreSQL</text>
+        <text x="214" y="645" fill="#94a3b8" font-size="8" text-anchor="middle">postgres:16 :5432</text>
+        <text x="214" y="660" fill="#94a3b8" font-size="8" text-anchor="middle">元数据 + JSON</text>
+        <text x="214" y="678" fill="#a78bfa" font-size="7.5" text-anchor="middle">原始媒体不入库</text>
+        <!-- Redis -->
+        <rect x="288" y="606" width="124" height="82" rx="6" fill="#0f172a"/>
+        <rect x="288" y="606" width="124" height="82" rx="6" fill="rgba(251,146,60,0.32)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="350" y="628" fill="white" font-size="10" font-weight="600" text-anchor="middle">Redis</text>
+        <text x="350" y="645" fill="#94a3b8" font-size="8" text-anchor="middle">redis:7 :6379</text>
+        <text x="350" y="660" fill="#94a3b8" font-size="8" text-anchor="middle">broker db0</text>
+        <text x="350" y="678" fill="#fb923c" font-size="8" text-anchor="middle">result db1</text>
+
+        <!-- Worker -->
+        <rect x="16" y="700" width="396" height="150" rx="7" fill="#0f172a"/>
+        <rect x="16" y="700" width="396" height="150" rx="7" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="214" y="726" fill="white" font-size="12" font-weight="600" text-anchor="middle">Celery Worker</text>
+        <text x="214" y="745" fill="#94a3b8" font-size="8" text-anchor="middle">Celery 5 · queue learning_english · tz Asia/Shanghai</text>
+        <text x="214" y="768" fill="#34d399" font-size="8.5" text-anchor="middle">Live tasks</text>
+        <text x="92" y="787" fill="#94a3b8" font-size="8" text-anchor="start">· process_material_job</text>
+        <text x="92" y="803" fill="#94a3b8" font-size="8" text-anchor="start">· process_learning_asset_media</text>
+        <text x="92" y="819" fill="#94a3b8" font-size="8" text-anchor="start">· score_speaking_attempt</text>
+        <text x="92" y="835" fill="#94a3b8" font-size="8" text-anchor="start">· aggregate_weekly_report</text>
+
+        <!-- DashScope -->
+        <rect x="16" y="896" width="408" height="84" rx="7" fill="#0f172a"/>
+        <rect x="16" y="896" width="408" height="84" rx="7" fill="rgba(120,53,15,0.28)" stroke="#fbbf24" stroke-width="1.8"/>
+        <text x="220" y="920" fill="white" font-size="11" font-weight="600" text-anchor="middle">DashScope / Qwen（默认 · Aliyun Model Studio）</text>
+        <text x="220" y="940" fill="#94a3b8" font-size="8.5" text-anchor="middle">Qwen-VL OCR · Qwen 解析 · Wan 图像</text>
+        <text x="220" y="956" fill="#94a3b8" font-size="8.5" text-anchor="middle">CosyVoice US/UK TTS · Paraformer ASR + 评分</text>
+        <text x="220" y="973" fill="#fbbf24" font-size="7.5" text-anchor="middle">⚠ 口语评分经公网 /uploads URL 拉取录音</text>
+        <!-- Doubao -->
+        <rect x="16" y="996" width="196" height="72" rx="6" fill="#0f172a"/>
+        <rect x="16" y="996" width="196" height="72" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="114" y="1020" fill="white" font-size="10" font-weight="600" text-anchor="middle">Doubao / Ark</text>
+        <text x="114" y="1040" fill="#94a3b8" font-size="8.5" text-anchor="middle">备选 AI_PROVIDER</text>
+        <text x="114" y="1056" fill="#94a3b8" font-size="8.5" text-anchor="middle">vision OCR + 解析</text>
+        <!-- OpenAI -->
+        <rect x="228" y="996" width="196" height="72" rx="6" fill="#0f172a"/>
+        <rect x="228" y="996" width="196" height="72" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="326" y="1020" fill="white" font-size="10" font-weight="600" text-anchor="middle">OpenAI（可选）</text>
+        <text x="326" y="1040" fill="#94a3b8" font-size="8.5" text-anchor="middle">image / TTS 媒体</text>
+        <text x="326" y="1056" fill="#94a3b8" font-size="7.5" text-anchor="middle">MEDIA_*_PROVIDER</text>
+
+        <!-- ===== LEGEND ===== -->
+        <rect x="16" y="1098" width="14" height="9" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="34" y="1106" fill="#94a3b8" font-size="8">前端</text>
+        <rect x="74" y="1098" width="14" height="9" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="92" y="1106" fill="#94a3b8" font-size="8">后端</text>
+        <rect x="132" y="1098" width="14" height="9" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="150" y="1106" fill="#94a3b8" font-size="8">数据库</text>
+        <rect x="206" y="1098" width="14" height="9" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="224" y="1106" fill="#94a3b8" font-size="8">存储</text>
+        <rect x="266" y="1098" width="14" height="9" rx="2" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1"/>
+        <text x="284" y="1106" fill="#94a3b8" font-size="8">消息总线</text>
+        <rect x="346" y="1098" width="14" height="9" rx="2" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="364" y="1106" fill="#94a3b8" font-size="8">安全</text>
+        <rect x="16" y="1120" width="14" height="9" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="34" y="1128" fill="#94a3b8" font-size="8">外部</text>
+        <line x1="74" y1="1124" x2="92" y2="1124" stroke="#fb923c" stroke-width="1.6"/>
+        <text x="96" y="1127" fill="#94a3b8" font-size="8">队列</text>
+        <line x1="140" y1="1124" x2="158" y2="1124" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,3"/>
+        <text x="162" y="1127" fill="#94a3b8" font-size="8">认证</text>
+        <line x1="206" y1="1124" x2="224" y2="1124" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="228" y="1127" fill="#94a3b8" font-size="8">HTTP</text>
+        <line x1="284" y1="1124" x2="302" y2="1124" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="306" y="1127" fill="#94a3b8" font-size="8">存储/Provider</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header"><div class="card-dot violet"></div><h3>主链 Main Chain</h3></div>
+        <ul>
+          <li>① 账号/孩子 → /children → Postgres</li>
+          <li>② 上传 CourseMaterial → /materials → Object Storage</li>
+          <li>③ OCR/解析 → Worker · Provider pipeline</li>
+          <li>④ 家长校对 → 轮询 → /material-jobs/confirm</li>
+          <li>⑤ 课程包 → Worker 媒体回填 → KnowledgePack + ReviewTask</li>
+          <li>⑥ 复习/口语 → PracticeSession · SpeakingAttempt（ASR）</li>
+          <li>⑦ 周报 → aggregate_weekly_report → /reports/weekly</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot rose"></div><h3>边界与约定</h3></div>
+        <ul>
+          <li>• 家长端 /v1/*（JWT） vs 运维端 /v1/admin/*（Token+RBAC+租户）</li>
+          <li>• parent/admin/shared 模块边界由 test_engineering_boundaries.py 守护</li>
+          <li>• Worker 不得 import app.api，复用 services/shared</li>
+          <li>• 原始/生成媒体不入 Postgres，仅存对象存储，经 /uploads 提供</li>
+          <li>• 口语评分需公网可达音频 URL（DashScope 直接拉取）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot amber"></div><h3>Providers & 基础设施</h3></div>
+        <ul>
+          <li>• 默认 DashScope/Qwen：OCR·解析·图像·TTS·ASR</li>
+          <li>• 备选 Doubao/Ark；可选 OpenAI</li>
+          <li>• PostgreSQL 16 · Redis 7（db0/db1） · MinIO :9000</li>
+          <li>• Celery 队列 learning_english · 移动端 3s 轮询</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">LearningEnglish · FastAPI 模块化单体 + Celery + Flutter + React<br>横版（桌面）见 architecture.html</p>
+  </div>
+
+  <script>
+    async function cap() {
+      const el = document.getElementById('report-container');
+      const r = el.getBoundingClientRect();
+      const pad = 24;
+      return html2canvas(document.body, { backgroundColor: '#020617', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+    }
+    async function copyAsImage(btn){ const o=btn.textContent; try{ const c=await cap(); const b=await new Promise(r=>c.toBlob(r,'image/png')); await navigator.clipboard.write([new ClipboardItem({'image/png':b})]); btn.textContent='✓'; }catch(e){ btn.textContent='✗'; } setTimeout(()=>btn.textContent=o,2000); }
+    async function downloadPNG(btn){ const o=btn.textContent; btn.textContent='⏳'; try{ const c=await cap(); const a=document.createElement('a'); a.download='learningenglish-architecture-mobile.png'; a.href=c.toDataURL('image/png'); a.click(); btn.textContent='✓'; }catch(e){ btn.textContent='✗'; } setTimeout(()=>btn.textContent=o,2000); }
+    async function downloadPDF(btn){ const o=btn.textContent; btn.textContent='⏳'; try{ const c=await cap(); const i=c.toDataURL('image/png'); const {jsPDF}=window.jspdf; const pdf=new jsPDF({orientation:c.width>c.height?'landscape':'portrait',unit:'px',format:[c.width,c.height],hotfixes:['px_scaling']}); pdf.addImage(i,'PNG',0,0,c.width,c.height); pdf.save('learningenglish-architecture-mobile.pdf'); btn.textContent='✓'; }catch(e){ btn.textContent='✗'; } setTimeout(()=>btn.textContent=o,2000); }
+  </script>
+</body>
+</html>

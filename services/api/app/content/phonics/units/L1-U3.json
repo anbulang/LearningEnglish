@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l1_u3",
+  "unit_code": "L1-U3",
+  "sequence_order": 3,
+  "level": "1",
+  "content_version": "1",
+  "title": "字母 i j k l 与短音 i",
+  "subtitle": "认识 i、j、k、l 的发音，学会拼读带短音 i 的单词",
+  "vowel_focus": "short_i",
+  "letters": ["i", "j", "k", "l"],
+  "sound_card_ids": ["card_short_i", "card_j", "card_k", "card_l"],
+  "heart_words": [
+    {"text": "you", "cn": "你"},
+    {"text": "to", "cn": "到／向"}
+  ],
+  "decodable_words": [
+    {"id": "w_big", "text": "big", "segments": ["b", "i", "g"], "cn": "大的", "kind": "real"},
+    {"id": "w_dig", "text": "dig", "segments": ["d", "i", "g"], "cn": "挖", "kind": "real"},
+    {"id": "w_kid", "text": "kid", "segments": ["k", "i", "d"], "cn": "小孩", "kind": "real"},
+    {"id": "w_lid", "text": "lid", "segments": ["l", "i", "d"], "cn": "盖子", "kind": "real"},
+    {"id": "w_jig", "text": "jig", "segments": ["j", "i", "g"], "cn": "吉格舞", "kind": "real"},
+    {"id": "w_fig", "text": "fig", "segments": ["f", "i", "g"], "cn": "无花果", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "A big kid.", "cn": "一个大孩子。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_jig", "word_id": "w_jig", "answer": "j", "options": ["j", "i", "g"]},
+    {"id": "fs_kid", "word_id": "w_kid", "answer": "k", "options": ["k", "i", "d"]},
+    {"id": "fs_lid", "word_id": "w_lid", "answer": "l", "options": ["l", "i", "d"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "听一听每个字母的发音，跟着读一遍。",
+      "card_ids": ["card_short_i", "card_j", "card_k", "card_l"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它的第一个音是哪个字母。",
+      "item_ids": ["fs_jig", "fs_kid", "fs_lid"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "依次点每个字母听发音，再把它们连起来读，然后录下你的声音。",
+      "word_ids": ["w_big", "w_kid", "w_lid"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。",
+      "word_ids": ["w_big", "w_kid", "w_lid"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_big", "w_kid", "w_lid"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["you", "to"]
+    }
+  ]
+}

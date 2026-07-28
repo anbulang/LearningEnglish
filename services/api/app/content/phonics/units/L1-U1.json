@@ -1,0 +1,75 @@
+{
+  "unit_id": "phonics_l1_u1",
+  "unit_code": "L1-U1",
+  "sequence_order": 1,
+  "level": "1",
+  "content_version": "1",
+  "title": "字母 a b c d 与短音 a",
+  "subtitle": "认识 a、b、c、d 的发音，学会拼读带短音 a 的单词",
+  "vowel_focus": "short_a",
+  "letters": ["a", "b", "c", "d"],
+  "sound_card_ids": ["card_short_a", "card_b", "card_c", "card_d"],
+  "heart_words": [
+    {"text": "I", "cn": "我"},
+    {"text": "a", "cn": "一（个）"}
+  ],
+  "decodable_words": [
+    {"id": "w_dad", "text": "dad", "segments": ["d", "a", "d"], "cn": "爸爸", "kind": "real"},
+    {"id": "w_bad", "text": "bad", "segments": ["b", "a", "d"], "cn": "坏的", "kind": "real"},
+    {"id": "w_cab", "text": "cab", "segments": ["c", "a", "b"], "cn": "出租车", "kind": "real"},
+    {"id": "w_dab", "text": "dab", "segments": ["d", "a", "b"], "cn": "轻拍", "kind": "real"},
+    {"id": "w_add", "text": "add", "segments": ["a", "d", "d"], "cn": "增加", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "Add a cab.", "cn": "加上一辆出租车。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_bad", "word_id": "w_bad", "answer": "b", "options": ["b", "a", "d"]},
+    {"id": "fs_cab", "word_id": "w_cab", "answer": "c", "options": ["c", "b", "d"]},
+    {"id": "fs_dad", "word_id": "w_dad", "answer": "d", "options": ["d", "a", "c"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "听一听每个字母的发音，跟着读一遍。",
+      "card_ids": ["card_short_a", "card_b", "card_c", "card_d"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它的第一个音是哪个字母。",
+      "item_ids": ["fs_bad", "fs_cab", "fs_dad"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "依次点每个字母听发音，再把它们连起来读，然后录下你的声音。",
+      "word_ids": ["w_dad", "w_bad", "w_cab"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。",
+      "word_ids": ["w_bad", "w_cab", "w_dab"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_bad", "w_cab", "w_dab"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["I", "a"]
+    }
+  ]
+}

@@ -4,7 +4,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -150,6 +150,7 @@ class ChildProfileModel(Base):
     learning_goal: Mapped[str] = mapped_column(Text)
     preferred_review_duration_minutes: Mapped[int] = mapped_column(Integer, default=10)
     parent_notes: Mapped[str] = mapped_column(Text, default="")
+    accent: Mapped[str] = mapped_column(String(8), default="us")  # us | uk (phonics audio accent)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -303,3 +304,103 @@ class WeeklyReportModel(Base):
     speaking_attempts: Mapped[int] = mapped_column(Integer, default=0)
     weak_items: Mapped[list[str]] = mapped_column(JSON, default=list)
     recommended_actions: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+
+class PhonicsUnitModel(Base):
+    """Authored phonics curriculum unit — global, not tied to a tenant or material."""
+
+    __tablename__ = "phonics_units"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    unit_code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    sequence_order: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    title: Mapped[str] = mapped_column(String(255), default="")
+    subtitle: Mapped[str] = mapped_column(String(255), default="")
+    level: Mapped[str] = mapped_column(String(8), default="1")
+    content_version: Mapped[str] = mapped_column(String(16), default="1")
+    content_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    media_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    media_status: Mapped[str] = mapped_column(String(32), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class PhonicsSoundCardModel(Base):
+    """The Blevins sound-spelling cards — shared across units, referenced by id."""
+
+    __tablename__ = "phonics_sound_cards"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    card_type: Mapped[str] = mapped_column(String(16), default="consonant")
+    letter: Mapped[str] = mapped_column(String(8), default="")
+    phoneme: Mapped[str] = mapped_column(String(32), default="")
+    keyword: Mapped[str] = mapped_column(String(64), default="")
+    keyword_cn: Mapped[str] = mapped_column(String(64), default="")
+    articulation_cue: Mapped[str] = mapped_column(String(255), default="")
+    common_spellings: Mapped[list[str]] = mapped_column(JSON, default=list)
+    speakable_sound: Mapped[str] = mapped_column(String(255), default="")
+    example_words: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    content_version: Mapped[str] = mapped_column(String(16), default="1")
+    sound_audio_url: Mapped[str] = mapped_column(Text, default="")
+    sound_audio_object_key: Mapped[str] = mapped_column(Text, default="")
+    sound_tts_status: Mapped[str] = mapped_column(String(32), default="pending")
+    keyword_audio_url: Mapped[str] = mapped_column(Text, default="")
+    keyword_audio_object_key: Mapped[str] = mapped_column(Text, default="")
+    keyword_tts_status: Mapped[str] = mapped_column(String(32), default="pending")
+    # Per-accent audio: {"us": {sound_url, sound_status, keyword_url, keyword_status}, "uk": {...}}.
+    # The flat *_audio_url columns above stay the "us" canonical for back-compat.
+    audio_variants: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ChildPhonicsProgressModel(Base):
+    """Per-child mastery of a phonics unit."""
+
+    __tablename__ = "child_phonics_progress"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"phprog_{uuid4().hex[:12]}")
+    child_id: Mapped[str] = mapped_column(ForeignKey("child_profiles.id"), index=True)
+    unit_id: Mapped[str] = mapped_column(ForeignKey("phonics_units.id"), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="unlocked")
+    decoding_accuracy: Mapped[float] = mapped_column(Float, default=0.0)
+    first_sound_accuracy: Mapped[float] = mapped_column(Float, default=0.0)
+    grapheme_scores: Mapped[dict] = mapped_column(JSON, default=dict)
+    blended_words: Mapped[list[str]] = mapped_column(JSON, default=list)
+    attempts_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_attempt_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    mastered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    __table_args__ = (
+        UniqueConstraint("child_id", "unit_id", name="uq_child_phonics_progress_child_unit"),
+    )
+
+
+class PhonicsAttemptModel(Base):
+    """One phonics practice interaction (tap or spoken-word)."""
+
+    __tablename__ = "phonics_attempts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"phattempt_{uuid4().hex[:12]}")
+    child_id: Mapped[str] = mapped_column(ForeignKey("child_profiles.id"), index=True)
+    unit_id: Mapped[str] = mapped_column(ForeignKey("phonics_units.id"), index=True)
+    step: Mapped[str] = mapped_column(String(32), default="")
+    practice_type: Mapped[str] = mapped_column(String(32), default="")
+    target_text: Mapped[str] = mapped_column(Text, default="")
+    item_results: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    accuracy_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    passed: Mapped[bool] = mapped_column(Boolean, default=False)
+    audio_url: Mapped[str] = mapped_column(Text, default="")
+    audio_object_key: Mapped[str] = mapped_column(Text, default="")
+    audio_content_type: Mapped[str] = mapped_column(String(255), default="")
+    audio_size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    audio_duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    transcript: Mapped[str] = mapped_column(Text, default="")
+    feedback: Mapped[str] = mapped_column(Text, default="")
+    word_feedback: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    provider: Mapped[str] = mapped_column(String(64), default="")
+    failure_reason: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="scored")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

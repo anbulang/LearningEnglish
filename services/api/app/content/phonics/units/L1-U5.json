@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l1_u5",
+  "unit_code": "L1-U5",
+  "sequence_order": 5,
+  "level": "1",
+  "content_version": "1",
+  "title": "字母 q r s t u 与短音 u",
+  "subtitle": "认识 q、r、s、t、u 的发音，学会拼读带短音 u 的单词",
+  "vowel_focus": "short_u",
+  "letters": ["q", "r", "s", "t", "u"],
+  "sound_card_ids": ["card_q", "card_r", "card_s", "card_t", "card_short_u"],
+  "heart_words": [
+    {"text": "he", "cn": "他"},
+    {"text": "she", "cn": "她"}
+  ],
+  "decodable_words": [
+    {"id": "w_sun", "text": "sun", "segments": ["s", "u", "n"], "cn": "太阳", "kind": "real"},
+    {"id": "w_run", "text": "run", "segments": ["r", "u", "n"], "cn": "跑", "kind": "real"},
+    {"id": "w_cup", "text": "cup", "segments": ["c", "u", "p"], "cn": "杯子", "kind": "real"},
+    {"id": "w_bus", "text": "bus", "segments": ["b", "u", "s"], "cn": "公交车", "kind": "real"},
+    {"id": "w_tub", "text": "tub", "segments": ["t", "u", "b"], "cn": "浴盆", "kind": "real"},
+    {"id": "w_rug", "text": "rug", "segments": ["r", "u", "g"], "cn": "地毯", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "The sun is up.", "cn": "太阳升起来了。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_run", "word_id": "w_run", "answer": "r", "options": ["r", "u", "n"]},
+    {"id": "fs_sun", "word_id": "w_sun", "answer": "s", "options": ["s", "u", "n"]},
+    {"id": "fs_tub", "word_id": "w_tub", "answer": "t", "options": ["t", "u", "b"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "听一听每个字母的发音，跟着读一遍。字母 q 常和 u 一起出现，读作 “kw”。",
+      "card_ids": ["card_q", "card_r", "card_s", "card_t", "card_short_u"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它的第一个音是哪个字母。",
+      "item_ids": ["fs_run", "fs_sun", "fs_tub"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "依次点每个字母听发音，再把它们连起来读，然后录下你的声音。",
+      "word_ids": ["w_sun", "w_run", "w_cup"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。",
+      "word_ids": ["w_sun", "w_run", "w_cup"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_sun", "w_run", "w_cup"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["he", "she"]
+    }
+  ]
+}

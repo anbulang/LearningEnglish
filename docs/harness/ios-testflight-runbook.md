@@ -1,8 +1,8 @@
 # iOS TestFlight 分发 Runbook
 
-更新时间：2026-06-17
+更新时间：2026-06-20
 
-> **当前状态(2026-06-17):未启用。** 项目当前内测分发仍走 development / UDID(`make mobile-ios-ipa`),见 [`device-regression-runbook.md`](device-regression-runbook.md) 与 README「打包与设备」。本文档及配套脚手架(`ExportOptions.appstore.plist`、`make mobile-ios-testflight-ipa/upload`)为**停泊保留**,若日后重新考虑 TestFlight 可直接启用,无需从头搭。
+> **当前状态(2026-06-20):未启用。** 项目当前内测分发仍走 development / UDID(`make mobile-ios-ipa`)，见 [`device-regression-runbook.md`](device-regression-runbook.md) 与 README「打包与设备」。本文档及配套脚手架（`ExportOptions.appstore.plist`、`make mobile-ios-testflight-ipa/upload`）为停泊保留；若后续重新启用 TestFlight，可直接接着执行，无需从头搭。
 
 把 iOS 内测分发从 development / UDID（`make mobile-ios-ipa` + `ExportOptions.internal.plist`，method=`debugging`）切换到 **TestFlight**。本文是执行清单，区分「可自动化」与「需 Apple 账号人工」两类步骤。
 

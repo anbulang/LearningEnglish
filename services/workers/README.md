@@ -21,6 +21,12 @@ Celery worker 服务，负责处理讲义识别、学习资产媒体补齐和轻
   - 调用 speech assessment provider
   - 回写 transcript、维度分、逐词反馈和中文建议
   - 评分成功后累计 `WeeklyReport.speaking_attempts`
+- `phonics.process_unit_media`
+  - 为拼读课程单元生成 sound cards、单词、句子的媒体资源
+  - 复用当前媒体 provider，结果按共享课程资源存储
+- `phonics.score_attempt`
+  - 读取孩子的拼读录音
+  - 调用拼读评分逻辑并回写 transcript、accuracy、pass/fail 与进度
 
 ### 预留任务（未实现）
 
@@ -39,6 +45,7 @@ Celery worker 服务，负责处理讲义识别、学习资产媒体补齐和轻
 - 如果 Doubao 调用需要走系统代理，worker 进程也必须显式带上 `AI_HTTP_TRUST_ENV=true`；仅在 shell 中导出代理变量还不够。
 - 学习资产媒体默认使用 DashScope 真实 provider；测试环境可显式设置 `MEDIA_PROVIDER=mock`。若当前网络依赖系统代理，还需显式设置 `MEDIA_HTTP_TRUST_ENV=true`。
 - speaking 默认使用 DashScope ASR + Qwen 评分；测试环境可显式设置 `SPEECH_PROVIDER=stub`。DashScope ASR 需要公网可访问音频 URL，本地或局域网 URL 会被 provider 提前拒绝；真机调试时可配置 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL`，让 worker 使用公网 `/uploads/{object_key}`。
+- `phonics` 课程媒体和录音评分也由 worker 承接；如需预热课程内容，可先运行 `make phonics-seed`，再观察 `phonics.process_unit_media` / `phonics.score_attempt` 的任务推进。
 
 ## 本地运行
 

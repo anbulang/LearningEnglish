@@ -2,7 +2,7 @@
 
 适用对象：内部测试同学、产品同学、需要完整体验 MVP 主链的非开发人员。
 
-当前版本说明：本文已按 2026-06-13 仓库现状与本机可直接核对的产物更新，重点反映 AI 校对页自动轮询、DashScope 真实媒体 provider、DashScope ASR + Qwen 口语评分、HN-020 家长试用验收入口，以及当前交付边界仍受 Android 构建与 iOS 分发策略限制；本文不把历史真机或导包记录直接表述成“今天已复验”。
+当前版本说明：本文已按 2026-07-19 仓库现状更新，重点反映 AI 校对页自动轮询、端上音频播放、服务器地址设置入口、DashScope 真实媒体 provider、DashScope ASR + Qwen 口语评分、HN-020 家长试用验收入口，以及当前交付边界仍受公网部署、真实身份与 iOS/Android 分发策略限制；本文不把历史真机或导包记录直接表述成“今天已复验”。
 
 ## 1. 你会体验到什么
 这次试用的目标是验证一条完整链路：
@@ -72,12 +72,12 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 如果你拿到的是 iOS IPA 文件，请让开发同学协助安装到测试设备。
 
 当前已知限制：
-- 当前机器磁盘上仍保留 `dist/ios/export/learning_english_mobile.ipa`，文件时间是 `2026-06-08 20:05:20`；这说明最近一次 iOS Internal/Profile 导包产物仍在，但本轮没有重新执行 `make mobile-ios-ipa`。
-- 这个 IPA 是 development provisioning 分发包，只能安装到已纳入 provisioning profile 的测试设备；如果你的设备未注册，需要开发同学先补设备授权或改用 TestFlight。
+- 当前默认 iOS 内测分发仍走 development / UDID；TestFlight 相关脚手架保留但未启用，不要把历史导包产物直接当成当前可复用交付结论。
+- 如果使用的是 development provisioning IPA，它只能安装到已纳入 provisioning profile 的测试设备；如果你的设备未注册，需要开发同学先补设备授权或改用 TestFlight。
 - 不要使用 Flutter Debug 包做普通真机试用；Debug 包必须通过 `flutter run` 或 Xcode 启动，否则从桌面打开会闪退。
 - 真机首次点击登录时，如果 iOS 弹出“允许访问本地网络”，必须选择“允许”，否则 App 无法连接本机开发 API。
 - 当前 shell 环境里 `ANDROID_HOME` / `ANDROID_SDK_ROOT` 未设置；至少在这台机器上，Android debug APK 仍不能被视为已准备完成。
-- `Chaucer` 的真机安装成功属于既有 evidence，不是本轮新鲜复验；其他 iPhone 仍需先确认设备是否已纳入 development provisioning profile。
+- 历史真机安装成功只代表既有 evidence，不是本轮新鲜复验；新的 iPhone 仍需先确认设备是否已纳入 development provisioning profile，或改走 TestFlight。
 
 ## 3. 登录方式
 当前是开发环境，登录规则固定：
@@ -228,13 +228,13 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
 如果这次试用要作为 `HN-020` 验收证据，请按 `docs/harness/hn020-parent-pilot-acceptance.md` 的模板补充阶段结果、问题等级、截图路径和建议修复批次，并把本地证据放到 `dist/harness/HN-020/`。
 
 ## 7. 当前交付状态
-截至 2026-06-12，当前仓库入口、既有 evidence 和本机可见产物表明以下能力已经存在；本轮没有重新执行真机安装、导包或 speaking 复跑：
+截至 2026-07-19，当前仓库入口与既有 evidence 表明以下能力已经存在；本轮没有重新执行真机安装、导包或 speaking 复跑：
 
 - API：登录、绑定、创建孩子、上传、进入 AI 校对
 - 移动端：上传成功后跳转 AI 校对页，AI 校对确认后跳转课程详情
 - Harness：`HARNESS_RESET=1 make harness-mvp-readiness` 可以完成到测试和模拟器构建阶段
-- iOS：磁盘上仍保留 `dist/ios/export/learning_english_mobile.ipa`，说明最近一次导包产物仍在
-- 真机：`Chaucer` 的安装启动 evidence 已存在于历史记录
+- iOS：仓库已有 `make mobile-ios-ipa` 与 `make mobile-ios-testflight-ipa` 两条导包入口
+- 真机：至少一轮安装启动 evidence 已存在于历史记录
 - speaking：stub 评分闭环、API multipart 上传、worker 日志、attempt JSON、DashScope 真实 provider smoke、真实 worker smoke、公网音频 URL 改写、公网 `/uploads` 隧道 smoke、iOS 模拟器 App shell 结果页截图、物理手机 speaking 上传/真实评分回写和真机结果页截图证据已存在
 - 媒体 provider：DashScope 直连、worker/storage 回填、课程详情 widget 截图和 iOS 模拟器完整 App shell 截图证据已存在
 

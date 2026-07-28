@@ -1,0 +1,597 @@
+{
+  "version": "3",
+  "cards": [
+    {
+      "id": "card_short_a",
+      "card_type": "vowel",
+      "letter": "a",
+      "phoneme": "/æ/",
+      "keyword": "apple",
+      "keyword_cn": "苹果",
+      "articulation_cue": "嘴巴张大，下巴自然放低，发短促的 “ae” 音。",
+      "common_spellings": ["a"],
+      "speakable_sound": "The short a sound. a, a, a. As in apple.",
+      "example_words": [
+        {"text": "apple", "cn": "苹果"},
+        {"text": "ant", "cn": "蚂蚁"},
+        {"text": "cat", "cn": "猫"}
+      ]
+    },
+    {
+      "id": "card_b",
+      "card_type": "consonant",
+      "letter": "b",
+      "phoneme": "/b/",
+      "keyword": "bag",
+      "keyword_cn": "书包",
+      "articulation_cue": "双唇先闭紧，再突然张开送气，发出 “b” 音。",
+      "common_spellings": ["b"],
+      "speakable_sound": "The b sound. b, b, b. As in bag.",
+      "example_words": [
+        {"text": "bag", "cn": "书包"},
+        {"text": "bed", "cn": "床"},
+        {"text": "bus", "cn": "公交车"}
+      ]
+    },
+    {
+      "id": "card_c",
+      "card_type": "consonant",
+      "letter": "c",
+      "phoneme": "/k/",
+      "keyword": "cat",
+      "keyword_cn": "猫",
+      "articulation_cue": "舌根抬起贴住软腭，再放开送气，发出 “k” 音。",
+      "common_spellings": ["c", "k"],
+      "speakable_sound": "The c sound. k, k, k. As in cat.",
+      "example_words": [
+        {"text": "cat", "cn": "猫"},
+        {"text": "cab", "cn": "出租车"},
+        {"text": "cup", "cn": "杯子"}
+      ]
+    },
+    {
+      "id": "card_d",
+      "card_type": "consonant",
+      "letter": "d",
+      "phoneme": "/d/",
+      "keyword": "dog",
+      "keyword_cn": "狗",
+      "articulation_cue": "舌尖顶住上齿龈，再放开发出 “d” 音。",
+      "common_spellings": ["d"],
+      "speakable_sound": "The d sound. d, d, d. As in dog.",
+      "example_words": [
+        {"text": "dog", "cn": "狗"},
+        {"text": "dad", "cn": "爸爸"},
+        {"text": "desk", "cn": "书桌"}
+      ]
+    },
+    {
+      "id": "card_short_e",
+      "card_type": "vowel",
+      "letter": "e",
+      "phoneme": "/ɛ/",
+      "keyword": "egg",
+      "keyword_cn": "鸡蛋",
+      "articulation_cue": "嘴巴微张，舌头放平靠前，发短促的 “eh” 音。",
+      "common_spellings": ["e"],
+      "speakable_sound": "The short e sound. eh, eh, eh. As in egg.",
+      "example_words": [
+        {"text": "egg", "cn": "鸡蛋"},
+        {"text": "bed", "cn": "床"},
+        {"text": "red", "cn": "红色"}
+      ]
+    },
+    {
+      "id": "card_f",
+      "card_type": "consonant",
+      "letter": "f",
+      "phoneme": "/f/",
+      "keyword": "fish",
+      "keyword_cn": "鱼",
+      "articulation_cue": "上齿轻触下唇，持续送气发出 “fff” 音。",
+      "common_spellings": ["f"],
+      "speakable_sound": "The f sound. fff. As in fish.",
+      "example_words": [
+        {"text": "fish", "cn": "鱼"},
+        {"text": "fan", "cn": "扇子"},
+        {"text": "fox", "cn": "狐狸"}
+      ]
+    },
+    {
+      "id": "card_g",
+      "card_type": "consonant",
+      "letter": "g",
+      "phoneme": "/g/",
+      "keyword": "goat",
+      "keyword_cn": "山羊",
+      "articulation_cue": "舌根抬起贴住软腭，再放开发出短促的 “g” 音。",
+      "common_spellings": ["g"],
+      "speakable_sound": "The g sound. g, g, g. As in goat.",
+      "example_words": [
+        {"text": "goat", "cn": "山羊"},
+        {"text": "gift", "cn": "礼物"},
+        {"text": "dog", "cn": "狗"}
+      ]
+    },
+    {
+      "id": "card_h",
+      "card_type": "consonant",
+      "letter": "h",
+      "phoneme": "/h/",
+      "keyword": "hat",
+      "keyword_cn": "帽子",
+      "articulation_cue": "张开嘴巴，轻轻呼一口气，发出 “h” 音。",
+      "common_spellings": ["h"],
+      "speakable_sound": "The h sound. h, h, h. As in hat.",
+      "example_words": [
+        {"text": "hat", "cn": "帽子"},
+        {"text": "hand", "cn": "手"},
+        {"text": "hen", "cn": "母鸡"}
+      ]
+    },
+    {
+      "id": "card_short_i",
+      "card_type": "vowel",
+      "letter": "i",
+      "phoneme": "/ɪ/",
+      "keyword": "ink",
+      "keyword_cn": "墨水",
+      "articulation_cue": "嘴巴微微张开放松，发短促的 “ih” 音。",
+      "common_spellings": ["i"],
+      "speakable_sound": "The short i sound. ih, ih, ih. As in ink.",
+      "example_words": [
+        {"text": "ink", "cn": "墨水"},
+        {"text": "pig", "cn": "猪"},
+        {"text": "big", "cn": "大的"}
+      ]
+    },
+    {
+      "id": "card_j",
+      "card_type": "consonant",
+      "letter": "j",
+      "phoneme": "/dʒ/",
+      "keyword": "jam",
+      "keyword_cn": "果酱",
+      "articulation_cue": "舌面抬起贴住上腭，再放开送气发出 “j” 音。",
+      "common_spellings": ["j"],
+      "speakable_sound": "The j sound. j, j, j. As in jam.",
+      "example_words": [
+        {"text": "jam", "cn": "果酱"},
+        {"text": "jet", "cn": "喷气机"},
+        {"text": "jug", "cn": "水壶"}
+      ]
+    },
+    {
+      "id": "card_k",
+      "card_type": "consonant",
+      "letter": "k",
+      "phoneme": "/k/",
+      "keyword": "kite",
+      "keyword_cn": "风筝",
+      "articulation_cue": "舌根抬起贴住软腭，再放开送气发出 “k” 音。",
+      "common_spellings": ["k", "c"],
+      "speakable_sound": "The k sound. k, k, k. As in kite.",
+      "example_words": [
+        {"text": "kite", "cn": "风筝"},
+        {"text": "key", "cn": "钥匙"},
+        {"text": "kid", "cn": "小孩"}
+      ]
+    },
+    {
+      "id": "card_l",
+      "card_type": "consonant",
+      "letter": "l",
+      "phoneme": "/l/",
+      "keyword": "lion",
+      "keyword_cn": "狮子",
+      "articulation_cue": "舌尖顶住上齿龈，声音从舌头两侧送出，发出 “lll” 音。",
+      "common_spellings": ["l"],
+      "speakable_sound": "The l sound. lll. As in lion.",
+      "example_words": [
+        {"text": "lion", "cn": "狮子"},
+        {"text": "leg", "cn": "腿"},
+        {"text": "lid", "cn": "盖子"}
+      ]
+    },
+    {
+      "id": "card_m",
+      "card_type": "consonant",
+      "letter": "m",
+      "phoneme": "/m/",
+      "keyword": "moon",
+      "keyword_cn": "月亮",
+      "articulation_cue": "双唇轻轻闭拢，让声音从鼻子里出来，发出 “mmm” 音。",
+      "common_spellings": ["m"],
+      "speakable_sound": "The m sound. mmm. As in moon.",
+      "example_words": [
+        {"text": "moon", "cn": "月亮"},
+        {"text": "map", "cn": "地图"},
+        {"text": "mom", "cn": "妈妈"}
+      ]
+    },
+    {
+      "id": "card_n",
+      "card_type": "consonant",
+      "letter": "n",
+      "phoneme": "/n/",
+      "keyword": "net",
+      "keyword_cn": "网",
+      "articulation_cue": "舌尖顶住上齿龈，让声音从鼻子里出来，发出 “nnn” 音。",
+      "common_spellings": ["n"],
+      "speakable_sound": "The n sound. nnn. As in net.",
+      "example_words": [
+        {"text": "net", "cn": "网"},
+        {"text": "nose", "cn": "鼻子"},
+        {"text": "nut", "cn": "坚果"}
+      ]
+    },
+    {
+      "id": "card_short_o",
+      "card_type": "vowel",
+      "letter": "o",
+      "phoneme": "/ɒ/",
+      "keyword": "octopus",
+      "keyword_cn": "章鱼",
+      "articulation_cue": "嘴巴张大成圆形，发短促的 “o” 音。",
+      "common_spellings": ["o"],
+      "speakable_sound": "The short o sound. o, o, o. As in octopus.",
+      "example_words": [
+        {"text": "octopus", "cn": "章鱼"},
+        {"text": "dog", "cn": "狗"},
+        {"text": "box", "cn": "盒子"}
+      ]
+    },
+    {
+      "id": "card_p",
+      "card_type": "consonant",
+      "letter": "p",
+      "phoneme": "/p/",
+      "keyword": "pen",
+      "keyword_cn": "钢笔",
+      "articulation_cue": "双唇先闭紧，再突然张开送气，发出 “p” 音。",
+      "common_spellings": ["p"],
+      "speakable_sound": "The p sound. p, p, p. As in pen.",
+      "example_words": [
+        {"text": "pen", "cn": "钢笔"},
+        {"text": "pig", "cn": "猪"},
+        {"text": "pot", "cn": "锅"}
+      ]
+    },
+    {
+      "id": "card_q",
+      "card_type": "consonant",
+      "letter": "q",
+      "phoneme": "/kw/",
+      "keyword": "queen",
+      "keyword_cn": "女王",
+      "articulation_cue": "字母 q 常和 u 一起出现，圆唇连读发出 “kw” 音。",
+      "common_spellings": ["qu"],
+      "speakable_sound": "The q sound. kw, kw, kw. As in queen.",
+      "example_words": [
+        {"text": "queen", "cn": "女王"},
+        {"text": "quick", "cn": "快的"},
+        {"text": "quilt", "cn": "被子"}
+      ]
+    },
+    {
+      "id": "card_r",
+      "card_type": "consonant",
+      "letter": "r",
+      "phoneme": "/r/",
+      "keyword": "rabbit",
+      "keyword_cn": "兔子",
+      "articulation_cue": "舌尖微微后卷但不碰到上腭，发出 “rrr” 音。",
+      "common_spellings": ["r"],
+      "speakable_sound": "The r sound. rrr. As in rabbit.",
+      "example_words": [
+        {"text": "rabbit", "cn": "兔子"},
+        {"text": "red", "cn": "红色"},
+        {"text": "run", "cn": "跑"}
+      ]
+    },
+    {
+      "id": "card_s",
+      "card_type": "consonant",
+      "letter": "s",
+      "phoneme": "/s/",
+      "keyword": "sun",
+      "keyword_cn": "太阳",
+      "articulation_cue": "舌尖靠近上齿龈，持续送气发出 “sss” 音。",
+      "common_spellings": ["s"],
+      "speakable_sound": "The s sound. sss. As in sun.",
+      "example_words": [
+        {"text": "sun", "cn": "太阳"},
+        {"text": "snake", "cn": "蛇"},
+        {"text": "bus", "cn": "公交车"}
+      ]
+    },
+    {
+      "id": "card_t",
+      "card_type": "consonant",
+      "letter": "t",
+      "phoneme": "/t/",
+      "keyword": "tiger",
+      "keyword_cn": "老虎",
+      "articulation_cue": "舌尖顶住上齿龈，再放开送气发出 “t” 音。",
+      "common_spellings": ["t"],
+      "speakable_sound": "The t sound. t, t, t. As in tiger.",
+      "example_words": [
+        {"text": "tiger", "cn": "老虎"},
+        {"text": "top", "cn": "陀螺"},
+        {"text": "ten", "cn": "十"}
+      ]
+    },
+    {
+      "id": "card_short_u",
+      "card_type": "vowel",
+      "letter": "u",
+      "phoneme": "/ʌ/",
+      "keyword": "umbrella",
+      "keyword_cn": "雨伞",
+      "articulation_cue": "嘴巴自然张开放松，发短促的 “uh” 音。",
+      "common_spellings": ["u"],
+      "speakable_sound": "The short u sound. uh, uh, uh. As in umbrella.",
+      "example_words": [
+        {"text": "umbrella", "cn": "雨伞"},
+        {"text": "cup", "cn": "杯子"},
+        {"text": "sun", "cn": "太阳"}
+      ]
+    },
+    {
+      "id": "card_v",
+      "card_type": "consonant",
+      "letter": "v",
+      "phoneme": "/v/",
+      "keyword": "van",
+      "keyword_cn": "面包车",
+      "articulation_cue": "上齿轻触下唇，一边振动一边送气，发出 “vvv” 音。",
+      "common_spellings": ["v"],
+      "speakable_sound": "The v sound. vvv. As in van.",
+      "example_words": [
+        {"text": "van", "cn": "面包车"},
+        {"text": "vet", "cn": "兽医"},
+        {"text": "five", "cn": "五"}
+      ]
+    },
+    {
+      "id": "card_w",
+      "card_type": "consonant",
+      "letter": "w",
+      "phoneme": "/w/",
+      "keyword": "window",
+      "keyword_cn": "窗户",
+      "articulation_cue": "双唇拢成圆形再快速放开，发出 “w” 音。",
+      "common_spellings": ["w"],
+      "speakable_sound": "The w sound. w, w, w. As in window.",
+      "example_words": [
+        {"text": "window", "cn": "窗户"},
+        {"text": "wig", "cn": "假发"},
+        {"text": "web", "cn": "蜘蛛网"}
+      ]
+    },
+    {
+      "id": "card_x",
+      "card_type": "consonant",
+      "letter": "x",
+      "phoneme": "/ks/",
+      "keyword": "box",
+      "keyword_cn": "盒子",
+      "articulation_cue": "字母 x 常在单词末尾，和前一个音连起来发出 “ks” 音。",
+      "common_spellings": ["x"],
+      "speakable_sound": "The x sound. ks, ks, ks. As in box.",
+      "example_words": [
+        {"text": "box", "cn": "盒子"},
+        {"text": "fox", "cn": "狐狸"},
+        {"text": "six", "cn": "六"}
+      ]
+    },
+    {
+      "id": "card_y",
+      "card_type": "consonant",
+      "letter": "y",
+      "phoneme": "/j/",
+      "keyword": "yes",
+      "keyword_cn": "是的",
+      "articulation_cue": "舌面抬向硬腭再快速滑出，发出 “y” 音。",
+      "common_spellings": ["y"],
+      "speakable_sound": "The y sound. y, y, y. As in yes.",
+      "example_words": [
+        {"text": "yes", "cn": "是的"},
+        {"text": "yak", "cn": "牦牛"},
+        {"text": "yellow", "cn": "黄色"}
+      ]
+    },
+    {
+      "id": "card_z",
+      "card_type": "consonant",
+      "letter": "z",
+      "phoneme": "/z/",
+      "keyword": "zebra",
+      "keyword_cn": "斑马",
+      "articulation_cue": "舌尖靠近上齿龈，一边振动一边送气，发出 “zzz” 音。",
+      "common_spellings": ["z"],
+      "speakable_sound": "The z sound. zzz. As in zebra.",
+      "example_words": [
+        {"text": "zebra", "cn": "斑马"},
+        {"text": "zip", "cn": "拉链"},
+        {"text": "zoo", "cn": "动物园"}
+      ]
+    },
+    {
+      "id": "card_sh",
+      "card_type": "digraph",
+      "letter": "sh",
+      "phoneme": "/ʃ/",
+      "keyword": "ship",
+      "keyword_cn": "船",
+      "articulation_cue": "s 和 h 在一起读一个音：双唇轻轻嘟起，持续送气发出安静的 “shhh” 音。",
+      "common_spellings": ["sh"],
+      "speakable_sound": "The sh sound. shhh. As in ship.",
+      "example_words": [
+        {"text": "ship", "cn": "船"},
+        {"text": "shop", "cn": "商店"},
+        {"text": "fish", "cn": "鱼"}
+      ]
+    },
+    {
+      "id": "card_ch",
+      "card_type": "digraph",
+      "letter": "ch",
+      "phoneme": "/tʃ/",
+      "keyword": "chick",
+      "keyword_cn": "小鸡",
+      "articulation_cue": "c 和 h 在一起读一个音：舌尖先抵住上腭再放开送气，发出 “ch” 音。",
+      "common_spellings": ["ch"],
+      "speakable_sound": "The ch sound. ch, ch, ch. As in chick.",
+      "example_words": [
+        {"text": "chick", "cn": "小鸡"},
+        {"text": "chip", "cn": "薯片"},
+        {"text": "chat", "cn": "聊天"}
+      ]
+    },
+    {
+      "id": "card_th",
+      "card_type": "digraph",
+      "letter": "th",
+      "phoneme": "/θ/",
+      "keyword": "thumb",
+      "keyword_cn": "拇指",
+      "articulation_cue": "t 和 h 在一起读一个音：舌尖轻轻放在上下齿之间，送气发出 “th” 音。",
+      "common_spellings": ["th"],
+      "speakable_sound": "The th sound. th, th, th. As in thumb.",
+      "example_words": [
+        {"text": "thumb", "cn": "拇指"},
+        {"text": "thin", "cn": "瘦的"},
+        {"text": "math", "cn": "数学"}
+      ]
+    },
+    {
+      "id": "card_wh",
+      "card_type": "digraph",
+      "letter": "wh",
+      "phoneme": "/w/",
+      "keyword": "whale",
+      "keyword_cn": "鲸鱼",
+      "articulation_cue": "w 和 h 在一起读一个音：像 w 一样双唇拢圆再快速放开，发出 “wh” 音。",
+      "common_spellings": ["wh"],
+      "speakable_sound": "The wh sound. wh, wh, wh. As in whale.",
+      "example_words": [
+        {"text": "whale", "cn": "鲸鱼"},
+        {"text": "whip", "cn": "鞭子"},
+        {"text": "when", "cn": "什么时候"}
+      ]
+    },
+    {
+      "id": "card_long_a",
+      "card_type": "vowel",
+      "letter": "a-e",
+      "phoneme": "/eɪ/",
+      "keyword": "cake",
+      "keyword_cn": "蛋糕",
+      "articulation_cue": "结尾的 e 不发音，它让前面的 a 读出自己的名字 “ay”。",
+      "common_spellings": ["a_e", "ai", "ay"],
+      "speakable_sound": "The long a sound. ay. As in cake.",
+      "example_words": [
+        {"text": "cake", "cn": "蛋糕"},
+        {"text": "name", "cn": "名字"},
+        {"text": "gate", "cn": "大门"}
+      ]
+    },
+    {
+      "id": "card_long_i",
+      "card_type": "vowel",
+      "letter": "i-e",
+      "phoneme": "/aɪ/",
+      "keyword": "bike",
+      "keyword_cn": "自行车",
+      "articulation_cue": "结尾的 e 不发音，它让前面的 i 读出自己的名字 “i”。",
+      "common_spellings": ["i_e"],
+      "speakable_sound": "The long i sound. i. As in bike.",
+      "example_words": [
+        {"text": "bike", "cn": "自行车"},
+        {"text": "kite", "cn": "风筝"},
+        {"text": "ride", "cn": "骑"}
+      ]
+    },
+    {
+      "id": "card_long_o",
+      "card_type": "vowel",
+      "letter": "o-e",
+      "phoneme": "/əʊ/",
+      "keyword": "home",
+      "keyword_cn": "家",
+      "articulation_cue": "结尾的 e 不发音，它让前面的 o 读出自己的名字 “oh”。",
+      "common_spellings": ["o_e"],
+      "speakable_sound": "The long o sound. oh. As in home.",
+      "example_words": [
+        {"text": "home", "cn": "家"},
+        {"text": "rope", "cn": "绳子"},
+        {"text": "note", "cn": "便条"}
+      ]
+    },
+    {
+      "id": "card_long_u",
+      "card_type": "vowel",
+      "letter": "u-e",
+      "phoneme": "/juː/",
+      "keyword": "cube",
+      "keyword_cn": "立方体",
+      "articulation_cue": "结尾的 e 不发音，它让前面的 u 读出自己的名字 “you”。",
+      "common_spellings": ["u_e"],
+      "speakable_sound": "The long u sound. you. As in cube.",
+      "example_words": [
+        {"text": "cube", "cn": "立方体"},
+        {"text": "cute", "cn": "可爱的"},
+        {"text": "mule", "cn": "骡子"}
+      ]
+    },
+    {
+      "id": "card_ee",
+      "card_type": "vowel",
+      "letter": "ee",
+      "phoneme": "/iː/",
+      "keyword": "bee",
+      "keyword_cn": "蜜蜂",
+      "articulation_cue": "两个 e 手拉手，一起读出长长的 “ee” 音。",
+      "common_spellings": ["ee", "ea"],
+      "speakable_sound": "The long e sound. ee. As in bee.",
+      "example_words": [
+        {"text": "bee", "cn": "蜜蜂"},
+        {"text": "see", "cn": "看见"},
+        {"text": "feet", "cn": "脚"}
+      ]
+    },
+    {
+      "id": "card_ai",
+      "card_type": "vowel",
+      "letter": "ai",
+      "phoneme": "/eɪ/",
+      "keyword": "rain",
+      "keyword_cn": "雨",
+      "articulation_cue": "a 和 i 手拉手，一起读出 a 的名字 “ay”，常出现在单词中间。",
+      "common_spellings": ["ai"],
+      "speakable_sound": "The long a sound. ay. As in rain.",
+      "example_words": [
+        {"text": "rain", "cn": "雨"},
+        {"text": "tail", "cn": "尾巴"},
+        {"text": "wait", "cn": "等待"}
+      ]
+    },
+    {
+      "id": "card_ay",
+      "card_type": "vowel",
+      "letter": "ay",
+      "phoneme": "/eɪ/",
+      "keyword": "day",
+      "keyword_cn": "白天",
+      "articulation_cue": "a 和 y 手拉手，也读出 a 的名字 “ay”，常出现在单词末尾。",
+      "common_spellings": ["ay"],
+      "speakable_sound": "The long a sound. ay. As in day.",
+      "example_words": [
+        {"text": "day", "cn": "白天"},
+        {"text": "play", "cn": "玩"},
+        {"text": "say", "cn": "说"}
+      ]
+    }
+  ]
+}

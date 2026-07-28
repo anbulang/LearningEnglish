@@ -172,6 +172,7 @@ class AppRepository implements MaterialsRepository {
     required String learningGoal,
     required int preferredReviewDurationMinutes,
     required String parentNotes,
+    String accent = 'us',
   }) async {
     final response = await _authorizedRequest<Map<String, dynamic>>(
       (options) => _dio.post<Map<String, dynamic>>(
@@ -183,6 +184,26 @@ class AppRepository implements MaterialsRepository {
           'learning_goal': learningGoal,
           'preferred_review_duration_minutes': preferredReviewDurationMinutes,
           'parent_notes': parentNotes,
+          'accent': accent,
+        },
+        options: options,
+      ),
+    );
+    return ChildProfile.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  /// Partially updates a child profile. Only the non-null fields are sent, so
+  /// the backend leaves everything else untouched. Returns the updated
+  /// [ChildProfile].
+  Future<ChildProfile> updateChild({
+    required String childId,
+    String? accent,
+  }) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.patch<Map<String, dynamic>>(
+        '/children/$childId',
+        data: <String, dynamic>{
+          if (accent != null) 'accent': accent,
         },
         options: options,
       ),
@@ -550,6 +571,184 @@ class AppRepository implements MaterialsRepository {
       ),
     );
     return SpeakingAttempt.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  // --- 自然拼读 (phonics) ---------------------------------------------------
+
+  Future<PhonicsUnitListResponse> getPhonicsUnits(String childId) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.get<Map<String, dynamic>>(
+        '/phonics/units',
+        queryParameters: <String, dynamic>{'child_id': childId},
+        options: options,
+      ),
+    );
+    // Unit summaries carry no media urls, so no normalization is needed here.
+    return PhonicsUnitListResponse.fromJson(
+        response.data ?? const <String, dynamic>{});
+  }
+
+  Future<PhonicsUnitDetailResponse> getPhonicsUnit(
+    String unitId,
+    String childId,
+  ) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.get<Map<String, dynamic>>(
+        '/phonics/units/$unitId',
+        queryParameters: <String, dynamic>{'child_id': childId},
+        options: options,
+      ),
+    );
+    return PhonicsUnitDetailResponse.fromJson(
+      _normalizePhonicsUnitDetailRuntimeUrls(
+          response.data ?? const <String, dynamic>{}),
+    );
+  }
+
+  Future<PhonicsProgressResponse> getPhonicsProgress(String childId) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.get<Map<String, dynamic>>(
+        '/phonics/progress',
+        queryParameters: <String, dynamic>{'child_id': childId},
+        options: options,
+      ),
+    );
+    return PhonicsProgressResponse.fromJson(
+        response.data ?? const <String, dynamic>{});
+  }
+
+  Future<PhonicsAttemptResponse> submitPhonicsTapAttempt({
+    required String childId,
+    required String unitId,
+    required String step,
+    required String practiceType,
+    required List<PhonicsItemResult> itemResults,
+  }) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.post<Map<String, dynamic>>(
+        '/phonics/attempts',
+        data: <String, dynamic>{
+          'child_id': childId,
+          'unit_id': unitId,
+          'step': step,
+          'practice_type': practiceType,
+          'item_results':
+              itemResults.map((item) => item.toJson()).toList(),
+        },
+        options: options,
+      ),
+    );
+    final payload = response.data ?? const <String, dynamic>{};
+    final normalized = Map<String, dynamic>.from(payload);
+    final attempt = normalized['attempt'];
+    if (attempt is Map<String, dynamic>) {
+      normalized['attempt'] = _normalizePhonicsAttemptRuntimeUrls(attempt);
+    }
+    return PhonicsAttemptResponse.fromJson(normalized);
+  }
+
+  Future<PhonicsAttempt> uploadPhonicsWordAttempt({
+    required String childId,
+    required String unitId,
+    required String targetText,
+    required String filePath,
+    int durationMs = 0,
+    String step = 'blending',
+  }) async {
+    Future<FormData> buildForm() async {
+      return FormData.fromMap(<String, dynamic>{
+        'child_id': childId,
+        'unit_id': unitId,
+        'target_text': targetText,
+        'step': step,
+        'audio_duration_ms': durationMs,
+        'audio': await MultipartFile.fromFile(
+          filePath,
+          filename: 'phonics-attempt.m4a',
+          contentType: DioMediaType('audio', 'mp4'),
+        ),
+      });
+    }
+
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) async {
+        return _dio.post<Map<String, dynamic>>(
+          '/phonics/attempts/audio',
+          data: await buildForm(),
+          options: options,
+        );
+      },
+    );
+    return PhonicsAttempt.fromJson(
+      _normalizePhonicsAttemptRuntimeUrls(
+          response.data ?? const <String, dynamic>{}),
+    );
+  }
+
+  Future<PhonicsAttempt> getPhonicsAttempt(String attemptId) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.get<Map<String, dynamic>>(
+        '/phonics/attempts/$attemptId',
+        options: options,
+      ),
+    );
+    return PhonicsAttempt.fromJson(
+      _normalizePhonicsAttemptRuntimeUrls(
+          response.data ?? const <String, dynamic>{}),
+    );
+  }
+
+  Map<String, dynamic> _normalizePhonicsUnitDetailRuntimeUrls(
+      Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized['sound_cards'] = _normalizePhonicsUrls(
+      normalized['sound_cards'],
+      const <String>['sound_audio_url', 'keyword_audio_url'],
+    );
+    normalized['decodable_words'] = _normalizePhonicsUrls(
+      normalized['decodable_words'],
+      const <String>['audio_url'],
+    );
+    normalized['sentences'] = _normalizePhonicsUrls(
+      normalized['sentences'],
+      const <String>['audio_url'],
+    );
+    normalized['heart_words'] = _normalizePhonicsUrls(
+      normalized['heart_words'],
+      const <String>['audio_url'],
+    );
+    normalized['first_sound_items'] = _normalizePhonicsUrls(
+      normalized['first_sound_items'],
+      const <String>['audio_url'],
+    );
+    return normalized;
+  }
+
+  Map<String, dynamic> _normalizePhonicsAttemptRuntimeUrls(
+      Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized['audio_url'] =
+        _publicRuntimeUrl(normalized['audio_url'] as String? ?? '');
+    return normalized;
+  }
+
+  dynamic _normalizePhonicsUrls(dynamic value, List<String> keys) {
+    if (value is! List) {
+      return value;
+    }
+    return value.map((item) {
+      if (item is! Map<String, dynamic>) {
+        return item;
+      }
+      final normalizedItem = Map<String, dynamic>.from(item);
+      for (final key in keys) {
+        if (normalizedItem.containsKey(key)) {
+          normalizedItem[key] =
+              _publicRuntimeUrl(normalizedItem[key] as String? ?? '');
+        }
+      }
+      return normalizedItem;
+    }).toList();
   }
 }
 

@@ -1,6 +1,6 @@
 # 真机回归 Runbook
 
-更新时间：2026-06-12
+更新时间：2026-07-19
 
 ## 目的
 
@@ -49,6 +49,7 @@ git diff --check
 - 测试和 analyze 通过。
 - `dist/harness/evidence-index.json` 可生成并通过 JSON 格式化检查。
 - 当前工作区没有格式错误。
+- `docs/project/2026-07-19-status-and-todo.md` 与当前分支的项目状态描述不冲突。
 
 ## R1：真机安装启动
 
@@ -87,6 +88,7 @@ xcrun devicectl device process launch --device 19586D29-7FF4-5289-8B83-30AA8C3F2
 - API 和 worker 已启动。
 - App 指向当前可访问的局域网 API；不要直接沿用 `Makefile` 的默认 `127.0.0.1`，真机导包时必须显式覆盖 `IOS_API_BASE_URL`。
 - 如需要 clean state，先清理测试账号或模拟器/真机旧数据。
+- 如果本轮还要进入家长试用验收，先执行 `make harness-hn020-preflight`，避免把环境问题混进 HN-020 结果。
 
 真机操作步骤：
 
@@ -110,7 +112,7 @@ make harness-hn019-real-device-main-chain
 - `SOURCE_IMAGE_URLS` 需要提供当前可下载的讲义图片 URL。
 - 这条 harness 负责登录、建档、上传、轮询、确认、读取报告，并把 material/job/media/API/worker 摘要归档到 `dist/harness/HN-019/`；截图仍需要手工补存。
 - harness 内置对局域网 `healthz` 的 no-proxy 探测，避免 shell 里残留 `HTTP_PROXY` / `HTTPS_PROXY` 时把本机 LAN 健康检查误送到代理。
-- 默认真机 ID 使用当前开发机上的 `Chaucer`，如设备变化，通过 `DEVICE_ID=<flutter-device-id>` 和 `DEVICETL_DEVICE_ID=<devicectl-device-id>` 覆盖。
+- 默认会沿用当前脚本里的真机 ID 配置；如设备变化，通过 `DEVICE_ID=<flutter-device-id>` 和 `DEVICETL_DEVICE_ID=<devicectl-device-id>` 覆盖，不要把历史设备名当成固定前提。
 - 默认会在验证结束后重新安装 `dist/ios/export/learning_english_mobile.ipa` 并启动正式 App；如只想保留 harness app，可设置 `HN019_RESTORE_APP=0`。
 - 历史 evidence 里出现的固定 LAN IP 只代表当时环境，不应当成当前默认值。
 

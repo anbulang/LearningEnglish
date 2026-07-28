@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l2_u6",
+  "unit_code": "L2-U6",
+  "sequence_order": 12,
+  "level": "2",
+  "content_version": "1",
+  "title": "长音 a 的朋友（ai / ay）",
+  "subtitle": "ai 在词中、ay 在词尾，都读 a 的名字：rain、play、day",
+  "vowel_focus": "long_a_teams",
+  "letters": ["ai", "ay"],
+  "sound_card_ids": ["card_ai", "card_ay"],
+  "heart_words": [
+    {"text": "where", "cn": "哪里"},
+    {"text": "who", "cn": "谁"}
+  ],
+  "decodable_words": [
+    {"id": "w_rain", "text": "rain", "segments": ["r", "ai", "n"], "cn": "雨", "kind": "real"},
+    {"id": "w_tail", "text": "tail", "segments": ["t", "ai", "l"], "cn": "尾巴", "kind": "real"},
+    {"id": "w_wait", "text": "wait", "segments": ["w", "ai", "t"], "cn": "等待", "kind": "real"},
+    {"id": "w_play", "text": "play", "segments": ["p", "l", "ay"], "cn": "玩", "kind": "real"},
+    {"id": "w_day", "text": "day", "segments": ["d", "ay"], "cn": "白天", "kind": "real"},
+    {"id": "w_say", "text": "say", "segments": ["s", "ay"], "cn": "说", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "We play in the rain.", "cn": "我们在雨中玩耍。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_rain", "word_id": "w_rain", "answer": "r", "options": ["r", "l", "n"]},
+    {"id": "fs_tail", "word_id": "w_tail", "answer": "t", "options": ["t", "d", "l"]},
+    {"id": "fs_play", "word_id": "w_play", "answer": "p", "options": ["p", "b", "l"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "ai 和 ay 都读 a 的名字 “ay”：ai 喜欢待在单词中间，ay 喜欢站在单词末尾。",
+      "card_ids": ["card_ai", "card_ay"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它开头的音。",
+      "item_ids": ["fs_rain", "fs_tail", "fs_play"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "ai、ay 是一个整体音。依次点每块听发音，再连起来读，然后录下你的声音。",
+      "word_ids": ["w_rain", "w_play", "w_day"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。ai、ay 各是一整块。",
+      "word_ids": ["w_rain", "w_play", "w_day"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_rain", "w_play", "w_day"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["where", "who"]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -85,6 +86,17 @@ class SpeakingRecorderController
         audioPath: path ?? state.valueOrNull?.audioPath ?? '',
         durationMs: durationMs,
       ),
+    );
+  }
+
+  /// Automation seam: present a pre-recorded clip as if it had just been
+  /// captured. The iOS Simulator has no microphone, so the real-ASR walkthrough
+  /// harness injects a clip here to exercise the genuine upload → DashScope ASR
+  /// → scoring path end-to-end. Not used by product UI.
+  @visibleForTesting
+  void injectRecording({required String path, required int durationMs}) {
+    state = AsyncData(
+      SpeakingRecorderState(audioPath: path, durationMs: durationMs),
     );
   }
 
