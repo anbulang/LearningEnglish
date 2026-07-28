@@ -26,6 +26,7 @@ LearningEnglish 是一个面向早期英语学习家庭的内测 MVP。家长拍
 | 讲义导入 | 支持移动端拍照/相册上传，后端保存原始图片和解析任务 |
 | AI 校对 | 默认使用阿里云百炼 / DashScope Qwen；测试环境显式切到 stub |
 | 复习闭环 | `KnowledgePack`、`ReviewTask`、`PracticeSession`、`WeeklyReport` 已串联 |
+| 拼读课程 | `phonics` 课程、进度、点按练习、音频上传与评分链路已进入当前仓库 |
 | 口语评分 | 移动端录音上传、音频存储、DashScope ASR + Qwen 评分、逐词反馈和结果页已接通；`dist/harness/HN-017/` 已保留真机证据，复跑时仍需提供公网可拉取的录音 URL |
 | 移动端 | Flutter 自适应手机/平板页面结构，含登录、资料库、校对、课程、复习、报告 |
 | 工程验收 | `make` 入口和 Harness evidence 目录已固定，便于反复回归 |
@@ -100,6 +101,7 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | 重置本地 infra | `make infra-reset` |
 | API 测试 | `make api-test` |
 | Worker 测试 | `make worker-test` |
+| 拼读课程种子 | `make phonics-seed` |
 | Admin 原型安装 | `make admin-install` |
 | Admin 原型开发 | `make admin-dev` |
 | Admin 连接本地 API | `make admin-dev-live` |
@@ -109,6 +111,7 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | Flutter 静态检查 | `make mobile-analyze` |
 | Android debug APK | `make mobile-apk` |
 | iOS internal/Profile IPA | `make mobile-ios-ipa` |
+| 公网试点部署 | `make deploy-prod-up` |
 | MVP readiness 回归 | `HARNESS_RESET=1 make harness-mvp-readiness` |
 | 主链 smoke | `make harness-main-chain-smoke` |
 | Doubao provider smoke | `make harness-doubao-smoke` |
@@ -124,7 +127,7 @@ ParentAccount -> ChildProfile -> CourseMaterial -> MaterialParseJob
 | [`services/api`](services/api) | FastAPI 后端服务，内部按 `api/parent`、`api/admin`、`services/parent`、`services/admin`、`services/shared` 区分家长端、运维管理和共享能力 |
 | [`services/workers`](services/workers) | Celery worker 和讲义处理任务边界 |
 | [`infra`](infra) | Docker Compose 本地依赖：PostgreSQL、Redis、MinIO、API、worker |
-| [`docs`](docs) | 产品、设计、架构、Harness 验收文档 |
+| [`docs`](docs) | 项目状态、架构、Harness 验收与历史 spec/plan 文档 |
 | [`scripts/harness`](scripts/harness) | MVP readiness、provider smoke、模拟器截图等辅助脚本 |
 
 ## 验证入口
@@ -244,12 +247,13 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 | 主题 | 适用人群 / 用途 | 文档 |
 | --- | --- | --- |
-| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-06-15-status-and-todo.md`](docs/project/2026-06-15-status-and-todo.md) |
+| 项目进度与 ToDo | 项目负责人 / 当前阶段判断、项目级 backlog | [`docs/project/2026-07-19-status-and-todo.md`](docs/project/2026-07-19-status-and-todo.md) |
 | 系统总览 | 新成员 / 快速理解系统边界与默认技术路径 | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | 数据模型 | 后端 / 数据层设计核对 | [`docs/architecture/data-models.md`](docs/architecture/data-models.md) |
 | 后端架构 | API、worker 开发 / 服务边界核对 | [`docs/architecture/backend-architecture.md`](docs/architecture/backend-architecture.md) |
 | 移动端架构 | Flutter 开发 / 主链页面与状态结构核对 | [`docs/architecture/mobile-architecture.md`](docs/architecture/mobile-architecture.md) |
 | Harness 文档索引 | 所有人 / 找当前验收入口与真相源 | [`docs/harness/README.md`](docs/harness/README.md) |
+| 公网部署 Runbook | 交付执行者 / 最小公网试点部署与 HTTPS | [`docs/harness/public-deploy-runbook.md`](docs/harness/public-deploy-runbook.md) |
 | 真机回归 Runbook | iOS 真机回归执行者 / R0-R3 分层复跑 | [`docs/harness/device-regression-runbook.md`](docs/harness/device-regression-runbook.md) |
 | iOS TestFlight 分发（停泊，未启用） | iOS 发布执行者 / 当前仍走 UDID，TestFlight 脚手架备查 | [`docs/harness/ios-testflight-runbook.md`](docs/harness/ios-testflight-runbook.md) |
 | Evidence 归档策略 | 需要整理 `dist/harness/` 的成员 / 证据治理 | [`docs/harness/evidence-archive-policy.md`](docs/harness/evidence-archive-policy.md) |

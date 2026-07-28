@@ -18,7 +18,7 @@ API_DATABASE_URL ?= postgresql+psycopg://learning_english:learning_english@127.0
 ADMIN_API_BASE_URL ?= http://127.0.0.1:8000
 ADMIN_API_TOKEN ?= local-admin-token
 
-.PHONY: api-install api-dev api-test api-migrate worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset deploy-prod-up deploy-prod-down deploy-prod-logs mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa mobile-ios-testflight-ipa mobile-ios-testflight-upload harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-hn020-preflight harness-hn020-validate harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
+.PHONY: api-install api-dev api-test api-migrate phonics-seed worker-install worker-dev worker-test admin-install admin-dev admin-dev-live admin-test admin-build infra-up infra-down infra-reset deploy-prod-up deploy-prod-down deploy-prod-logs mobile-bootstrap mobile-test mobile-analyze mobile-apk mobile-ios-prep mobile-ios-archive mobile-ios-ipa mobile-ios-testflight-ipa mobile-ios-testflight-upload harness-main-chain-smoke harness-mvp-readiness harness-doubao-smoke harness-phonics-dashscope-smoke harness-hn019-real-device-main-chain harness-hn020-parent-pilot-template harness-hn020-preflight harness-hn020-validate harness-reset-ios-sim harness-capture-ios-screen harness-evidence-index
 
 api-install:
 	cd services/api && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync --group dev
@@ -31,6 +31,9 @@ api-dev:
 
 api-test:
 	cd services/api && .venv/bin/pytest
+
+phonics-seed:
+	cd services/api && DATABASE_URL=$(API_DATABASE_URL) .venv/bin/python -m scripts.seed_phonics $(PHONICS_SEED_ARGS)
 
 worker-install:
 	cd services/workers && UV_CACHE_DIR=/tmp/learning_english_uv_cache uv sync
@@ -159,6 +162,11 @@ harness-mvp-readiness:
 
 harness-doubao-smoke:
 	bash /Users/chaucermini/Code/LearningEnglish/scripts/harness/run_doubao_smoke.sh
+
+# Real DashScope end-to-end for the phonics ASR path (incl. L2 digraph scoring).
+# Needs DASHSCOPE_API_KEY (auto-sourced from infra/.env if present) + cloudflared.
+harness-phonics-dashscope-smoke:
+	@bash -c 'set -a; [ -f infra/.env ] && . infra/.env; set +a; services/api/.venv/bin/python scripts/harness/run_phonics_dashscope_smoke.py'
 
 harness-hn019-real-device-main-chain:
 	$(PYTHON) scripts/harness/run_hn019_real_device_main_chain.py

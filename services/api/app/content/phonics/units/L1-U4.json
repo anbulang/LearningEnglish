@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l1_u4",
+  "unit_code": "L1-U4",
+  "sequence_order": 4,
+  "level": "1",
+  "content_version": "1",
+  "title": "字母 m n o p 与短音 o",
+  "subtitle": "认识 m、n、o、p 的发音，学会拼读带短音 o 的单词",
+  "vowel_focus": "short_o",
+  "letters": ["m", "n", "o", "p"],
+  "sound_card_ids": ["card_m", "card_n", "card_short_o", "card_p"],
+  "heart_words": [
+    {"text": "my", "cn": "我的"},
+    {"text": "we", "cn": "我们"}
+  ],
+  "decodable_words": [
+    {"id": "w_mop", "text": "mop", "segments": ["m", "o", "p"], "cn": "拖把", "kind": "real"},
+    {"id": "w_pop", "text": "pop", "segments": ["p", "o", "p"], "cn": "爆开", "kind": "real"},
+    {"id": "w_nod", "text": "nod", "segments": ["n", "o", "d"], "cn": "点头", "kind": "real"},
+    {"id": "w_dog", "text": "dog", "segments": ["d", "o", "g"], "cn": "狗", "kind": "real"},
+    {"id": "w_hop", "text": "hop", "segments": ["h", "o", "p"], "cn": "单脚跳", "kind": "real"},
+    {"id": "w_pod", "text": "pod", "segments": ["p", "o", "d"], "cn": "豆荚", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "My dog can hop.", "cn": "我的狗会跳。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_mop", "word_id": "w_mop", "answer": "m", "options": ["m", "o", "p"]},
+    {"id": "fs_nod", "word_id": "w_nod", "answer": "n", "options": ["n", "o", "d"]},
+    {"id": "fs_pop", "word_id": "w_pop", "answer": "p", "options": ["p", "o", "m"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "听一听每个字母的发音，跟着读一遍。",
+      "card_ids": ["card_m", "card_n", "card_short_o", "card_p"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它的第一个音是哪个字母。",
+      "item_ids": ["fs_mop", "fs_nod", "fs_pop"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "依次点每个字母听发音，再把它们连起来读，然后录下你的声音。",
+      "word_ids": ["w_mop", "w_pop", "w_dog"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。",
+      "word_ids": ["w_mop", "w_pop", "w_dog"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_mop", "w_pop", "w_dog"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["my", "we"]
+    }
+  ]
+}

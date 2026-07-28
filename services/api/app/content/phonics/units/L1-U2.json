@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l1_u2",
+  "unit_code": "L1-U2",
+  "sequence_order": 2,
+  "level": "1",
+  "content_version": "1",
+  "title": "字母 e f g h 与短音 e",
+  "subtitle": "认识 e、f、g、h 的发音，学会拼读带短音 e 的单词",
+  "vowel_focus": "short_e",
+  "letters": ["e", "f", "g", "h"],
+  "sound_card_ids": ["card_short_e", "card_f", "card_g", "card_h"],
+  "heart_words": [
+    {"text": "the", "cn": "这个／那个"},
+    {"text": "is", "cn": "是"}
+  ],
+  "decodable_words": [
+    {"id": "w_bed", "text": "bed", "segments": ["b", "e", "d"], "cn": "床", "kind": "real"},
+    {"id": "w_fed", "text": "fed", "segments": ["f", "e", "d"], "cn": "喂养", "kind": "real"},
+    {"id": "w_beg", "text": "beg", "segments": ["b", "e", "g"], "cn": "乞求", "kind": "real"},
+    {"id": "w_egg", "text": "egg", "segments": ["e", "g", "g"], "cn": "鸡蛋", "kind": "real"},
+    {"id": "w_gab", "text": "gab", "segments": ["g", "a", "b"], "cn": "闲聊", "kind": "real"},
+    {"id": "w_had", "text": "had", "segments": ["h", "a", "d"], "cn": "有过", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "The egg is bad.", "cn": "那个鸡蛋坏了。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_fed", "word_id": "w_fed", "answer": "f", "options": ["f", "e", "d"]},
+    {"id": "fs_gab", "word_id": "w_gab", "answer": "g", "options": ["g", "a", "b"]},
+    {"id": "fs_had", "word_id": "w_had", "answer": "h", "options": ["h", "a", "d"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "听一听每个字母的发音，跟着读一遍。",
+      "card_ids": ["card_short_e", "card_f", "card_g", "card_h"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它的第一个音是哪个字母。",
+      "item_ids": ["fs_fed", "fs_gab", "fs_had"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "依次点每个字母听发音，再把它们连起来读，然后录下你的声音。",
+      "word_ids": ["w_bed", "w_fed", "w_beg"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。",
+      "word_ids": ["w_bed", "w_fed", "w_beg"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_bed", "w_fed", "w_beg"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["the", "is"]
+    }
+  ]
+}

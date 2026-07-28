@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l2_u3",
+  "unit_code": "L2-U3",
+  "sequence_order": 9,
+  "level": "2",
+  "content_version": "1",
+  "title": "神奇 e・长音 a（a-e）",
+  "subtitle": "结尾不发音的 e 让 a 读出自己的名字：cake、name、gate",
+  "vowel_focus": "long_a_magic_e",
+  "letters": ["a-e"],
+  "sound_card_ids": ["card_long_a"],
+  "heart_words": [
+    {"text": "have", "cn": "有"},
+    {"text": "come", "cn": "来"}
+  ],
+  "decodable_words": [
+    {"id": "w_cake", "text": "cake", "segments": ["c", "a-e", "k"], "cn": "蛋糕", "kind": "real"},
+    {"id": "w_name", "text": "name", "segments": ["n", "a-e", "m"], "cn": "名字", "kind": "real"},
+    {"id": "w_gate", "text": "gate", "segments": ["g", "a-e", "t"], "cn": "大门", "kind": "real"},
+    {"id": "w_lake", "text": "lake", "segments": ["l", "a-e", "k"], "cn": "湖", "kind": "real"},
+    {"id": "w_game", "text": "game", "segments": ["g", "a-e", "m"], "cn": "游戏", "kind": "real"},
+    {"id": "w_late", "text": "late", "segments": ["l", "a-e", "t"], "cn": "迟到的", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "The cake is at the gate.", "cn": "蛋糕在大门口。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_cake", "word_id": "w_cake", "answer": "c", "options": ["c", "k", "g"]},
+    {"id": "fs_name", "word_id": "w_name", "answer": "n", "options": ["n", "m", "a-e"]},
+    {"id": "fs_gate", "word_id": "w_gate", "answer": "g", "options": ["g", "c", "t"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "认识神奇 e：单词结尾的 e 自己不发音，却让前面的 a 读出名字 “ay”。",
+      "card_ids": ["card_long_a"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它开头的音。",
+      "item_ids": ["fs_cake", "fs_name", "fs_gate"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "中间的 a-e 读长音 “ay”。依次点每块听发音，再连起来读，然后录下你的声音。",
+      "word_ids": ["w_cake", "w_name", "w_gate"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。a-e 是一整块，别忘了结尾的神奇 e。",
+      "word_ids": ["w_cake", "w_name", "w_gate"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_cake", "w_name", "w_gate"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["have", "come"]
+    }
+  ]
+}

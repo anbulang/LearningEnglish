@@ -7,6 +7,8 @@ import '../../features/coaching/presentation/parent_coaching_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/lessons/presentation/lesson_detail_screen.dart';
 import '../../features/materials/presentation/material_review_screen.dart';
+import '../../features/phonics/presentation/phonics_lesson_screen.dart';
+import '../../features/phonics/presentation/phonics_unit_list_screen.dart';
 import '../../features/materials/presentation/materials_library_screen.dart';
 import '../../features/materials/presentation/scan_upload_screen.dart';
 import '../../features/profiles/presentation/profile_screen.dart';
@@ -21,7 +23,10 @@ import '../../features/speaking/presentation/speaking_partner_screen.dart';
 import '../shell/app_shell.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final session = ref.watch(sessionControllerProvider);
+  // Only rebuild the router when the auth STAGE changes. Watching the whole
+  // session state would recreate the GoRouter on any child-data change (e.g. an
+  // accent toggle), resetting navigation back to /home.
+  final stage = ref.watch(sessionControllerProvider.select((s) => s.stage));
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
@@ -32,16 +37,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (location == '/settings/server') {
         return null;
       }
-      if (session.stage == SessionStage.bootstrapping) {
+      if (stage == SessionStage.bootstrapping) {
         return location == '/splash' ? null : '/splash';
       }
-      if (session.stage == SessionStage.signedOut) {
+      if (stage == SessionStage.signedOut) {
         return isAuthRoute ? null : '/auth/login';
       }
-      if (session.stage == SessionStage.phoneBindingRequired) {
+      if (stage == SessionStage.phoneBindingRequired) {
         return location == '/auth/bind' ? null : '/auth/bind';
       }
-      if (session.stage == SessionStage.authenticated &&
+      if (stage == SessionStage.authenticated &&
           (location == '/splash' || isAuthRoute)) {
         return '/home';
       }
@@ -121,6 +126,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'coaching/:materialId',
                 builder: (context, state) => ParentCoachingScreen(
                   materialId: state.pathParameters['materialId'] ?? '',
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/phonics',
+            builder: (context, state) => const PhonicsUnitListScreen(),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'unit/:unitId',
+                builder: (context, state) => PhonicsLessonScreen(
+                  unitId: state.pathParameters['unitId'] ?? '',
                 ),
               ),
             ],

@@ -1,6 +1,6 @@
 # 真实 Provider Readiness 最短复现
 
-更新时间：2026-06-12
+更新时间：2026-07-19
 
 ## 目的
 
@@ -12,6 +12,8 @@
 `HN-018` 只作为报告页 UI / 数据聚合证据，不是 provider readiness 证据；它在本文末尾的“非 Provider 证据”小节单独复查。
 
 所有文档和命令都不保存真实密钥；`dist/harness/` 是本地证据目录，不进入 git。
+
+当前项目里，provider readiness 已不只是 smoke 脚本问题；`services/api/app/core/readiness.py` 和 `/readyz` 已经把关键配置缺失前移到了启动期与健康检查层。
 
 ## 默认配置
 
@@ -52,6 +54,20 @@ SPEECH_ASSESSMENT_PROVIDER=dashscope
 | 公网音频 URL 不可拉取 | speaking provider 拒绝 `localhost`、`127.0.0.1`、`192.168.*` 或 `testserver` | `blocked` | 设置 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL` |
 | provider 返回格式不合法 | JSON parse 失败或字段缺失 | `failed` | 保留脱敏日志和 summary，修 adapter 或 prompt |
 | worker 未运行 | job 或 attempt 长时间不推进 | `blocked` | 启动 worker 并检查队列 |
+
+## 预检入口
+
+在跑任何真实 provider smoke 前，先确认当前环境不是明显未就绪：
+
+```bash
+cd /Users/chaucermini/Code/LearningEnglish
+curl -s http://127.0.0.1:8000/readyz | python3 -m json.tool
+```
+
+判读原则：
+
+- `ready=true` 只代表关键配置已就绪，不等于真实 provider 已完整通过。
+- `ready=false` 时先修配置，再跑下面的 smoke；不要把已知缺配置环境下的失败记成 provider 功能 bug。
 
 ## HN-016A：DashScope 媒体
 

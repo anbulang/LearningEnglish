@@ -175,6 +175,7 @@ class ChildProfile {
     required this.learningGoal,
     required this.preferredReviewDurationMinutes,
     required this.parentNotes,
+    this.accent = 'us',
   });
 
   final String id;
@@ -185,6 +186,9 @@ class ChildProfile {
   final String name;
   final String parentNotes;
   final int preferredReviewDurationMinutes;
+
+  /// Preferred TTS accent for this child: `'us'` (American) or `'uk'` (British).
+  final String accent;
 
   factory ChildProfile.fromJson(JsonMap json) {
     return ChildProfile(
@@ -197,6 +201,7 @@ class ChildProfile {
       preferredReviewDurationMinutes:
           json['preferred_review_duration_minutes'] as int,
       parentNotes: (json['parent_notes'] ?? '') as String,
+      accent: json['accent'] as String? ?? 'us',
     );
   }
 
@@ -209,7 +214,33 @@ class ChildProfile {
         'learning_goal': learningGoal,
         'preferred_review_duration_minutes': preferredReviewDurationMinutes,
         'parent_notes': parentNotes,
+        'accent': accent,
       };
+
+  ChildProfile copyWith({
+    String? id,
+    String? name,
+    String? avatarUrl,
+    int? age,
+    String? level,
+    String? learningGoal,
+    int? preferredReviewDurationMinutes,
+    String? parentNotes,
+    String? accent,
+  }) {
+    return ChildProfile(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      age: age ?? this.age,
+      level: level ?? this.level,
+      learningGoal: learningGoal ?? this.learningGoal,
+      preferredReviewDurationMinutes:
+          preferredReviewDurationMinutes ?? this.preferredReviewDurationMinutes,
+      parentNotes: parentNotes ?? this.parentNotes,
+      accent: accent ?? this.accent,
+    );
+  }
 }
 
 @immutable

@@ -109,3 +109,61 @@ enum SpeakingAttemptStatus {
     );
   }
 }
+
+enum PhonicsUnitStatus {
+  locked('locked'),
+  unlocked('unlocked'),
+  inProgress('in_progress'),
+  mastered('mastered');
+
+  const PhonicsUnitStatus(this.value);
+
+  final String value;
+
+  static PhonicsUnitStatus fromJson(String value) {
+    return PhonicsUnitStatus.values.firstWhere(
+      (status) => status.value == value,
+      orElse: () => PhonicsUnitStatus.locked,
+    );
+  }
+}
+
+enum PhonicsAttemptStatus {
+  queued('queued'),
+  recordingUploaded('recording_uploaded'),
+  transcribing('transcribing'),
+  scored('scored'),
+  noMatch('no_match'),
+  failed('failed');
+
+  const PhonicsAttemptStatus(this.value);
+
+  final String value;
+
+  static PhonicsAttemptStatus fromJson(String value) {
+    return PhonicsAttemptStatus.values.firstWhere(
+      (status) => status.value == value,
+      orElse: () => PhonicsAttemptStatus.queued,
+    );
+  }
+}
+
+enum PhonicsPracticeType {
+  none('none'),
+  firstSoundTap('first_sound_tap'),
+  blendWordAsr('blend_word_asr'),
+  heartWordAsr('heart_word_asr'),
+  tileBuild('tile_build'),
+  dictation('dictation');
+
+  const PhonicsPracticeType(this.value);
+
+  final String value;
+
+  static PhonicsPracticeType fromJson(String value) {
+    return PhonicsPracticeType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => PhonicsPracticeType.none,
+    );
+  }
+}

@@ -1,6 +1,6 @@
 # LearningEnglish MVP Readiness Checklist
 
-更新时间：2026-06-13
+更新时间：2026-07-19
 
 ## 目的
 
@@ -22,6 +22,7 @@
 - [x] API 当前仍提供主链所需的 parent routes。
 - [x] worker 当前仍提供讲义处理、学习资产媒体补齐、speaking 评分与周报聚合任务。
 - [x] 移动端 README 与目录结构仍能对应到主链页面与状态流转。
+- [x] `phonics` 课程已经进入 API、worker、mobile 与测试目录，不再只是待设计事项。
 
 ### B. 默认真实 provider 路径
 
@@ -37,14 +38,16 @@
 - [x] `/v1/admin/audit-events`
 - [x] `/v1/admin/tenants/{tenant_id}`
 - [x] `/v1/admin/operations`
+- [x] `/v1/admin/users`
+- [x] `/v1/admin/learning-assets`
 - [x] `/v1/admin/impersonation-sessions`
-- [x] `apps/admin` 当前已实现 `Command Center`、`Tenant Detail`、`Content Pipeline`、`Provider Ops`、`Audit & Access` 五个业务页面。
+- [x] `apps/admin` 当前已实现 `Command Center`、`Tenant Detail`、`Users & Children`、`Content Pipeline`、`Learning Assets`、`Provider Ops`、`Infrastructure`、`Audit & Access` 八个可运行页面。
 - [ ] 完整 admin login/SSO、DB-backed role mutation、permission mutation 和 broker 级运维观测仍不属于当前已完成能力。
 
 ### D. Harness / 文档入口
 
 - [x] `README.md` 提供项目入口和常用命令。
-- [x] `docs/project/2026-06-13-status-and-todo.md` 提供当前项目级快照。
+- [x] `docs/project/2026-07-19-status-and-todo.md` 提供当前项目级快照。
 - [x] `docs/harness/device-regression-runbook.md` 提供 `R0/R1/R2/R3` 真机回归分级。
 - [x] `docs/harness/provider-readiness-runbook.md` 提供真实 provider 运行入口。
 - [x] `docs/harness/evidence-archive-policy.md` 说明 evidence 归档规则。
@@ -58,6 +61,7 @@
 - `IOS_API_BASE_URL` 默认仍是 `http://127.0.0.1:8000/v1`；真机导包时必须显式覆盖当前局域网地址。
 - `HN-019` 真机主链 harness 已有独立脚本和 focused test；当前缺的不是入口存在性，而是截图清单和团队执行纪律。
 - `HN-020` 已定义家长试用验收清单和修复批次；当前缺的是用真实家长或非技术试用者跑一轮并归档证据。
+- `phonics` 课程当前已有代码与测试，但还缺独立的人类试用闭环与专项验收口径。
 
 ## 当前未在本轮重新验证的事项
 
@@ -73,24 +77,24 @@
 
 ## 当前 blocker / gap
 
-### 1. 交付链收口不足
+### 1. 公网交付链仍未闭合
 
-- Android 是否承诺分发、如何分发，当前仍没有项目级定论。
-- iOS 仍主要依赖 development provisioning / UDID 管理；是否转 TestFlight 仍待决定。
-- 非开发成员需要的最短交付步骤仍分散在多份文档。
+- 当前仓库仍以本地 infra / 局域网调试为主，公网域名、对象存储和 HTTPS 交付链还没有形成项目级完成态。
+- speaking 真实评分仍依赖公网可拉取录音 URL；没有 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL` 就不能把 R3 写成 ready。
+- Android 是否进入当前内测交付范围、iOS development / UDID 是否只作为短期口径，当前仍需项目级拍板。
 
-### 2. 真机回归执行化不足
+### 2. 真实身份与试用边界仍未完成
 
-- `R0/R1/R2/R3` 已有定义，但 summary 模板、截图清单和复跑节奏尚未完全固化。
+- dev/试点身份路径已经比之前收敛，但真实短信 OTP / 真实 WeChat OAuth 还没有落地。
+- 因此当前登录体系更适合开发和试点，不应在项目文档中描述为“真实家庭已可自助使用”。
+
+### 3. 真机回归执行化仍需固定
+
+- `R0/R1/R2/R3` 已有定义，但最新一轮 HN-017 / HN-019 / HN-020 并未在本轮重新复跑。
 - `HN-019` harness 已把主链 summary 字段收敛到固定 JSON，但截图补存和目录级说明还未完全统一。
 - `dist/harness/evidence-index.json` 已可生成，但不同 `HN-*` summary 仍存在新旧字段风格混用。
 
-### 3. 文档仍需持续减重
-
-- 历史验收记录仍容易被误读成当前 readiness 结论。
-- 当前仍需持续把长文改成“当前入口 / 当前结论 / 历史 evidence”结构。
-
-### 4. 家长试用闭环未执行
+### 4. 家长试用闭环仍待执行
 
 - `HN-020` 已有验收入口，但还没有一轮真实家长或非技术试用者的 `dist/harness/HN-020/` 证据。
 - 当前仍需要把上传、AI 校对、课程详情、复习和报告页的可用性问题按 `P0/P1/P2` 和 Batch 0-4 记录下来。
@@ -141,5 +145,6 @@ services/api/.venv/bin/python scripts/harness/run_hn017_public_uploads_tunnel_sm
 
 ## 结论
 
-- 当前 MVP 的核心主链已经存在，真正缺的是交付链、真机回归和 evidence 模板的执行化。
+- 当前仓库已经具备完整主链代码和 harness 入口，但还不能把项目写成“已完成可交付 MVP”。
+- 当前 gate 已经从“功能是否存在”转为“公网交付、真实身份、真机/provider 复验、家长试用闭环是否成立”。
 - 这份 checklist 应继续用于回答“现在能不能复查、差在哪里、下一个 gate 是什么”，而不是继续累积历史运行流水账。

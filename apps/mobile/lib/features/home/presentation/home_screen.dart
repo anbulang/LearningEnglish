@@ -75,6 +75,40 @@ class HomeScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         AppCard(
+          child: Row(
+            children: <Widget>[
+              LessonCoverThumbnail(
+                title: '自然拼读',
+                subtitle: 'Phonics',
+                icon: Icons.abc_rounded,
+                accent: AppColors.skyBlue,
+                assetPath: AppIllustrations.topicPhonics,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('自然拼读', style: AppTextStyles.sectionTitle),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '听音识音 → 圈首音 → 拼读 → 高频词，一步步学会自己拼读单词。',
+                      style: AppTextStyles.body,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    OutlinedButton.icon(
+                      onPressed: () => context.go('/phonics'),
+                      icon: const Icon(Icons.play_circle_outline_rounded),
+                      label: const Text('开始拼读'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[

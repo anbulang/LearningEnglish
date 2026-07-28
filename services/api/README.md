@@ -21,6 +21,8 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - `GET /v1/admin/audit-events?tenant_scope=all`
 - `GET /v1/admin/tenants/{tenant_id}?tenant_scope=all`
 - `GET /v1/admin/operations?tenant_scope=all`
+- `GET /v1/admin/users?tenant_scope=all`
+- `GET /v1/admin/learning-assets?tenant_scope=all`
 - `POST /v1/admin/material-jobs/{job_id}/retry?tenant_scope=all`
 - `POST /v1/admin/materials/{material_id}/archive?tenant_scope=all`
 - `POST /v1/admin/providers/policies?tenant_scope=all`
@@ -43,6 +45,12 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - `POST /v1/speaking-attempts`
 - `GET /v1/speaking-attempts/{attempt_id}`
 - `POST /v1/speaking-attempts/{attempt_id}/retry`
+- `GET /v1/phonics/units`
+- `GET /v1/phonics/units/{unit_id}`
+- `GET /v1/phonics/progress`
+- `POST /v1/phonics/attempts`
+- `POST /v1/phonics/attempts/audio`
+- `GET /v1/phonics/attempts/{attempt_id}`
 - `GET /v1/parent-coaching/{material_id}`
 - `GET /v1/reports/weekly`
 
@@ -77,6 +85,8 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - `GET /v1/admin/audit-events` 需要 `admin.audit.read`，支持 `tenant_scope`、`action`、`resource_type`、`risk_level`、`result`、`actor_id` 过滤；`limit` 会夹在 `1..100`，`cursor` 是上一页最后一条 audit id，排序为 `created_at desc, id desc`。`tenant_scope=all` 返回所有非空 scope，指定 tenant scope 时只返回 `all` 和该 tenant 的事件。
 - `GET /v1/admin/tenants/{tenant_id}` 需要 `admin.tenant.read`，返回单租户 read model：`tenant`、`summary`、`children`、`materials`、`provider_policy`、`module_settings`、`weekly_reports`、`speaking_attempts`、`risk_summary`、本次读操作 `audit_event` 和 `access_context`。如果 actor 同时有 `admin.audit.read`，`access_context.recent_audit_events` 会包含该租户近期审计；否则为空。
 - `GET /v1/admin/operations` 需要 `admin.operations.read` 或兼容的 `admin.dashboard.read`，返回 `summary`、`material_parse_jobs`、`media_generation`、`speaking_attempts`、`provider_configuration`、`module_toggle_coverage`、本次读操作 `audit_event` 和 `access_context`。运维 readiness 只从数据库状态和配置摘要推导，不做 Celery broker introspection；provider secret 只返回 `secret_presence` 布尔值，不返回 secret 明文。
+- `GET /v1/admin/users` 需要 `admin.tenant.read`，返回按 `tenant_scope` 限定的孩子档案与家长上下文摘要，支持可选 `level` 过滤，供 `Users & Children` 页只读消费。
+- `GET /v1/admin/learning-assets` 需要 `admin.tenant.read`，返回按 `tenant_scope` 限定的学习资产、媒体状态与讲义上下文，支持 `media_status`、`material_id` 等过滤，供 `Learning Assets` 页只读消费。
 - `GET /v1/admin/impersonation-sessions` 需要 `admin.impersonation.read`，按 `tenant_scope` 和 `status=active|ended|all` 查询，最多返回 50 条，并写入 low-risk `admin.impersonation.read` audit event。`POST /v1/admin/impersonation-sessions/{session_id}/end` 需要 `admin.impersonation.end` 和 `reason`，active session 会被置为 `ended` 并写入 high-risk `admin.impersonation.end` audit event；重复结束已结束 session 会保留原 `ended_at` 并写入 `admin.impersonation.end.already_ended` noop audit event。
 - Tenant scope 遵循 no-disclosure 规则：指定 `tenant_scope` 时，只允许访问该 tenant 的详情、材料、操作快照和 impersonation session；越权或不存在的单资源请求返回同类 404，不暴露其它 tenant 是否存在。
 - Admin material job retry 是受控 mutation：必须提供 `reason`，需要 `admin.material.retry` 权限，会把解析任务和材料重新置为 `processing`、重新排队识别任务，并写入 high-risk `AuditEvent`。
@@ -98,6 +108,8 @@ FastAPI 服务，负责鉴权、讲义上传、AI 草稿、课程详情、复习
 - `POST /v1/practice-sessions` 会完成对应复习任务并更新周报统计。
 - `POST /v1/speaking-attempts` 接收 multipart 音频上传，保存 `owner_type=speaking_attempt` 的音频对象，创建 `recording_uploaded` attempt，并由 worker 异步评分；接口本身不等待语音 provider 完成。
 - `GET /v1/speaking-attempts/{attempt_id}` 用于移动端轮询评分结果；`POST /v1/speaking-attempts/{attempt_id}/retry` 可对失败 attempt 重新入队。
+- `phonics` 课程当前已进入 parent API：`GET /v1/phonics/units` 返回课程与单元列表，`GET /v1/phonics/units/{unit_id}` 返回 sound cards、拼读步骤与当前进度，`POST /v1/phonics/attempts` 记录点按练习，`POST /v1/phonics/attempts/audio` 接收拼读录音并异步评分，`GET /v1/phonics/progress` 返回每个孩子的课程推进状态。
+- `make phonics-seed` / `python -m scripts.seed_phonics` 会把 `app/content/phonics/*.json` 的课程、sound cards 和单元数据写入数据库；可选 `--inline-media` 立即生成媒体，否则由 worker 异步生成。
 - DashScope ASR 需要云端可访问的公网音频 URL；本地 `localhost`、`testserver`、`192.168.*` 等地址会被提前拒绝。真机调试时可配置 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL`，让 worker 把 `audio_object_key` 改写成公网 `/uploads/{object_key}` 后再交给 provider。
 - `GET /v1/reports/weekly` 会返回周报基础统计、讲义汇总和每个 `learning_asset` 的掌握度、复习表现、口语表现与推荐动作。
 

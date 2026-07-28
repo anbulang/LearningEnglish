@@ -22,6 +22,8 @@ from app.db.models import (
     CourseMaterialModel,
     KnowledgePackModel,
     MaterialParseJobModel,
+    PhonicsAttemptModel,
+    PhonicsUnitModel,
     ReviewTaskModel,
     SpeakingAttemptModel,
     StoredAssetModel,
@@ -37,6 +39,9 @@ from app.models.contracts import (
 )
 from app.services.shared.learning_asset_media import MediaProviderConfigurationError, build_media_provider_bundle
 from app.services.shared.mappers import course_material_from_model, material_job_from_model
+from app.services.shared.phonics_media import generate_phonics_unit_media
+from app.services.shared.phonics_progress import apply_attempt_to_progress
+from app.services.shared.phonics_scoring import asr_accent_for, score_word_match
 from app.services.shared.pipeline import build_pipeline_service
 from app.services.shared.speaking_assessment import (
     SpeechAssessmentError,
@@ -114,7 +119,7 @@ def process_material_job(job_id: str) -> dict[str, str]:
         db.close()
 
 
-@shared_task(name="speaking.score_attempt")
+@shared_task(name="speaking.score_attempt", soft_time_limit=120, time_limit=150)
 def score_speaking_attempt(attempt_id: str) -> dict[str, str]:
     db = SessionLocal()
     provider = None
@@ -192,6 +197,98 @@ def score_speaking_attempt(attempt_id: str) -> dict[str, str]:
             attempt.status = SpeakingAttemptStatus.failed.value
             attempt.failure_reason = f"口语评分失败：{exc}"
             attempt.feedback = "口语评分失败，请稍后重试。"
+            db.add(attempt)
+            db.commit()
+        return {"attempt_id": attempt_id, "status": "failed"}
+    finally:
+        close = getattr(provider, "close", None)
+        if callable(close):
+            close()
+        db.close()
+
+
+@shared_task(name="phonics.process_unit_media")
+def process_phonics_unit_media(unit_id: str) -> dict[str, str]:
+    db = SessionLocal()
+    try:
+        return generate_phonics_unit_media(db, unit_id)
+    finally:
+        db.close()
+
+
+@shared_task(name="phonics.score_attempt", soft_time_limit=120, time_limit=150)
+def score_phonics_attempt(attempt_id: str) -> dict[str, str]:
+    db = SessionLocal()
+    provider = None
+    try:
+        row = db.execute(
+            select(PhonicsAttemptModel, PhonicsUnitModel)
+            .join(PhonicsUnitModel, PhonicsUnitModel.id == PhonicsAttemptModel.unit_id)
+            .where(PhonicsAttemptModel.id == attempt_id)
+        ).first()
+        if row is None:
+            return {"attempt_id": attempt_id, "status": "missing"}
+        attempt, unit = row
+        if attempt.status not in {
+            SpeakingAttemptStatus.queued.value,
+            SpeakingAttemptStatus.recording_uploaded.value,
+        }:
+            return {"attempt_id": attempt.id, "status": attempt.status}
+
+        attempt.status = SpeakingAttemptStatus.transcribing.value
+        db.add(attempt)
+        db.commit()
+
+        storage = get_storage_service()
+        audio_asset = db.scalar(
+            select(StoredAssetModel).where(
+                StoredAssetModel.owner_type == "phonics_attempt",
+                StoredAssetModel.owner_id == attempt.id,
+                StoredAssetModel.object_key == attempt.audio_object_key,
+            )
+        )
+        if audio_asset is None:
+            raise SpeechAssessmentError("录音文件不存在。")
+        audio_path = storage.resolve_local_path(audio_asset)
+        settings = get_settings()
+        assessment_audio_url = build_speech_assessment_audio_url(
+            stored_audio_url=attempt.audio_url,
+            object_key=attempt.audio_object_key,
+            public_base_url=settings.speech_assessment_audio_public_base_url,
+        )
+        child = db.get(ChildProfileModel, attempt.child_id)
+        asr_accent = asr_accent_for(
+            child.accent if child is not None else "us",
+            default=settings.speech_assessment_default_accent,
+        )
+        provider = build_speech_assessment_provider()
+        result = provider.assess(
+            audio_path=audio_path,
+            audio_url=assessment_audio_url,
+            target_text=attempt.target_text,
+            prompt_text=attempt.target_text,
+            attempt_id=attempt.id,
+            accent=asr_accent,
+        )
+
+        match = score_word_match(result.transcript, attempt.target_text)
+        attempt.transcript = result.transcript
+        attempt.accuracy_score = match.accuracy
+        attempt.passed = match.passed
+        attempt.feedback = match.feedback
+        attempt.provider = result.provider
+        attempt.status = match.status  # "scored" or "no_match"
+        attempt.failure_reason = ""
+        apply_attempt_to_progress(db, unit=unit, attempt=attempt)
+        db.add(attempt)
+        db.commit()
+        return {"attempt_id": attempt.id, "status": attempt.status}
+    except Exception as exc:
+        attempt = db.get(PhonicsAttemptModel, attempt_id)
+        if attempt is not None:
+            attempt.status = SpeakingAttemptStatus.failed.value
+            attempt.failure_reason = f"拼读评分失败：{exc}"
+            attempt.feedback = "评分失败，请稍后重试。"
             db.add(attempt)
             db.commit()
         return {"attempt_id": attempt_id, "status": "failed"}

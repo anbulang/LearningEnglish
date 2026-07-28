@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l2_u2",
+  "unit_code": "L2-U2",
+  "sequence_order": 8,
+  "level": "2",
+  "content_version": "1",
+  "title": "双辅音 th 与 wh",
+  "subtitle": "学会 th、wh，拼读 thin、when 这样的单词",
+  "vowel_focus": "digraph_th_wh",
+  "letters": ["th", "wh"],
+  "sound_card_ids": ["card_th", "card_wh"],
+  "heart_words": [
+    {"text": "what", "cn": "什么"},
+    {"text": "of", "cn": "……的"}
+  ],
+  "decodable_words": [
+    {"id": "w_thin", "text": "thin", "segments": ["th", "i", "n"], "cn": "瘦的", "kind": "real"},
+    {"id": "w_math", "text": "math", "segments": ["m", "a", "th"], "cn": "数学", "kind": "real"},
+    {"id": "w_bath", "text": "bath", "segments": ["b", "a", "th"], "cn": "洗澡", "kind": "real"},
+    {"id": "w_this", "text": "this", "segments": ["th", "i", "s"], "cn": "这个", "kind": "real"},
+    {"id": "w_whip", "text": "whip", "segments": ["wh", "i", "p"], "cn": "鞭子", "kind": "real"},
+    {"id": "w_when", "text": "when", "segments": ["wh", "e", "n"], "cn": "什么时候", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "This bath is hot.", "cn": "这个澡水很热。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_thin", "word_id": "w_thin", "answer": "th", "options": ["th", "t", "n"]},
+    {"id": "fs_whip", "word_id": "w_whip", "answer": "wh", "options": ["wh", "w", "p"]},
+    {"id": "fs_this", "word_id": "w_this", "answer": "th", "options": ["th", "sh", "s"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "再认识两个手拉手的组合：th 把舌尖放在齿间，wh 像 w 一样圆唇。",
+      "card_ids": ["card_th", "card_wh"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它开头的音。",
+      "item_ids": ["fs_thin", "fs_whip", "fs_this"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "th、wh 是一个整体音。依次点每块听发音，再连起来读，然后录下你的声音。",
+      "word_ids": ["w_thin", "w_math", "w_whip"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。记得 th、wh 是一整块。",
+      "word_ids": ["w_thin", "w_math", "w_whip"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_thin", "w_math", "w_whip"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["what", "of"]
+    }
+  ]
+}

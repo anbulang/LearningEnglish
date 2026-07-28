@@ -1,0 +1,106 @@
+{
+  "version": "3",
+  "course": {
+    "id": "course_pep_g3",
+    "title": "自然拼读（PEP 同步进阶）",
+    "description": "L1 对齐人教版（PEP）三年级上册 Letters and sounds，覆盖 26 个字母音与五个短元音的 CVC 拼读；L2 进阶到常见双辅音 sh/ch/th/wh 与长元音（神奇 e、ee、ai/ay）。"
+  },
+  "units": [
+    {
+      "unit_id": "phonics_l1_u1",
+      "unit_code": "L1-U1",
+      "sequence_order": 1,
+      "level": "1",
+      "title": "字母 a b c d 与短音 a",
+      "file": "units/L1-U1.json"
+    },
+    {
+      "unit_id": "phonics_l1_u2",
+      "unit_code": "L1-U2",
+      "sequence_order": 2,
+      "level": "1",
+      "title": "字母 e f g h 与短音 e",
+      "file": "units/L1-U2.json"
+    },
+    {
+      "unit_id": "phonics_l1_u3",
+      "unit_code": "L1-U3",
+      "sequence_order": 3,
+      "level": "1",
+      "title": "字母 i j k l 与短音 i",
+      "file": "units/L1-U3.json"
+    },
+    {
+      "unit_id": "phonics_l1_u4",
+      "unit_code": "L1-U4",
+      "sequence_order": 4,
+      "level": "1",
+      "title": "字母 m n o p 与短音 o",
+      "file": "units/L1-U4.json"
+    },
+    {
+      "unit_id": "phonics_l1_u5",
+      "unit_code": "L1-U5",
+      "sequence_order": 5,
+      "level": "1",
+      "title": "字母 q r s t u 与短音 u",
+      "file": "units/L1-U5.json"
+    },
+    {
+      "unit_id": "phonics_l1_u6",
+      "unit_code": "L1-U6",
+      "sequence_order": 6,
+      "level": "1",
+      "title": "字母 v w x y z 与尾音复习",
+      "file": "units/L1-U6.json"
+    },
+    {
+      "unit_id": "phonics_l2_u1",
+      "unit_code": "L2-U1",
+      "sequence_order": 7,
+      "level": "2",
+      "title": "双辅音 sh 与 ch",
+      "file": "units/L2-U1.json"
+    },
+    {
+      "unit_id": "phonics_l2_u2",
+      "unit_code": "L2-U2",
+      "sequence_order": 8,
+      "level": "2",
+      "title": "双辅音 th 与 wh",
+      "file": "units/L2-U2.json"
+    },
+    {
+      "unit_id": "phonics_l2_u3",
+      "unit_code": "L2-U3",
+      "sequence_order": 9,
+      "level": "2",
+      "title": "神奇 e・长音 a（a-e）",
+      "file": "units/L2-U3.json"
+    },
+    {
+      "unit_id": "phonics_l2_u4",
+      "unit_code": "L2-U4",
+      "sequence_order": 10,
+      "level": "2",
+      "title": "神奇 e・长音 i 和 o（i-e / o-e）",
+      "file": "units/L2-U4.json"
+    },
+    {
+      "unit_id": "phonics_l2_u5",
+      "unit_code": "L2-U5",
+      "sequence_order": 11,
+      "level": "2",
+      "title": "长音 u（u-e）与长音 e（ee）",
+      "file": "units/L2-U5.json"
+    },
+    {
+      "unit_id": "phonics_l2_u6",
+      "unit_code": "L2-U6",
+      "sequence_order": 12,
+      "level": "2",
+      "title": "长音 a 的朋友（ai / ay）",
+      "file": "units/L2-U6.json"
+    }
+  ]
+}

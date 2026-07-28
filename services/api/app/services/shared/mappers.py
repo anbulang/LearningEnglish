@@ -7,6 +7,7 @@ from app.db.models import (
     MaterialParseJobModel,
     ParentAccountModel,
     ParentCoachingScriptModel,
+    PhonicsAttemptModel,
     PracticeSessionModel,
     ReviewTaskModel,
     SpeakingAttemptModel,
@@ -25,6 +26,10 @@ from app.models.contracts import (
     ParentAccount,
     ParentCoachingScript,
     ParentCoachingStep,
+    PhonicsAttempt,
+    PhonicsAttemptItemResult,
+    PhonicsAttemptStatus,
+    PhonicsPracticeType,
     PracticeSession,
     ReviewTask,
     ReviewTaskStatus,
@@ -63,6 +68,7 @@ def child_profile_from_model(model: ChildProfileModel) -> ChildProfile:
         learning_goal=model.learning_goal,
         preferred_review_duration_minutes=model.preferred_review_duration_minutes,
         parent_notes=model.parent_notes,
+        accent=model.accent or "us",
     )
 
 
@@ -199,6 +205,36 @@ def parent_coaching_script_from_model(model: ParentCoachingScriptModel) -> Paren
         title=model.title,
         intro=model.intro,
         steps=[ParentCoachingStep(**item) for item in (model.steps or [])],
+    )
+
+
+def phonics_attempt_from_model(model: PhonicsAttemptModel) -> PhonicsAttempt:
+    try:
+        practice_type = PhonicsPracticeType(model.practice_type)
+    except ValueError:
+        practice_type = PhonicsPracticeType.none
+    try:
+        status = PhonicsAttemptStatus(model.status)
+    except ValueError:
+        status = PhonicsAttemptStatus.scored
+    return PhonicsAttempt(
+        id=model.id,
+        child_id=model.child_id,
+        unit_id=model.unit_id,
+        step=model.step,
+        practice_type=practice_type,
+        target_text=model.target_text,
+        item_results=[PhonicsAttemptItemResult(**item) for item in (model.item_results or [])],
+        accuracy_score=model.accuracy_score,
+        passed=model.passed,
+        transcript=model.transcript,
+        feedback=model.feedback,
+        audio_url=model.audio_url,
+        provider=model.provider,
+        failure_reason=model.failure_reason,
+        status=status,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
     )
 
 

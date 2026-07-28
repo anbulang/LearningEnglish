@@ -34,3 +34,10 @@ htmlcov/
 dist/
 # Generated walkthrough screenshots (regenerable harness artifacts)
 apps/mobile/screenshots/
+
+# Local-only reference teaching materials (copyrighted PEP/Scholastic media — never commit/redistribute)
+reference/
+
+# Local runtime artifacts (redis dump from the local phonics dev stack)
+dump.rdb
+*.rdb

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:learning_english_contracts/contracts.dart';
 import 'package:learning_english_design_tokens/design_tokens.dart';
 
 import '../../../core/assets/app_illustrations.dart';
@@ -8,6 +9,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/illustrated_surface.dart';
 import '../../../core/widgets/state_panel.dart';
 import '../../materials/data/app_repository.dart';
+import '../../phonics/data/phonics_providers.dart';
 import '../data/demo_data.dart';
 import '../../session/data/session_controller.dart';
 
@@ -104,6 +106,10 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text('默认复习时长：${child.preferredReviewDurationMinutes} 分钟'),
                   const Text('孩子模式保护：PIN 待接入'),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text('拼读发音口音'),
+                  const SizedBox(height: AppSpacing.xs),
+                  _AccentToggle(child: child),
                   if (session != null &&
                       session.children.length > 1) ...<Widget>[
                     const SizedBox(height: AppSpacing.md),
@@ -267,5 +273,72 @@ class _AddChildSheetState extends State<_AddChildSheet> {
         setState(() => _isSaving = false);
       }
     }
+  }
+}
+
+/// 美音 / 英音 segmented toggle for a single child. Persists the choice through
+/// `PATCH /children/{id}`, refreshes the session's copy of the child, and
+/// invalidates the phonics providers so audio re-fetches in the new accent.
+class _AccentToggle extends ConsumerStatefulWidget {
+  const _AccentToggle({required this.child});
+
+  final ChildProfile child;
+
+  @override
+  ConsumerState<_AccentToggle> createState() => _AccentToggleState();
+}
+
+class _AccentToggleState extends ConsumerState<_AccentToggle> {
+  var _isSaving = false;
+
+  Future<void> _select(String accent) async {
+    if (_isSaving || accent == widget.child.accent) {
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      final updated = await ref
+          .read(appRepositoryProvider)
+          .updateChild(childId: widget.child.id, accent: accent);
+      await ref.read(sessionControllerProvider.notifier).updateChild(updated);
+      ref.invalidate(activeChildProvider);
+      ref.invalidate(phonicsUnitsProvider);
+      ref.invalidate(phonicsProgressProvider);
+      ref.invalidate(phonicsUnitProvider);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('口音切换失败，请稍后重试')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SegmentedButton<String>(
+          segments: const <ButtonSegment<String>>[
+            ButtonSegment<String>(value: 'us', label: Text('美音')),
+            ButtonSegment<String>(value: 'uk', label: Text('英音')),
+          ],
+          selected: <String>{widget.child.accent},
+          onSelectionChanged: _isSaving
+              ? null
+              : (selection) => _select(selection.first),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          '切换后拼读发音会用所选口音重新加载。',
+          style: AppTextStyles.helper,
+        ),
+      ],
+    );
   }
 }

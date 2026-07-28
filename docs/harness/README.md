@@ -1,6 +1,6 @@
 # Harness 文档索引
 
-更新时间：2026-06-13
+更新时间：2026-07-19
 
 ## 这份目录的作用
 
@@ -18,7 +18,7 @@
 - `Makefile`
 - `docs/architecture/*`
 - `docs/harness/*`
-- `docs/project/2026-06-13-status-and-todo.md`
+- `docs/project/2026-07-19-status-and-todo.md`
 - `services/api/README.md`
 - `services/workers/README.md`
 - `infra/env/local.example.env`
@@ -78,9 +78,9 @@ make harness-capture-ios-screen SCREEN=login-screen
 - `HN-017` 真机 speaking evidence 已存在；`HN-019` 已完成至少一轮真机安装和主链回归证据归档。
 - `HN-019` 现在不只是 runbook 入口；`scripts/harness/run_hn019_real_device_main_chain.py` 已形成独立真机 harness，并带有针对局域网 `healthz` no-proxy 探测的 focused test。
 - `HN-020` 已作为下一批家长试用验收入口，用来把主链可用性问题拆成面向真实家长的清单和修复批次。
-- 当前剩余问题主要在 Android / iOS 交付手册收口、R0/R1/R2/R3 固定复跑纪律、admin 原型向可运营边界收口，以及家长试用闭环执行。
+- 当前剩余问题已经不只是文档收口，而是公网交付、真实身份、真机/provider 复验和家长试用闭环四类项目级阻塞。
 - `Makefile` 默认 `IOS_API_BASE_URL` 已回到 `http://127.0.0.1:8000/v1`；真机导包必须显式覆盖为当前局域网 API 地址，不能假设某个历史 `192.168.*` 仍然有效。
-- 最新项目级进度与 ToDo 统一以 `docs/project/2026-06-13-status-and-todo.md` 为准；旧快照不再并存。
+- 最新项目级进度与 ToDo 统一以 `docs/project/2026-07-19-status-and-todo.md` 为准；旧快照不再并存。
 
 ## 使用约定
 
@@ -89,6 +89,6 @@ make harness-capture-ios-screen SCREEN=login-screen
 - 交付或文档治理收尾时，至少执行一次：
 
 ```bash
-rg -n "2026-06-12-status-and-todo|2026-06-11-status-and-todo|2026-06-10-status-and-todo|2026-06-09-status-and-todo|2026-06-08-status-and-todo|2026-06-07-status-and-todo|2026-06-06-status-and-todo|2026-06-05-status-and-todo|2026-06-04-status-and-todo|2026-06-03-status-and-todo|2026-06-02-status-and-todo|2026-06-01-status-and-todo|2026-05-31-status-and-todo|待生成|预期目录|待补真机证据|infra/\\.env\\.example" README.md docs apps services infra --glob '!docs/superpowers/**'
+rg -n "2026-07-16-status-and-todo|2026-06-20-status-and-todo|2026-06-18-status-and-todo|2026-06-17-mvp-completion-plan|2026-06-15-status-and-todo|2026-06-13-status-and-todo|2026-06-12-status-and-todo|2026-06-11-status-and-todo|2026-06-10-status-and-todo|2026-06-09-status-and-todo|2026-06-08-status-and-todo|2026-06-07-status-and-todo|2026-06-06-status-and-todo|2026-06-05-status-and-todo|2026-06-04-status-and-todo|2026-06-03-status-and-todo|2026-06-02-status-and-todo|2026-06-01-status-and-todo|2026-05-31-status-and-todo|待生成|预期目录|待补真机证据|infra/\\.env\\.example" README.md docs apps services infra --glob '!docs/superpowers/**'
 git diff --check
 ```

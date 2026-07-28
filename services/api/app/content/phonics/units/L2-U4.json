@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l2_u4",
+  "unit_code": "L2-U4",
+  "sequence_order": 10,
+  "level": "2",
+  "content_version": "1",
+  "title": "神奇 e・长音 i 和 o（i-e / o-e）",
+  "subtitle": "神奇 e 继续变魔法：bike、kite、home、rope",
+  "vowel_focus": "long_i_o_magic_e",
+  "letters": ["i-e", "o-e"],
+  "sound_card_ids": ["card_long_i", "card_long_o"],
+  "heart_words": [
+    {"text": "little", "cn": "小的"},
+    {"text": "one", "cn": "一"}
+  ],
+  "decodable_words": [
+    {"id": "w_bike", "text": "bike", "segments": ["b", "i-e", "k"], "cn": "自行车", "kind": "real"},
+    {"id": "w_kite", "text": "kite", "segments": ["k", "i-e", "t"], "cn": "风筝", "kind": "real"},
+    {"id": "w_ride", "text": "ride", "segments": ["r", "i-e", "d"], "cn": "骑", "kind": "real"},
+    {"id": "w_home", "text": "home", "segments": ["h", "o-e", "m"], "cn": "家", "kind": "real"},
+    {"id": "w_rope", "text": "rope", "segments": ["r", "o-e", "p"], "cn": "绳子", "kind": "real"},
+    {"id": "w_note", "text": "note", "segments": ["n", "o-e", "t"], "cn": "便条", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "I ride my bike home.", "cn": "我骑自行车回家。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_bike", "word_id": "w_bike", "answer": "b", "options": ["b", "d", "k"]},
+    {"id": "fs_kite", "word_id": "w_kite", "answer": "k", "options": ["k", "c", "t"]},
+    {"id": "fs_home", "word_id": "w_home", "answer": "h", "options": ["h", "m", "o-e"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "神奇 e 也能让 i 和 o 读出自己的名字。听一听 i-e 和 o-e。",
+      "card_ids": ["card_long_i", "card_long_o"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它开头的音。",
+      "item_ids": ["fs_bike", "fs_kite", "fs_home"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "中间的 i-e 读 “i”、o-e 读 “oh”。依次点每块听发音，再连起来读，然后录下你的声音。",
+      "word_ids": ["w_bike", "w_kite", "w_home"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。i-e、o-e 各是一整块。",
+      "word_ids": ["w_bike", "w_kite", "w_home"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_bike", "w_kite", "w_home"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["little", "one"]
+    }
+  ]
+}

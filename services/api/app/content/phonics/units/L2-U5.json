@@ -1,0 +1,76 @@
+{
+  "unit_id": "phonics_l2_u5",
+  "unit_code": "L2-U5",
+  "sequence_order": 11,
+  "level": "2",
+  "content_version": "1",
+  "title": "长音 u（u-e）与长音 e（ee）",
+  "subtitle": "cube、cute 里的 u-e，bee、feet 里的 ee",
+  "vowel_focus": "long_u_e",
+  "letters": ["u-e", "ee"],
+  "sound_card_ids": ["card_long_u", "card_ee"],
+  "heart_words": [
+    {"text": "two", "cn": "二"},
+    {"text": "do", "cn": "做"}
+  ],
+  "decodable_words": [
+    {"id": "w_cute", "text": "cute", "segments": ["c", "u-e", "t"], "cn": "可爱的", "kind": "real"},
+    {"id": "w_cube", "text": "cube", "segments": ["c", "u-e", "b"], "cn": "立方体", "kind": "real"},
+    {"id": "w_mule", "text": "mule", "segments": ["m", "u-e", "l"], "cn": "骡子", "kind": "real"},
+    {"id": "w_bee", "text": "bee", "segments": ["b", "ee"], "cn": "蜜蜂", "kind": "real"},
+    {"id": "w_see", "text": "see", "segments": ["s", "ee"], "cn": "看见", "kind": "real"},
+    {"id": "w_feet", "text": "feet", "segments": ["f", "ee", "t"], "cn": "脚", "kind": "real"}
+  ],
+  "sentences": [
+    {"id": "s_1", "text": "I see a cute bee.", "cn": "我看见一只可爱的蜜蜂。"}
+  ],
+  "first_sound_items": [
+    {"id": "fs_cute", "word_id": "w_cute", "answer": "c", "options": ["c", "k", "t"]},
+    {"id": "fs_mule", "word_id": "w_mule", "answer": "m", "options": ["m", "n", "l"]},
+    {"id": "fs_feet", "word_id": "w_feet", "answer": "f", "options": ["f", "v", "t"]}
+  ],
+  "steps": [
+    {
+      "key": "sound_intro",
+      "practice_type": "none",
+      "title": "听音・识音",
+      "instruction": "u-e 让 u 读出名字 “you”；两个 e 手拉手读长长的 “ee”。",
+      "card_ids": ["card_long_u", "card_ee"]
+    },
+    {
+      "key": "first_sound",
+      "practice_type": "first_sound_tap",
+      "title": "听音・圈首音",
+      "instruction": "听这个单词，点出它开头的音。",
+      "item_ids": ["fs_cute", "fs_mule", "fs_feet"]
+    },
+    {
+      "key": "blending",
+      "practice_type": "blend_word_asr",
+      "title": "拼一拼・读出来",
+      "instruction": "依次点每块听发音，再连起来读，然后录下你的声音。",
+      "word_ids": ["w_cute", "w_bee", "w_feet"]
+    },
+    {
+      "key": "tile_build",
+      "practice_type": "tile_build",
+      "title": "搭一搭・拼出词",
+      "instruction": "把打乱的字母块按顺序摆好，拼出这个单词。u-e、ee 各是一整块。",
+      "word_ids": ["w_cute", "w_bee", "w_feet"]
+    },
+    {
+      "key": "dictation",
+      "practice_type": "dictation",
+      "title": "听一听・拼出来",
+      "instruction": "先听单词，再用字母块把它拼出来，这次没有字帮忙哦。",
+      "word_ids": ["w_cute", "w_bee", "w_feet"]
+    },
+    {
+      "key": "heart_word",
+      "practice_type": "none",
+      "title": "高频词",
+      "instruction": "这些词要直接认读、记在心里。",
+      "heart_words": ["two", "do"]
+    }
+  ]
+}
