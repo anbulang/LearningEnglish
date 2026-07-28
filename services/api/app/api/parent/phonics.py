@@ -98,6 +98,19 @@ def create_word_attempt(
     unit = db.get(PhonicsUnitModel, unit_id)
     if unit is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Phonics unit not found")
+    # The scored target must be a word actually taught in this unit — an empty or
+    # arbitrary target would otherwise score as a guaranteed pass (score_word_match
+    # returns pass for an empty target) and could credit words the child never saw.
+    target = target_text.strip()
+    content = unit.content_json or {}
+    valid_targets = {
+        (w.get("text") or "").strip().lower() for w in content.get("decodable_words", [])
+    } | {(h.get("text") or "").strip().lower() for h in content.get("heart_words", [])}
+    if not target or target.lower() not in valid_targets:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="target_text must be a word taught in this unit",
+        )
     _validate_audio_upload(audio)
     attempt = PhonicsAttemptModel(
         id=f"phattempt_{uuid4().hex[:12]}",
@@ -105,7 +118,7 @@ def create_word_attempt(
         unit_id=unit.id,
         step=step.strip() or "blending",
         practice_type="blend_word_asr",
-        target_text=target_text.strip(),
+        target_text=target,
         audio_duration_ms=max(audio_duration_ms, 0),
         status="recording_uploaded",
         created_at=datetime.now(timezone.utc),

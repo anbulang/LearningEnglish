@@ -43,6 +43,18 @@ class _PhonicsLessonScreenState extends ConsumerState<PhonicsLessonScreen> {
   int _stepIndex = 0;
 
   @override
+  void didUpdateWidget(covariant PhonicsLessonScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // GoRouter reuses this State across '/phonics/unit/:unitId' navigations
+    // (same route pattern), e.g. the completion screen's "下一课". A new unit must
+    // restart at step 0 instead of inheriting the previous unit's step index
+    // (which, post-completion, would open the next unit already "finished").
+    if (oldWidget.unitId != widget.unitId) {
+      _stepIndex = 0;
+    }
+  }
+
+  @override
   void dispose() {
     // Stop any card/keyword playback when leaving the lesson.
     try {

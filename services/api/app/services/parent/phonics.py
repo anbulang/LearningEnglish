@@ -251,6 +251,13 @@ def get_unit_detail(db: Session, child_id: str, unit_id: str) -> PhonicsUnitDeta
             ChildPhonicsProgressModel.unit_id == unit.id,
         )
     )
+    # Report the same sequence-aware status the list/progress endpoints use, so a
+    # locked unit fetched directly doesn't misreport as "unlocked".
+    progress_contract = _progress_contract(unit.id, progress)
+    units = db.scalars(select(PhonicsUnitModel).order_by(PhonicsUnitModel.sequence_order)).all()
+    progress_map = _load_progress_map(db, child_id)
+    index = next((i for i, u in enumerate(units) if u.id == unit.id), 0)
+    progress_contract.status = _effective_status(index, unit.id, units, progress_map)
 
     return PhonicsUnitDetailResponse(
         unit=PhonicsUnitDetail(
@@ -270,7 +277,7 @@ def get_unit_detail(db: Session, child_id: str, unit_id: str) -> PhonicsUnitDeta
         heart_words=heart_words,
         first_sound_items=first_sound_items,
         steps=steps,
-        progress=_progress_contract(unit.id, progress),
+        progress=progress_contract,
     )
 
 

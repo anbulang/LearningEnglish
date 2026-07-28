@@ -27,6 +27,7 @@ class JobStatus(str, Enum):
 class MediaGenerationStatus(str, Enum):
     pending = "pending"
     processing = "processing"
+    partial = "partial"  # some assets ready, some failed (phonics dual-accent gen)
     ready = "ready"
     failed = "failed"
 

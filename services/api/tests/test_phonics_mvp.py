@@ -103,6 +103,17 @@ def test_unit_detail_for_a_later_unit(api_client) -> None:
     assert any(c["id"] == "card_short_e" for c in d["sound_cards"])
     # first-sound task isolates the new consonants f, g, h
     assert {i["answer"] for i in d["first_sound_items"]} == {"f", "g", "h"}
+    # detail reports the same sequence-aware status as the list: L1-U2 is locked
+    # until U1 is mastered (not misreported as "unlocked").
+    assert d["progress"]["status"] == "locked"
+
+
+def test_media_status_enum_has_partial() -> None:
+    # a unit with some ready + some failed audio persists "partial"; the enum must
+    # carry it so it isn't silently downgraded to "pending" (still-generating).
+    from app.models.contracts import MediaGenerationStatus
+
+    assert MediaGenerationStatus("partial") is MediaGenerationStatus.partial
 
 
 def test_unit_lock_progression_unlocks_next_on_mastery(api_client) -> None:
@@ -445,6 +456,31 @@ def test_audio_attempt_endpoint_accepts_recording(api_client) -> None:
     assert body["status"] == "recording_uploaded"
     fetched = api_client.get(f"/v1/phonics/attempts/{body['id']}", headers=headers)
     assert fetched.status_code == 200
+
+
+def test_audio_attempt_rejects_empty_or_foreign_target(api_client) -> None:
+    headers, _ = auth_headers(api_client)
+    _seed()
+    child_id = _create_child(api_client, headers)
+
+    def post(target: str):
+        return api_client.post(
+            "/v1/phonics/attempts/audio",
+            data={
+                "child_id": child_id, "unit_id": "phonics_l1_u1",
+                "target_text": target, "step": "blending", "audio_duration_ms": "900",
+            },
+            files={"audio": ("x.m4a", io.BytesIO(b"fake-audio-bytes"), "audio/mp4")},
+            headers=headers,
+        )
+
+    # empty / whitespace target would otherwise score as a guaranteed pass
+    assert post("").status_code == 422
+    assert post("   ").status_code == 422
+    # a word not taught in this unit is rejected (can't credit arbitrary words)
+    assert post("zebra").status_code == 422
+    # a real unit word is accepted
+    assert post("dad").status_code == 201
 
 
 def test_blend_passes_drive_mastery_and_unlock(api_client) -> None:
