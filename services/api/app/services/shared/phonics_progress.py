@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import ChildPhonicsProgressModel, PhonicsAttemptModel, PhonicsUnitModel
@@ -17,16 +18,26 @@ from app.services.shared.phonics_scoring import decide_mastery
 
 
 def get_or_create_progress(db: Session, child_id: str, unit_id: str) -> ChildPhonicsProgressModel:
-    progress = db.scalar(
-        select(ChildPhonicsProgressModel).where(
-            ChildPhonicsProgressModel.child_id == child_id,
-            ChildPhonicsProgressModel.unit_id == unit_id,
-        )
+    stmt = select(ChildPhonicsProgressModel).where(
+        ChildPhonicsProgressModel.child_id == child_id,
+        ChildPhonicsProgressModel.unit_id == unit_id,
     )
-    if progress is None:
-        progress = ChildPhonicsProgressModel(child_id=child_id, unit_id=unit_id, status="unlocked")
-        db.add(progress)
-        db.flush()
+    progress = db.scalar(stmt)
+    if progress is not None:
+        return progress
+    # Create inside a SAVEPOINT so a concurrent creator racing the
+    # (child_id, unit_id) unique constraint rolls back just this INSERT (not the
+    # caller's pending attempt row) — then reuse the row the winner created
+    # instead of surfacing a 500.
+    progress = ChildPhonicsProgressModel(child_id=child_id, unit_id=unit_id, status="unlocked")
+    try:
+        with db.begin_nested():
+            db.add(progress)
+            db.flush()
+    except IntegrityError:
+        progress = db.scalar(stmt)
+        if progress is None:
+            raise
     return progress
 
 

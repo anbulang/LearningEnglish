@@ -70,6 +70,10 @@ class LocalStorageService:
     def resolve_local_path(self, asset: StoredAssetModel) -> Path:
         return self.settings.local_storage_path / asset.object_key
 
+    def cleanup_local_path(self, path: Path) -> None:
+        # The resolved path IS the canonical stored file — never delete it.
+        return
+
 
 class S3StorageService:
     def __init__(self) -> None:
@@ -140,6 +144,14 @@ class S3StorageService:
         with target as fp:
             self.client.download_fileobj(asset.bucket, asset.object_key, fp)
         return Path(target.name)
+
+    def cleanup_local_path(self, path: Path) -> None:
+        # resolve_local_path downloaded to a delete=False temp file; drop it once
+        # the caller is done so the worker disk doesn't fill over time.
+        try:
+            Path(path).unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def _ensure_bucket(self) -> None:
         try:
