@@ -3,6 +3,9 @@
 把拼读的**发音生成（TTS）**与**跟读评分（ASR）**接到真 DashScope，并在真机上验收，
 覆盖 L1 CVC 与 **L2 digraph / 长元音**（sh、ch、th、wh、a-e、ee、ai/ay）。
 
+> 状态：自然拼读全链路已合并入 `main`（PR #27）。剩余并发/健壮性硬化（outbox/重试、进度并发写、
+> S3 临时文件清理）见 issue #28，不阻塞当前验收。
+
 ## 结论先行（已验证）
 `scripts/harness/run_phonics_dashscope_smoke.py`（`make harness-phonics-dashscope-smoke`）
 已用**真 DashScope** 跑通完整链路，**无需真机**：
@@ -67,6 +70,28 @@ make mobile-ios-ipa IOS_API_BASE_URL=http://<lan-ip>:8000/v1
 - [ ] 再录一个 **长元音词**（如 `cake`）→ 通过。
 - [ ] 故意读错/不出声 → 显示「再试一次」（`no_match`），不报错崩溃。
 - [ ] 完成 first_sound + 拼读达标后，单元变「已掌握」并解锁下一课。
+
+## C. 模拟器真 ASR 走查（无真机时）
+模拟器没有麦克风，`SpeakingRecorderController.injectRecording`（`@visibleForTesting`）把一段真
+TTS 合成的词当作「孩子录音」注入，从而走完整的 **App 上传 → worker → 真 DashScope ASR → UI** 链路
+（ASR、评分、界面渲染都是真的，只有"孩子的嗓音"是替身）。前置同 B：真后端栈 + worker + 隧道在
+`:8000` 起着；App 指向 `http://127.0.0.1:8000/v1`。
+
+```bash
+DEV=<booted-sim-udid>
+cd apps/mobile
+# 读对（L2 digraph ship）：期望 UI 显示「读得不错！/ AI 听到：Ship.」
+flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/phonics_real_asr_test.dart -d $DEV \
+  --dart-define=API_BASE_URL=http://127.0.0.1:8000/v1
+# 读错（提交 cake 录音打 ship）：期望 UI 显示「再试一次」
+flutter drive ... --target=integration_test/phonics_real_asr_retry_test.dart ...
+# 切美音/英音：期望该娃 card 音频 URL 从 sound-us.mp3 → sound-uk.mp3
+flutter drive ... --target=integration_test/phonics_accent_test.dart ...
+```
+- 前台跑更稳（后台易 VM attach 失败）；截图落在 `apps/mobile/screenshots/`（已 gitignore）。
+- 内嵌的真 TTS 片段：`integration_test/phonics_ship_audio.dart` / `phonics_cake_audio.dart`（base64）。
+- 全流程 + 单元列表锁进阶 + 六步课堂：`integration_test/phonics_walkthrough_test.dart`。
 
 ## 排错
 - ASR 一直 `failed`：多半是录音 URL 非公网 → 确认 `SPEECH_ASSESSMENT_AUDIO_PUBLIC_BASE_URL`

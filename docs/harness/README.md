@@ -1,6 +1,6 @@
 # Harness 文档索引
 
-更新时间：2026-07-19
+更新时间：2026-07-29
 
 ## 这份目录的作用
 
@@ -38,6 +38,7 @@
 HARNESS_RESET=1 make harness-mvp-readiness
 make harness-main-chain-smoke
 make harness-doubao-smoke
+make harness-phonics-dashscope-smoke
 API_BASE_URL=http://<current-host-ip>:8000/v1 SOURCE_IMAGE_URLS=https://example.com/page-1.jpg,https://example.com/page-2.jpg make harness-hn019-real-device-main-chain
 make harness-hn020-parent-pilot-template
 make harness-evidence-index
@@ -54,6 +55,7 @@ make harness-capture-ios-screen SCREEN=login-screen
 - `evidence-archive-policy.md`：`dist/harness/` 证据保留、脱敏和索引规则。
 - `non-technical-pilot-guide.md`：给产品或内部测试同学的试用说明。
 - `hn020-parent-pilot-acceptance.md`：家长试用验收清单、问题分级和修复批次入口。
+- `phonics-real-device-runbook.md`：自然拼读真机/模拟器 × 真 DashScope（发音 TTS + 跟读 ASR，含 L2 digraph）的栈搭建与验收清单。
 
 ## Evidence 目录
 
@@ -69,6 +71,7 @@ make harness-capture-ios-screen SCREEN=login-screen
 | `dist/harness/HN-018/` | 独立报告页 | `weekly-report.json`、`summary.json`、`reports-screen.png` | `docs/harness/provider-readiness-runbook.md` |
 | `dist/harness/HN-019/` | 真机回归与 evidence 治理 | `real-device-main-chain-summary.json`、`real-device-main-chain-material.json`、`real-device-main-chain-job.json`、`real-device-main-chain-media-summary.json`、主链 API/worker 日志；历史证据仍保留 `device-main-chain-summary.json` 等 | `docs/harness/device-regression-runbook.md`、`docs/harness/evidence-archive-policy.md` |
 | `dist/harness/HN-020/` | 家长试用与非技术验收闭环 | `parent-pilot-summary.json`、`parent-pilot-notes.md`、上传 / AI 校对 / 课程详情 / 复习 / 报告截图 | `docs/harness/hn020-parent-pilot-acceptance.md`、`docs/harness/non-technical-pilot-guide.md` |
+| `dist/harness/HN-021/` | 自然拼读真 DashScope 发音(TTS)+跟读(ASR) smoke（含 L2 digraph） | `phonics-dashscope-smoke-summary.json`、`phonics-dashscope-cloudflared.log` | `docs/harness/phonics-real-device-runbook.md` |
 | `dist/harness/screens/` | 标准截图路径 | `login-screen.png`、`phone-binding-screen.png`、`upload-screen.png`、`ai-review-screen.png`、`lesson-detail-screen.png`、`report-screen.png` | `docs/harness/mvp-readiness-checklist.md` |
 
 ## 当前结论
@@ -81,6 +84,7 @@ make harness-capture-ios-screen SCREEN=login-screen
 - 当前剩余问题已经不只是文档收口，而是公网交付、真实身份、真机/provider 复验和家长试用闭环四类项目级阻塞。
 - `Makefile` 默认 `IOS_API_BASE_URL` 已回到 `http://127.0.0.1:8000/v1`；真机导包必须显式覆盖为当前局域网 API 地址，不能假设某个历史 `192.168.*` 仍然有效。
 - 最新项目级进度与 ToDo 统一以 `docs/project/2026-07-19-status-and-todo.md` 为准；旧快照不再并存。
+- 自然拼读（phonics）课程全链路已合并入 `main`（PR #27）：PEP L1+L2 内容、搭词/听写 tile 交互、真 DashScope 发音(TTS)+跟读(ASR，含 L2 digraph 评分)、按孩子美音/英音。provider 级 smoke（`make harness-phonics-dashscope-smoke`，evidence `dist/harness/HN-021/`）与真机后端上传→worker→真 ASR 路径均已实测通过；模拟器 `flutter drive` 走查覆盖读对（读得不错）/读错（再试一次）/切口音。并发与健壮性硬化（outbox/重试、进度并发写、S3 临时文件清理）见 issue #28。
 
 ## 使用约定
 
