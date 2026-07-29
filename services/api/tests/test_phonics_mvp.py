@@ -483,6 +483,86 @@ def test_audio_attempt_rejects_empty_or_foreign_target(api_client) -> None:
     assert post("dad").status_code == 201
 
 
+def test_retry_reenqueues_stuck_or_failed_audio_attempt(api_client) -> None:
+    headers, _ = auth_headers(api_client)
+    _seed()
+    child_id = _create_child(api_client, headers)
+    created = api_client.post(
+        "/v1/phonics/attempts/audio",
+        data={
+            "child_id": child_id, "unit_id": "phonics_l1_u1",
+            "target_text": "dad", "step": "blending", "audio_duration_ms": "900",
+        },
+        files={"audio": ("dad.m4a", io.BytesIO(b"fake-audio-bytes"), "audio/mp4")},
+        headers=headers,
+    ).json()
+    aid = created["id"]
+    assert created["status"] == "recording_uploaded"  # enqueue is a no-op in tests
+
+    # retry recovers a stuck attempt (resets + re-enqueues)
+    retried = api_client.post(f"/v1/phonics/attempts/{aid}/retry", headers=headers)
+    assert retried.status_code == 200
+    assert retried.json()["status"] == "recording_uploaded"
+
+    # unknown attempt -> 404
+    assert api_client.post("/v1/phonics/attempts/nope/retry", headers=headers).status_code == 404
+
+    # tap attempts are synchronous (not ASR) — can't be retried
+    tap = api_client.post(
+        "/v1/phonics/attempts",
+        json={
+            "child_id": child_id, "unit_id": "phonics_l1_u1", "step": "first_sound",
+            "practice_type": "first_sound_tap",
+            "item_results": [{"prompt": "bad", "expected": "b", "given": "b", "correct": True}],
+        },
+        headers=headers,
+    ).json()
+    assert api_client.post(
+        f"/v1/phonics/attempts/{tap['attempt']['id']}/retry", headers=headers
+    ).status_code == 422
+
+    # already-scored attempt: retry is a harmless no-op, returns it unchanged
+    db = SessionLocal()
+    try:
+        a = db.get(PhonicsAttemptModel, aid)
+        a.status = "scored"
+        db.add(a)
+        db.commit()
+    finally:
+        db.close()
+    done = api_client.post(f"/v1/phonics/attempts/{aid}/retry", headers=headers)
+    assert done.status_code == 200 and done.json()["status"] == "scored"
+
+
+def test_get_or_create_progress_is_idempotent(api_client) -> None:
+    from app.services.shared.phonics_progress import get_or_create_progress
+
+    headers, _ = auth_headers(api_client)
+    _seed()
+    child_id = _create_child(api_client, headers)
+    db = SessionLocal()
+    try:
+        p1 = get_or_create_progress(db, child_id, "phonics_l1_u1")
+        db.commit()
+        p2 = get_or_create_progress(db, child_id, "phonics_l1_u1")
+        assert p1.id == p2.id
+        rows = db.query(type(p1)).filter_by(child_id=child_id, unit_id="phonics_l1_u1").count()
+        assert rows == 1  # no duplicate row from the second call
+    finally:
+        db.close()
+
+
+def test_local_storage_cleanup_keeps_canonical_file(tmp_path) -> None:
+    # LocalStorageService.resolve_local_path returns the real stored file, so
+    # cleanup_local_path must be a no-op (S3's temp download is the one to unlink).
+    from app.services.shared.storage import LocalStorageService
+
+    f = tmp_path / "keep.mp3"
+    f.write_bytes(b"audio")
+    LocalStorageService().cleanup_local_path(f)
+    assert f.exists()
+
+
 def test_blend_passes_drive_mastery_and_unlock(api_client) -> None:
     headers, _ = auth_headers(api_client)
     _seed()

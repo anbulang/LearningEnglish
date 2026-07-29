@@ -123,6 +123,8 @@ def process_material_job(job_id: str) -> dict[str, str]:
 def score_speaking_attempt(attempt_id: str) -> dict[str, str]:
     db = SessionLocal()
     provider = None
+    storage = None
+    audio_path = None
     try:
         row = db.execute(
             select(SpeakingAttemptModel, CourseMaterialModel)
@@ -201,6 +203,8 @@ def score_speaking_attempt(attempt_id: str) -> dict[str, str]:
             db.commit()
         return {"attempt_id": attempt_id, "status": "failed"}
     finally:
+        if storage is not None and audio_path is not None:
+            storage.cleanup_local_path(audio_path)
         close = getattr(provider, "close", None)
         if callable(close):
             close()
@@ -220,6 +224,8 @@ def process_phonics_unit_media(unit_id: str) -> dict[str, str]:
 def score_phonics_attempt(attempt_id: str) -> dict[str, str]:
     db = SessionLocal()
     provider = None
+    storage = None
+    audio_path = None
     try:
         row = db.execute(
             select(PhonicsAttemptModel, PhonicsUnitModel)
@@ -293,6 +299,8 @@ def score_phonics_attempt(attempt_id: str) -> dict[str, str]:
             db.commit()
         return {"attempt_id": attempt_id, "status": "failed"}
     finally:
+        if storage is not None and audio_path is not None:
+            storage.cleanup_local_path(audio_path)
         close = getattr(provider, "close", None)
         if callable(close):
             close()

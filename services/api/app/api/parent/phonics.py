@@ -13,6 +13,8 @@ from app.db.models import ChildProfileModel, ParentAccountModel, PhonicsAttemptM
 from app.models.contracts import (
     PhonicsAttempt,
     PhonicsAttemptResponse,
+    PhonicsAttemptStatus,
+    PhonicsPracticeType,
     PhonicsProgressResponse,
     PhonicsTapAttemptCreate,
     PhonicsUnitDetailResponse,
@@ -147,6 +149,43 @@ def get_phonics_attempt(
     db: Session = Depends(get_db),
 ) -> PhonicsAttempt:
     attempt = _get_owned_attempt(db, current_parent.id, attempt_id)
+    return phonics_attempt_from_model(attempt)
+
+
+@router.post("/attempts/{attempt_id}/retry", response_model=PhonicsAttempt)
+def retry_phonics_attempt(
+    attempt_id: str,
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
+) -> PhonicsAttempt:
+    """Re-drive a stuck or failed ASR attempt.
+
+    Recovers the two enqueue/worker failure modes without a full outbox: a lost
+    enqueue (stuck ``recording_uploaded``/``queued``) or a worker crash mid-scoring
+    (stuck ``transcribing``), plus an explicit ``failed``. Resets to
+    ``recording_uploaded`` and re-enqueues; an already-scored attempt is returned
+    unchanged so a double-tap is harmless.
+    """
+    attempt = _get_owned_attempt(db, current_parent.id, attempt_id)
+    if attempt.practice_type != PhonicsPracticeType.blend_word_asr.value:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Only audio (ASR) attempts can be retried",
+        )
+    if attempt.status in {PhonicsAttemptStatus.scored.value, PhonicsAttemptStatus.no_match.value}:
+        return phonics_attempt_from_model(attempt)
+    if not attempt.audio_object_key:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attempt has no uploaded audio to re-score",
+        )
+    attempt.status = PhonicsAttemptStatus.recording_uploaded.value
+    attempt.failure_reason = ""
+    attempt.updated_at = datetime.now(timezone.utc)
+    db.add(attempt)
+    db.commit()
+    db.refresh(attempt)
+    enqueue_phonics_attempt_job(attempt.id)
     return phonics_attempt_from_model(attempt)
 
 
