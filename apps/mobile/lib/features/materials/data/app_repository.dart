@@ -496,8 +496,7 @@ class AppRepository implements MaterialsRepository {
   Future<PracticeSession> createPracticeSession({
     required String childId,
     required List<String> reviewTaskIds,
-    required double score,
-    required List<String> weakPoints,
+    required List<PracticeTaskResult> taskResults,
   }) async {
     final response = await _authorizedRequest<Map<String, dynamic>>(
       (options) => _dio.post<Map<String, dynamic>>(
@@ -505,8 +504,7 @@ class AppRepository implements MaterialsRepository {
         data: <String, dynamic>{
           'child_id': childId,
           'review_task_ids': reviewTaskIds,
-          'score': score,
-          'weak_points': weakPoints,
+          'task_results': taskResults.map((r) => r.toJson()).toList(),
         },
         options: options,
       ),

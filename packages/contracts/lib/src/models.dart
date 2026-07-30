@@ -651,6 +651,25 @@ class ReviewTask {
 }
 
 @immutable
+class PracticeTaskResult {
+  const PracticeTaskResult({
+    required this.taskId,
+    this.answer = '',
+    this.answers = const <String>[],
+  });
+
+  final String taskId;
+  final String answer;
+  final List<String> answers;
+
+  JsonMap toJson() => {
+        'task_id': taskId,
+        'answer': answer,
+        'answers': answers,
+      };
+}
+
+@immutable
 class PracticeSession {
   const PracticeSession({
     required this.id,

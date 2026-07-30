@@ -290,9 +290,19 @@ class PracticeSession(BaseModel):
     weak_points: list[str] = Field(default_factory=list)
 
 
+class PracticeTaskResult(BaseModel):
+    task_id: str
+    answer: str = ""  # listen_choice: picked word · flashcard: self-rate ("known"/"unknown")
+    answers: list[str] = Field(default_factory=list)  # match_choice: chosen right per left, in left order
+
+
 class PracticeSessionCreate(BaseModel):
     child_id: str
     review_task_ids: list[str]
+    # When task_results is provided the server derives score + weak_points from the
+    # child's actual answers (authoritative). score/weak_points are a legacy
+    # fallback for callers that don't submit per-task answers.
+    task_results: list[PracticeTaskResult] = Field(default_factory=list)
     score: float = 0.0
     weak_points: list[str] = Field(default_factory=list)
 
