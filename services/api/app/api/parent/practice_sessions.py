@@ -16,6 +16,7 @@ from app.db.models import (
 )
 from app.models.contracts import MaterialStatus, PracticeSession, PracticeSessionCreate, ReviewTaskStatus
 from app.services.shared.mappers import practice_session_from_model
+from app.services.shared.review_scoring import score_review_session, score_review_task
 
 router = APIRouter(prefix="/practice-sessions", tags=["practice-sessions"])
 
@@ -47,11 +48,30 @@ def create_practice_session(
     if len(tasks) != len(payload.review_task_ids):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more review tasks were not found")
 
+    # Authoritative path: derive score + weak points from the child's actual
+    # per-task answers against each task's stored content. Fall back to the
+    # client-supplied score/weak_points only when no answers were submitted.
+    if payload.task_results:
+        tasks_by_id = {task.id: task for task in tasks}
+        results_by_id = {r.task_id: r for r in payload.task_results if r.task_id in tasks_by_id}
+        scored = [
+            score_review_task(
+                task_type=tasks_by_id[task_id].task_type,
+                content=tasks_by_id[task_id].content_json or {},
+                answer=result.answer,
+                answers=result.answers,
+            )
+            for task_id, result in results_by_id.items()
+        ]
+        score, weak_points = score_review_session(scored)
+    else:
+        score, weak_points = payload.score, list(payload.weak_points)
+
     session = PracticeSessionModel(
         child_id=payload.child_id,
         review_task_ids=payload.review_task_ids,
-        score=payload.score,
-        weak_points=payload.weak_points,
+        score=score,
+        weak_points=weak_points,
     )
     db.add(session)
 
@@ -71,7 +91,7 @@ def create_practice_session(
         db.add(report)
     report.completed_sessions += 1
     report.reviewed_words += len(payload.review_task_ids)
-    report.weak_items = list(dict.fromkeys([*(report.weak_items or []), *payload.weak_points]))
+    report.weak_items = list(dict.fromkeys([*(report.weak_items or []), *weak_points]))
     db.add(report)
 
     db.commit()
