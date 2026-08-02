@@ -26,8 +26,11 @@ from app.models.contracts import (
     ReviewTaskStatus,
     SpeakingAttemptStatus,
     WeeklyReportResponse,
+    WeeklyTrendPoint,
+    WeeklyTrendResponse,
 )
 from app.services.shared.mappers import weekly_report_from_model
+from app.services.shared.weekly_report import current_week_bounds
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -46,7 +49,21 @@ def get_weekly_report(
     )
     if child is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
-    report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == child_id))
+    # Prefer the current ISO-week report; fall back to the most recent week so a
+    # child who hasn't practiced yet this week still sees their latest snapshot.
+    week_start, _ = current_week_bounds()
+    report = db.scalar(
+        select(WeeklyReportModel).where(
+            WeeklyReportModel.child_id == child_id,
+            WeeklyReportModel.week_start == week_start,
+        )
+    )
+    if report is None:
+        report = db.scalar(
+            select(WeeklyReportModel)
+            .where(WeeklyReportModel.child_id == child_id)
+            .order_by(WeeklyReportModel.week_start.desc())
+        )
     if report is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
     asset_mastery, material_summaries = _build_learning_asset_report(db, child_id)
@@ -63,6 +80,47 @@ def get_weekly_report(
         }
     )
     return WeeklyReportResponse(report=weekly_report)
+
+
+@router.get("/trends", response_model=WeeklyTrendResponse)
+def get_weekly_trends(
+    child_id: str,
+    weeks: int = 8,
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
+) -> WeeklyTrendResponse:
+    """Return the child's last ``weeks`` weekly reports, oldest → newest.
+
+    Powers the parent-side multi-week trend view (复习次数 / 单词量 / 口语次数)."""
+    child = db.scalar(
+        select(ChildProfileModel).where(
+            ChildProfileModel.id == child_id,
+            ChildProfileModel.parent_account_id == current_parent.id,
+        )
+    )
+    if child is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
+
+    limit = max(1, min(weeks, 52))
+    reports = db.scalars(
+        select(WeeklyReportModel)
+        .where(WeeklyReportModel.child_id == child_id)
+        .order_by(WeeklyReportModel.week_start.desc())
+        .limit(limit)
+    ).all()
+
+    points = [
+        WeeklyTrendPoint(
+            week_start=report.week_start,
+            week_end=report.week_end,
+            completed_sessions=report.completed_sessions,
+            reviewed_words=report.reviewed_words,
+            speaking_attempts=report.speaking_attempts,
+            weak_item_count=len(report.weak_items or []),
+        )
+        for report in reversed(reports)  # oldest → newest for left-to-right charting
+    ]
+    return WeeklyTrendResponse(child_id=child_id, points=points)
 
 
 def _build_learning_asset_report(

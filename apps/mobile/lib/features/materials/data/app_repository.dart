@@ -167,6 +167,24 @@ class AppRepository implements MaterialsRepository {
     );
   }
 
+  Future<WeeklyTrendResponse> getWeeklyTrends({
+    required String childId,
+    int weeks = 8,
+  }) async {
+    final response = await _authorizedRequest<Map<String, dynamic>>(
+      (options) => _dio.get<Map<String, dynamic>>(
+        '/reports/trends',
+        queryParameters: <String, dynamic>{
+          'child_id': childId,
+          'weeks': weeks,
+        },
+        options: options,
+      ),
+    );
+    return WeeklyTrendResponse.fromJson(
+        response.data ?? const <String, dynamic>{});
+  }
+
   Future<ChildProfile> createChild({
     required String name,
     required int age,

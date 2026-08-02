@@ -1166,3 +1166,67 @@ class WeeklyReport {
             materialSummaries.map((item) => item.toJson()).toList(),
       };
 }
+
+@immutable
+class WeeklyTrendPoint {
+  const WeeklyTrendPoint({
+    required this.weekStart,
+    required this.weekEnd,
+    required this.completedSessions,
+    required this.reviewedWords,
+    required this.speakingAttempts,
+    required this.weakItemCount,
+  });
+
+  final int completedSessions;
+  final int reviewedWords;
+  final int speakingAttempts;
+  final int weakItemCount;
+  final DateTime weekEnd;
+  final DateTime weekStart;
+
+  factory WeeklyTrendPoint.fromJson(JsonMap json) {
+    return WeeklyTrendPoint(
+      weekStart: dateTimeFromJson(json['week_start']) ?? DateTime.now(),
+      weekEnd: dateTimeFromJson(json['week_end']) ?? DateTime.now(),
+      completedSessions: json['completed_sessions'] as int? ?? 0,
+      reviewedWords: json['reviewed_words'] as int? ?? 0,
+      speakingAttempts: json['speaking_attempts'] as int? ?? 0,
+      weakItemCount: json['weak_item_count'] as int? ?? 0,
+    );
+  }
+
+  JsonMap toJson() => {
+        'week_start': weekStart.toIso8601String(),
+        'week_end': weekEnd.toIso8601String(),
+        'completed_sessions': completedSessions,
+        'reviewed_words': reviewedWords,
+        'speaking_attempts': speakingAttempts,
+        'weak_item_count': weakItemCount,
+      };
+}
+
+@immutable
+class WeeklyTrendResponse {
+  const WeeklyTrendResponse({
+    required this.childId,
+    required this.points,
+  });
+
+  final String childId;
+  final List<WeeklyTrendPoint> points;
+
+  factory WeeklyTrendResponse.fromJson(JsonMap json) {
+    return WeeklyTrendResponse(
+      childId: json['child_id'] as String,
+      points: (json['points'] as List<dynamic>? ?? const [])
+          .map((e) => WeeklyTrendPoint.fromJson(e as JsonMap))
+          .toList(),
+    );
+  }
+
+  JsonMap toJson() => {
+        'child_id': childId,
+        'points': points.map((e) => e.toJson()).toList(),
+      };
+}

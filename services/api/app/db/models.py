@@ -300,8 +300,11 @@ class ParentCoachingScriptModel(Base):
 class WeeklyReportModel(Base):
     __tablename__ = "weekly_reports"
 
+    __table_args__ = (UniqueConstraint("child_id", "week_start", name="uq_weekly_reports_child_week"),)
+
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"report_{uuid4().hex[:12]}")
-    child_id: Mapped[str] = mapped_column(ForeignKey("child_profiles.id"), unique=True, index=True)
+    # One report per (child, ISO week) — multi-week history for parent trends.
+    child_id: Mapped[str] = mapped_column(ForeignKey("child_profiles.id"), index=True)
     week_start: Mapped[date] = mapped_column(Date)
     week_end: Mapped[date] = mapped_column(Date)
     completed_sessions: Mapped[int] = mapped_column(Integer, default=0)

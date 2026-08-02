@@ -635,4 +635,56 @@ void main() {
       expect(identical(forms[0], forms[1]), isFalse);
     });
   });
+
+  group('AppRepository weekly trends', () {
+    test('parses ordered weekly trend points', () async {
+      final dio = Dio(
+        BaseOptions(baseUrl: 'http://127.0.0.1:8000/v1'),
+      )..httpClientAdapter = SequenceDioAdapter([
+          (_) => ResponseBody.fromString(
+                jsonEncode(<String, dynamic>{
+                  'child_id': 'child_1',
+                  'points': <Map<String, dynamic>>[
+                    <String, dynamic>{
+                      'week_start': '2026-07-06',
+                      'week_end': '2026-07-12',
+                      'completed_sessions': 1,
+                      'reviewed_words': 4,
+                      'speaking_attempts': 0,
+                      'weak_item_count': 2,
+                    },
+                    <String, dynamic>{
+                      'week_start': '2026-07-13',
+                      'week_end': '2026-07-19',
+                      'completed_sessions': 3,
+                      'reviewed_words': 6,
+                      'speaking_attempts': 2,
+                      'weak_item_count': 1,
+                    },
+                  ],
+                }),
+                200,
+                headers: <String, List<String>>{
+                  Headers.contentTypeHeader: <String>['application/json'],
+                },
+              ),
+        ]);
+
+      final repository = AppRepository(
+        dio,
+        accessToken: () => 'token',
+        refreshSession: () async => false,
+      );
+
+      final trends =
+          await repository.getWeeklyTrends(childId: 'child_1', weeks: 8);
+
+      expect(trends.childId, 'child_1');
+      expect(trends.points, hasLength(2));
+      expect(trends.points.first.completedSessions, 1);
+      expect(trends.points.last.completedSessions, 3);
+      expect(trends.points.last.weakItemCount, 1);
+      expect(trends.points.first.weekStart, DateTime(2026, 7, 6));
+    });
+  });
 }
