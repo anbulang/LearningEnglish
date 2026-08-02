@@ -236,6 +236,11 @@ class ReviewTaskModel(Base):
     content_json: Mapped[dict] = mapped_column(JSON, default=dict)
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(32), default="pending")
+    # SM-2 spaced-repetition state (updated on each practice session)
+    repetitions: Mapped[int] = mapped_column(Integer, default=0)
+    ease_factor: Mapped[float] = mapped_column(Float, default=2.5)
+    interval_days: Mapped[int] = mapped_column(Integer, default=0)
+    last_reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class PracticeSessionModel(Base):

@@ -132,6 +132,7 @@ class AppRepository implements MaterialsRepository {
   Future<List<ReviewTask>> listReviewTasks({
     required String childId,
     String? materialId,
+    bool dueOnly = false,
   }) async {
     final response = await _authorizedRequest<Map<String, dynamic>>(
       (options) => _dio.get<Map<String, dynamic>>(
@@ -139,6 +140,7 @@ class AppRepository implements MaterialsRepository {
         queryParameters: <String, dynamic>{
           'child_id': childId,
           if (materialId != null) 'material_id': materialId,
+          if (dueOnly) 'due_only': 'true',
         },
         options: options,
       ),

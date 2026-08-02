@@ -20,7 +20,7 @@ class HomeScreen extends ConsumerWidget {
     final child = ref.watch(activeChildProvider);
     final materials = ref.watch(materialsProvider);
     final report = ref.watch(weeklyReportProvider);
-    final tasks = ref.watch(reviewTasksProvider);
+    final tasks = ref.watch(dueReviewTasksProvider);
     final formFactor = formFactorOf(context);
 
     if (child == null) {
@@ -124,8 +124,17 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               ...tasks.when(
-                data: (items) => items
-                    .map(
+                data: (items) => items.isEmpty
+                    ? <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.sm),
+                          child: Text('今天的复习都完成啦，休息一下～',
+                              style: AppTextStyles.helper),
+                        ),
+                      ]
+                    : items
+                        .map(
                       (task) => ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: Container(

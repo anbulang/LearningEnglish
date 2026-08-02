@@ -116,6 +116,7 @@ class _FakeHomeRepository extends AppRepository {
   Future<List<ReviewTask>> listReviewTasks({
     required String childId,
     String? materialId,
+    bool dueOnly = false,
   }) async {
     return const <ReviewTask>[];
   }

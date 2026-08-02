@@ -48,6 +48,18 @@ final reviewTasksProvider = FutureProvider<List<ReviewTask>>((ref) async {
   return ref.watch(appRepositoryProvider).listReviewTasks(childId: child.id);
 });
 
+/// 今日待复习: only tasks scheduled at or before now (SM-2). Drives the home
+/// "today" list + count so it reflects real spaced-repetition scheduling.
+final dueReviewTasksProvider = FutureProvider<List<ReviewTask>>((ref) async {
+  final child = ref.watch(activeChildProvider);
+  if (child == null) {
+    return const <ReviewTask>[];
+  }
+  return ref
+      .watch(appRepositoryProvider)
+      .listReviewTasks(childId: child.id, dueOnly: true);
+});
+
 final weeklyReportProvider = FutureProvider<WeeklyReport>((ref) async {
   final child = ref.watch(activeChildProvider);
   if (child == null) {

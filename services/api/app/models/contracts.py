@@ -278,6 +278,8 @@ class ReviewTask(BaseModel):
     content_json: dict[str, Any] = Field(default_factory=dict)
     due_date: datetime
     status: ReviewTaskStatus
+    repetitions: int = 0  # SM-2 correct-streak (higher = better remembered)
+    interval_days: int = 0  # days until this task is due again
 
 
 class PracticeSession(BaseModel):
