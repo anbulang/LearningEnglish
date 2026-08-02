@@ -22,17 +22,16 @@ depends_on = None
 def upgrade() -> None:
     op.drop_index("ix_weekly_reports_child_id", table_name="weekly_reports")
     op.create_index("ix_weekly_reports_child_id", "weekly_reports", ["child_id"], unique=False)
-    # Legacy rows were seeded with week_start = created_at.date() (any weekday).
-    # Normalize to the ISO week (Monday..Sunday) BEFORE adding the composite unique,
-    # so a later write keyed on Monday doesn't create a duplicate row for the same
-    # week. Each child had at most one legacy row, so this can't collide.
-    op.execute(
-        """
-        UPDATE weekly_reports
-        SET week_start = (date_trunc('week', week_start::timestamp))::date,
-            week_end   = (date_trunc('week', week_start::timestamp))::date + INTERVAL '6 days'
-        """
-    )
+    # Legacy rows were a SINGLE cumulative snapshot per child (week_start =
+    # created_at, but counters accumulated across the child's whole lifetime by the
+    # old writers). Those totals don't belong to any one ISO week, so they can't be
+    # faithfully re-keyed — merely moving the date would stamp all-time activity onto
+    # the creation week and show 0 for the current week. Drop them; correct per-week
+    # rows rebuild from live activity via get_or_create_current_week_report going
+    # forward. History from before the migration is not reconstructed here (pre-pilot
+    # data volume is negligible); rebuild from practice_sessions/speaking_attempts if
+    # faithful backfill is ever needed.
+    op.execute("DELETE FROM weekly_reports")
     op.create_unique_constraint(
         "uq_weekly_reports_child_week", "weekly_reports", ["child_id", "week_start"]
     )

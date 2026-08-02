@@ -323,6 +323,12 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
         return;
       }
       ref.read(lastSpeakingAttemptProvider.notifier).state = latest;
+      // Manual re-query after a poll timeout can be what transitions the attempt
+      // out of processing — refresh the weekly report + trends just like the poll does.
+      if (!_isAttemptProcessing(latest)) {
+        ref.invalidate(weeklyReportProvider);
+        ref.invalidate(weeklyTrendsProvider);
+      }
     } catch (error) {
       if (!mounted) {
         return;

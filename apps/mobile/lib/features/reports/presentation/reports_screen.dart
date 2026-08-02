@@ -38,14 +38,16 @@ class ReportsScreen extends ConsumerWidget {
         data: (value) {
           if (value.assetMastery.isEmpty && value.materialSummaries.isEmpty) {
             // Materials may be archived while weekly counters still exist — only
-            // show the fully-empty panel when there's no trend history either,
-            // so the 多周趋势 card isn't gated behind active-material summaries.
-            final hasTrendHistory = ref.watch(weeklyTrendsProvider).maybeWhen(
-                  data: (trends) => trends.points.any(
+            // show the fully-empty panel when trends RESOLVED to genuinely-empty
+            // data. While trends load or error, fall through to the list so
+            // _TrendsSection renders its own spinner / error+retry instead of a
+            // dead-end "还没有报告数据".
+            final trendsEmpty = ref.watch(weeklyTrendsProvider).maybeWhen(
+                  data: (trends) => !trends.points.any(
                       (p) => p.completedSessions > 0 || p.speakingAttempts > 0),
                   orElse: () => false,
                 );
-            if (!hasTrendHistory) {
+            if (trendsEmpty) {
               return const Padding(
                 padding: EdgeInsets.all(AppSpacing.md),
                 child: StatePanel(

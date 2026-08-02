@@ -16,10 +16,29 @@ from sqlalchemy.orm import Session
 
 from app.db.models import WeeklyReportModel
 
+# The product serves families in China and the Celery worker runs on
+# Asia/Shanghai (see services/workers/workers_app/celery_app.py). ISO-week bounds
+# must be derived in that zone, or a Monday 00:00–07:59 local session lands in the
+# previous week while the UI still labels it "本周". CST is a fixed UTC+8 with no
+# DST since 1991, so a fixed offset is exact and avoids a tzdata dependency.
+PRODUCT_TZ = timezone(timedelta(hours=8))
+
+
+def local_date(moment: datetime | None = None) -> date:
+    """Return the calendar date of ``moment`` in the product timezone.
+
+    ``moment`` defaults to now. Naive datetimes (e.g. sqlite reads) are assumed UTC.
+    """
+    if moment is None:
+        moment = datetime.now(PRODUCT_TZ)
+    elif moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(PRODUCT_TZ).date()
+
 
 def current_week_bounds(today: date | None = None) -> tuple[date, date]:
-    """Return (Monday, Sunday) for the ISO week containing ``today`` (UTC)."""
-    today = today or datetime.now(timezone.utc).date()
+    """Return (Monday, Sunday) for the ISO week containing ``today`` (product tz)."""
+    today = today or local_date()
     monday = today - timedelta(days=today.weekday())
     return monday, monday + timedelta(days=6)
 

@@ -48,7 +48,7 @@ from app.services.shared.speaking_assessment import (
     build_speech_assessment_provider,
 )
 from app.services.shared.storage import get_storage_service
-from app.services.shared.weekly_report import get_or_create_current_week_report
+from app.services.shared.weekly_report import get_or_create_current_week_report, local_date
 
 
 @shared_task(name="materials.process_material_job")
@@ -482,9 +482,10 @@ def _update_speaking_report(db: Session, attempt: SpeakingAttemptModel) -> None:
     child = db.get(ChildProfileModel, attempt.child_id)
     if child is None:
         return
-    # Bucket by when the child actually spoke, not when scoring runs — an attempt
-    # uploaded Sunday but scored after the Monday boundary belongs to the earlier week.
-    occurred_on = attempt.created_at.date() if attempt.created_at else None
+    # Bucket by when the child actually spoke (in product tz), not when scoring runs —
+    # an attempt uploaded Sunday but scored after the Monday boundary belongs to the
+    # earlier week.
+    occurred_on = local_date(attempt.created_at) if attempt.created_at else None
     report = get_or_create_current_week_report(
         db,
         attempt.child_id,

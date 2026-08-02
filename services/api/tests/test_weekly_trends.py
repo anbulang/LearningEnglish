@@ -1,16 +1,33 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from app.core.db import SessionLocal
 from app.db.models import WeeklyReportModel
-from app.services.shared.weekly_report import current_week_bounds
+from app.services.shared.weekly_report import current_week_bounds, local_date
 from conftest import auth_headers
 
 _CHILD = {
     "name": "小趋", "age": 8, "level": "grade3", "learning_goal": "复习",
     "preferred_review_duration_minutes": 10, "parent_notes": "",
 }
+
+
+def test_local_date_uses_product_timezone_across_utc_midnight() -> None:
+    # 16:30 UTC == 00:30 next day in CST (UTC+8) → belongs to the next calendar day
+    late = datetime(2026, 8, 2, 16, 30, tzinfo=timezone.utc)
+    assert local_date(late) == date(2026, 8, 3)
+    # earlier the same UTC day is still the same product day
+    early = datetime(2026, 8, 2, 9, 0, tzinfo=timezone.utc)  # 17:00 CST
+    assert local_date(early) == date(2026, 8, 2)
+    # naive datetimes are treated as UTC, not silently mis-zoned
+    assert local_date(datetime(2026, 8, 2, 16, 30)) == date(2026, 8, 3)
+
+
+def test_week_bounds_track_the_product_date_not_the_utc_date() -> None:
+    instant = datetime(2026, 8, 2, 16, 30, tzinfo=timezone.utc)  # UTC Aug 2, CST Aug 3
+    assert current_week_bounds(local_date(instant))[0] == current_week_bounds(date(2026, 8, 3))[0]
+    assert current_week_bounds(instant.date())[0] == current_week_bounds(date(2026, 8, 2))[0]
 
 
 def _create_child(api_client, headers) -> str:
