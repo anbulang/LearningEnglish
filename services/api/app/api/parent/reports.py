@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import timedelta
 from statistics import mean
 from typing import Any
 
@@ -25,9 +26,13 @@ from app.models.contracts import (
     MaterialStatus,
     ReviewTaskStatus,
     SpeakingAttemptStatus,
+    WeeklyReport,
     WeeklyReportResponse,
+    WeeklyTrendPoint,
+    WeeklyTrendResponse,
 )
 from app.services.shared.mappers import weekly_report_from_model
+from app.services.shared.weekly_report import current_week_bounds
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -46,23 +51,87 @@ def get_weekly_report(
     )
     if child is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
-    report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == child_id))
-    if report is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
+    # Always report the CURRENT ISO week. If there's no activity yet this week we
+    # return an honest empty snapshot (zeros, this week's dates) rather than an
+    # older week's counters mislabeled as "本周" — history lives in /reports/trends.
+    week_start, week_end = current_week_bounds()
+    report = db.scalar(
+        select(WeeklyReportModel).where(
+            WeeklyReportModel.child_id == child_id,
+            WeeklyReportModel.week_start == week_start,
+        )
+    )
     asset_mastery, material_summaries = _build_learning_asset_report(db, child_id)
-    weekly_report = weekly_report_from_model(report).model_copy(
+    base = (
+        weekly_report_from_model(report)
+        if report is not None
+        else WeeklyReport(id="", child_id=child_id, week_start=week_start, week_end=week_end)
+    )
+    weekly_report = base.model_copy(
         update={
             "report_summary": _report_summary(
                 asset_mastery=asset_mastery,
                 material_summaries=material_summaries,
-                completed_sessions=report.completed_sessions,
-                speaking_attempts=report.speaking_attempts,
+                completed_sessions=base.completed_sessions,
+                speaking_attempts=base.speaking_attempts,
             ),
             "asset_mastery": asset_mastery,
             "material_summaries": material_summaries,
         }
     )
     return WeeklyReportResponse(report=weekly_report)
+
+
+@router.get("/trends", response_model=WeeklyTrendResponse)
+def get_weekly_trends(
+    child_id: str,
+    weeks: int = 8,
+    current_parent: ParentAccountModel = Depends(get_current_parent),
+    db: Session = Depends(get_db),
+) -> WeeklyTrendResponse:
+    """Return the child's last ``weeks`` weekly reports, oldest → newest.
+
+    Powers the parent-side multi-week trend view (复习次数 / 单词量 / 口语次数)."""
+    child = db.scalar(
+        select(ChildProfileModel).where(
+            ChildProfileModel.id == child_id,
+            ChildProfileModel.parent_account_id == current_parent.id,
+        )
+    )
+    if child is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
+
+    # A true N-*calendar-week* window ending this week, not the N most-recent rows:
+    # inactive weeks have no row, so we zero-fill the gaps to keep the x-axis a real
+    # time axis. Leading empty weeks are trimmed so a new child doesn't see N blanks.
+    limit = max(1, min(weeks, 52))
+    current_monday, _ = current_week_bounds()
+    window_start = current_monday - timedelta(days=7 * (limit - 1))
+    reports = db.scalars(
+        select(WeeklyReportModel).where(
+            WeeklyReportModel.child_id == child_id,
+            WeeklyReportModel.week_start >= window_start,
+        )
+    ).all()
+    by_week = {report.week_start: report for report in reports}
+
+    start = min(by_week) if by_week else current_monday
+    points: list[WeeklyTrendPoint] = []
+    week = start
+    while week <= current_monday:
+        report = by_week.get(week)
+        points.append(
+            WeeklyTrendPoint(
+                week_start=week,
+                week_end=week + timedelta(days=6),
+                completed_sessions=report.completed_sessions if report else 0,
+                reviewed_words=report.reviewed_words if report else 0,
+                speaking_attempts=report.speaking_attempts if report else 0,
+                weak_item_count=len(report.weak_items or []) if report else 0,
+            )
+        )
+        week += timedelta(days=7)
+    return WeeklyTrendResponse(child_id=child_id, points=points)
 
 
 def _build_learning_asset_report(

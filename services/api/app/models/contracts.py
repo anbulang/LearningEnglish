@@ -484,8 +484,18 @@ class WeeklyReportResponse(BaseModel):
     report: WeeklyReport
 
 
-class WeeklyReportResponse(BaseModel):
-    report: WeeklyReport
+class WeeklyTrendPoint(BaseModel):
+    week_start: date
+    week_end: date
+    completed_sessions: int = 0
+    reviewed_words: int = 0
+    speaking_attempts: int = 0
+    weak_item_count: int = 0
+
+
+class WeeklyTrendResponse(BaseModel):
+    child_id: str
+    points: list[WeeklyTrendPoint] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #

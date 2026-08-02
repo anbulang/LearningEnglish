@@ -27,7 +27,6 @@ from app.db.models import (
     ReviewTaskModel,
     SpeakingAttemptModel,
     StoredAssetModel,
-    WeeklyReportModel,
 )
 from app.models.contracts import (
     JobStatus,
@@ -49,6 +48,7 @@ from app.services.shared.speaking_assessment import (
     build_speech_assessment_provider,
 )
 from app.services.shared.storage import get_storage_service
+from app.services.shared.weekly_report import get_or_create_current_week_report, local_date
 
 
 @shared_task(name="materials.process_material_job")
@@ -482,16 +482,16 @@ def _update_speaking_report(db: Session, attempt: SpeakingAttemptModel) -> None:
     child = db.get(ChildProfileModel, attempt.child_id)
     if child is None:
         return
-    report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == attempt.child_id))
-    if report is None:
-        week_start = child.created_at.date()
-        report = WeeklyReportModel(
-            child_id=attempt.child_id,
-            week_start=week_start,
-            week_end=week_start + timedelta(days=6),
-            recommended_actions=["保持每周至少完成一次口语跟读。"],
-        )
-        db.add(report)
+    # Bucket by when the child actually spoke (in product tz), not when scoring runs —
+    # an attempt uploaded Sunday but scored after the Monday boundary belongs to the
+    # earlier week.
+    occurred_on = local_date(attempt.created_at) if attempt.created_at else None
+    report = get_or_create_current_week_report(
+        db,
+        attempt.child_id,
+        recommended_actions=["保持每周至少完成一次口语跟读。"],
+        when=occurred_on,
+    )
     report.speaking_attempts = (report.speaking_attempts or 0) + 1
     weak_words = [
         item.get("word", "")
@@ -764,10 +764,10 @@ def _primary_accent_audio_url(asset: LearningAsset) -> str:
 def aggregate_weekly_report(child_id: str) -> dict[str, str]:
     db = SessionLocal()
     try:
-        report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == child_id))
         child = db.scalar(select(ChildProfileModel).where(ChildProfileModel.id == child_id))
-        if report is None or child is None:
+        if child is None:
             return {"child_id": child_id, "status": "missing"}
+        report = get_or_create_current_week_report(db, child_id)
         report.recommended_actions = [
             "继续保持每周至少两次复习。",
             f"优先复习薄弱项：{', '.join((report.weak_items or [])[:3]) or '暂无'}。",

@@ -37,14 +37,26 @@ class ReportsScreen extends ConsumerWidget {
       body: report.when(
         data: (value) {
           if (value.assetMastery.isEmpty && value.materialSummaries.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: StatePanel(
-                title: '还没有报告数据',
-                description: '上传并确认讲义后，报告会按词卡、句子、复习和口语练习自动汇总。',
-                assetPath: AppIllustrations.stateEmpty,
-              ),
-            );
+            // Materials may be archived while weekly counters still exist — only
+            // show the fully-empty panel when trends RESOLVED to genuinely-empty
+            // data. While trends load or error, fall through to the list so
+            // _TrendsSection renders its own spinner / error+retry instead of a
+            // dead-end "还没有报告数据".
+            final trendsEmpty = ref.watch(weeklyTrendsProvider).maybeWhen(
+                  data: (trends) => !trends.points.any(
+                      (p) => p.completedSessions > 0 || p.speakingAttempts > 0),
+                  orElse: () => false,
+                );
+            if (trendsEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: StatePanel(
+                  title: '还没有报告数据',
+                  description: '上传并确认讲义后，报告会按词卡、句子、复习和口语练习自动汇总。',
+                  assetPath: AppIllustrations.stateEmpty,
+                ),
+              );
+            }
           }
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -66,6 +78,8 @@ class ReportsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               _MetricGrid(report: value),
+              const SizedBox(height: AppSpacing.md),
+              const _TrendsSection(),
               const SizedBox(height: AppSpacing.md),
               _MaterialSummarySection(items: value.materialSummaries),
               const SizedBox(height: AppSpacing.md),
@@ -96,7 +110,10 @@ class ReportsScreen extends ConsumerWidget {
                       describeApiError(error, fallback: '报告暂时不可用，请稍后重试。'),
                   assetPath: AppIllustrations.stateError,
                   action: FilledButton.icon(
-                    onPressed: () => ref.invalidate(weeklyReportProvider),
+                    onPressed: () {
+                      ref.invalidate(weeklyReportProvider);
+                      ref.invalidate(weeklyTrendsProvider);
+                    },
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('刷新报告'),
                   ),
@@ -181,6 +198,96 @@ class _MetricTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TrendsSection extends ConsumerWidget {
+  const _TrendsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trends = ref.watch(weeklyTrendsProvider);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(Icons.show_chart_rounded,
+                  color: AppColors.cocoaCoral, size: 20),
+              const SizedBox(width: AppSpacing.xs),
+              Text('多周趋势', style: AppTextStyles.sectionTitle),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text('每周完成复习次数（从旧到新）', style: AppTextStyles.helper),
+          const SizedBox(height: AppSpacing.md),
+          trends.when(
+            data: (value) => _TrendsChart(points: value.points),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => Text(
+              isNotFoundApiError(error)
+                  ? '还没有足够的每周数据，坚持练习后这里会显示趋势～'
+                  : '趋势暂时不可用，请稍后重试。',
+              style: AppTextStyles.helper,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendsChart extends StatelessWidget {
+  const _TrendsChart({required this.points});
+
+  final List<WeeklyTrendPoint> points;
+
+  @override
+  Widget build(BuildContext context) {
+    if (points.length < 2) {
+      return Text(
+        '还没有足够的每周数据，坚持练习后这里会显示趋势～',
+        style: AppTextStyles.helper,
+      );
+    }
+    final maxValue = points
+        .map((p) => p.completedSessions)
+        .fold<int>(1, (prev, v) => v > prev ? v : prev);
+    const chartHeight = 96.0;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        for (final point in points)
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('${point.completedSessions}',
+                    style: AppTextStyles.helper),
+                const SizedBox(height: 4),
+                Container(
+                  width: 18,
+                  height: (point.completedSessions / maxValue * chartHeight)
+                      .clamp(4.0, chartHeight),
+                  decoration: BoxDecoration(
+                    color: point.completedSessions == 0
+                        ? AppColors.softSheet
+                        : AppColors.mintLeaf,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text('${point.weekStart.month}/${point.weekStart.day}',
+                    style: AppTextStyles.helper),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

@@ -67,3 +67,11 @@ final weeklyReportProvider = FutureProvider<WeeklyReport>((ref) async {
   }
   return ref.watch(appRepositoryProvider).getWeeklyReport(childId: child.id);
 });
+
+final weeklyTrendsProvider = FutureProvider<WeeklyTrendResponse>((ref) async {
+  final child = ref.watch(activeChildProvider);
+  if (child == null) {
+    throw StateError('No active child selected');
+  }
+  return ref.watch(appRepositoryProvider).getWeeklyTrends(childId: child.id);
+});

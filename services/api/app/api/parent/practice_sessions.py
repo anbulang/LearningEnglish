@@ -12,12 +12,12 @@ from app.db.models import (
     ParentAccountModel,
     PracticeSessionModel,
     ReviewTaskModel,
-    WeeklyReportModel,
 )
 from app.models.contracts import MaterialStatus, PracticeSession, PracticeSessionCreate, ReviewTaskStatus
 from app.services.shared.mappers import practice_session_from_model
 from app.services.shared.review_scheduling import sm2_schedule
 from app.services.shared.review_scoring import score_review_session, score_review_task
+from app.services.shared.weekly_report import get_or_create_current_week_report
 
 router = APIRouter(prefix="/practice-sessions", tags=["practice-sessions"])
 
@@ -97,16 +97,11 @@ def create_practice_session(
     )
     db.add(session)
 
-    report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == payload.child_id))
-    if report is None:
-        start = child.created_at.date()
-        report = WeeklyReportModel(
-            child_id=payload.child_id,
-            week_start=start,
-            week_end=start + timedelta(days=6),
-            recommended_actions=["保持每周至少完成两次复习。"],
-        )
-        db.add(report)
+    report = get_or_create_current_week_report(
+        db,
+        payload.child_id,
+        recommended_actions=["保持每周至少完成两次复习。"],
+    )
     report.completed_sessions += 1
     report.reviewed_words += len(payload.review_task_ids)
     report.weak_items = list(dict.fromkeys([*(report.weak_items or []), *weak_points]))

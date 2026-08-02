@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -7,9 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_current_parent
 from app.core.db import get_db
-from app.db.models import ChildProfileModel, ParentAccountModel, WeeklyReportModel
+from app.db.models import ChildProfileModel, ParentAccountModel
 from app.models.contracts import ChildProfile, ChildProfileCreate, ChildProfileUpdate
 from app.services.shared.mappers import child_profile_from_model
+from app.services.shared.weekly_report import get_or_create_current_week_report
 
 router = APIRouter(prefix="/children", tags=["children"])
 
@@ -53,16 +52,14 @@ def create_child(
     )
     db.add(child)
     db.flush()
-    report = WeeklyReportModel(
-        child_id=child.id,
-        week_start=child.created_at.date(),
-        week_end=child.created_at.date() + timedelta(days=6),
+    get_or_create_current_week_report(
+        db,
+        child.id,
         recommended_actions=[
             "上传第一份讲义，开始生成复习包。",
             "先做 5-10 分钟轻量复习，建立节奏。",
         ],
     )
-    db.add(report)
     db.commit()
     db.refresh(child)
     return child_profile_from_model(child)
