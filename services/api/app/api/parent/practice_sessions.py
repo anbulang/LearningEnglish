@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -16,6 +16,7 @@ from app.db.models import (
 )
 from app.models.contracts import MaterialStatus, PracticeSession, PracticeSessionCreate, ReviewTaskStatus
 from app.services.shared.mappers import practice_session_from_model
+from app.services.shared.review_scheduling import sm2_schedule
 from app.services.shared.review_scoring import score_review_session, score_review_task
 
 router = APIRouter(prefix="/practice-sessions", tags=["practice-sessions"])
@@ -48,24 +49,45 @@ def create_practice_session(
     if len(tasks) != len(payload.review_task_ids):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more review tasks were not found")
 
+    now = datetime.now(timezone.utc)
     # Authoritative path: derive score + weak points from the child's actual
-    # per-task answers against each task's stored content. Fall back to the
-    # client-supplied score/weak_points only when no answers were submitted.
+    # per-task answers, and reschedule each answered task via SM-2 (correct →
+    # longer interval, miss → due again tomorrow). Fall back to the client-supplied
+    # score/weak_points (and terminal 'completed') only when no answers were sent.
     if payload.task_results:
-        tasks_by_id = {task.id: task for task in tasks}
-        results_by_id = {r.task_id: r for r in payload.task_results if r.task_id in tasks_by_id}
-        scored = [
-            score_review_task(
-                task_type=tasks_by_id[task_id].task_type,
-                content=tasks_by_id[task_id].content_json or {},
+        results_by_id = {r.task_id: r for r in payload.task_results}
+        scored: list[tuple[bool, str]] = []
+        for task in tasks:
+            result = results_by_id.get(task.id)
+            if result is None:
+                continue
+            correct, item = score_review_task(
+                task_type=task.task_type,
+                content=task.content_json or {},
                 answer=result.answer,
                 answers=result.answers,
             )
-            for task_id, result in results_by_id.items()
-        ]
+            scored.append((correct, item))
+            plan = sm2_schedule(
+                correct=correct,
+                repetitions=task.repetitions or 0,
+                ease_factor=task.ease_factor or 2.5,
+                interval_days=task.interval_days or 0,
+            )
+            task.repetitions = plan.repetitions
+            task.ease_factor = plan.ease_factor
+            task.interval_days = plan.interval_days
+            task.last_reviewed_at = now
+            task.due_date = now + timedelta(days=plan.interval_days)
+            # stays 'pending' so it re-surfaces in 今日待复习 once due again
+            task.status = ReviewTaskStatus.pending.value
+            db.add(task)
         score, weak_points = score_review_session(scored)
     else:
         score, weak_points = payload.score, list(payload.weak_points)
+        for task in tasks:
+            task.status = ReviewTaskStatus.completed.value
+            db.add(task)
 
     session = PracticeSessionModel(
         child_id=payload.child_id,
@@ -74,10 +96,6 @@ def create_practice_session(
         weak_points=weak_points,
     )
     db.add(session)
-
-    for task in tasks:
-        task.status = ReviewTaskStatus.completed.value
-        db.add(task)
 
     report = db.scalar(select(WeeklyReportModel).where(WeeklyReportModel.child_id == payload.child_id))
     if report is None:

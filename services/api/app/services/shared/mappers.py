@@ -151,6 +151,8 @@ def review_task_from_model(model: ReviewTaskModel) -> ReviewTask:
         content_json=model.content_json or {},
         due_date=model.due_date,
         status=ReviewTaskStatus(model.status),
+        repetitions=model.repetitions or 0,
+        interval_days=model.interval_days or 0,
     )
 
 

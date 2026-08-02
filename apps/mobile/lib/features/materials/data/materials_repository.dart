@@ -8,5 +8,6 @@ abstract class MaterialsRepository {
   Future<List<ReviewTask>> listReviewTasks({
     required String childId,
     String? materialId,
+    bool dueOnly = false,
   });
 }

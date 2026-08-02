@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_parent
 from app.core.db import get_db
 from app.db.models import ChildProfileModel, CourseMaterialModel, ParentAccountModel, ReviewTaskModel
-from app.models.contracts import MaterialStatus, ReviewTaskListResponse
+from app.models.contracts import MaterialStatus, ReviewTaskListResponse, ReviewTaskStatus
 from app.services.shared.mappers import review_task_from_model
 
 router = APIRouter(prefix="/review-tasks", tags=["review-tasks"])
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/review-tasks", tags=["review-tasks"])
 def list_review_tasks(
     child_id: Optional[str] = None,
     material_id: Optional[str] = None,
+    due_only: bool = False,
     current_parent: ParentAccountModel = Depends(get_current_parent),
     db: Session = Depends(get_db),
 ) -> ReviewTaskListResponse:
@@ -33,5 +35,11 @@ def list_review_tasks(
         stmt = stmt.where(ReviewTaskModel.child_id == child_id)
     if material_id:
         stmt = stmt.where(ReviewTaskModel.material_id == material_id)
+    if due_only:
+        # 今日待复习: not yet mastered-away and scheduled at or before now.
+        stmt = stmt.where(
+            ReviewTaskModel.status != ReviewTaskStatus.completed.value,
+            ReviewTaskModel.due_date <= datetime.now(timezone.utc),
+        )
     items = db.scalars(stmt.order_by(ReviewTaskModel.due_date)).all()
     return ReviewTaskListResponse(items=[review_task_from_model(item) for item in items])
