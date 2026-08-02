@@ -70,6 +70,24 @@ def test_multiple_weeks_coexist_and_trends_orders_oldest_first(api_client) -> No
     assert points[1]["weak_item_count"] == 1
 
 
+def test_trends_zero_fills_inactive_weeks_and_trims_leading_gaps(api_client) -> None:
+    headers, _ = auth_headers(api_client)
+    child_id = _create_child(api_client, headers)  # current-week row (completed 0)
+    _seed_past_week(child_id, weeks_ago=3, completed=2)  # gap at -2 and -1
+
+    resp = api_client.get(f"/v1/reports/trends?child_id={child_id}&weeks=8", headers=headers)
+    assert resp.status_code == 200
+    points = resp.json()["points"]
+    # consecutive calendar weeks from earliest activity (-3) to current (0) = 4 points
+    assert len(points) == 4
+    assert points[0]["completed_sessions"] == 2  # -3
+    assert points[1]["completed_sessions"] == 0  # -2 zero-filled
+    assert points[2]["completed_sessions"] == 0  # -1 zero-filled
+    # week starts are consecutive Mondays
+    starts = [p["week_start"] for p in points]
+    assert starts == sorted(starts) and len(set(starts)) == 4
+
+
 def test_practice_accumulates_into_current_week_not_past(api_client) -> None:
     headers, _ = auth_headers(api_client)
     child_id = _create_child(api_client, headers)
@@ -116,10 +134,11 @@ def test_trends_weeks_param_clamped_and_child_scoped(api_client) -> None:
     assert resp.status_code == 404
 
 
-def test_weekly_falls_back_to_latest_when_no_current_week(api_client) -> None:
+def test_weekly_returns_empty_current_week_snapshot_when_no_activity(api_client) -> None:
+    """No current-week row → honest zero snapshot for THIS week, never an older week's counters."""
     headers, _ = auth_headers(api_client)
     child_id = _create_child(api_client, headers)
-    # drop the auto-created current-week report, leave only a past week
+    # drop the auto-created current-week report, leave only a past week with real counters
     monday, _ = current_week_bounds()
     db = SessionLocal()
     try:
@@ -134,4 +153,9 @@ def test_weekly_falls_back_to_latest_when_no_current_week(api_client) -> None:
 
     resp = api_client.get(f"/v1/reports/weekly?child_id={child_id}", headers=headers)
     assert resp.status_code == 200
-    assert resp.json()["report"]["completed_sessions"] == 4
+    report = resp.json()["report"]
+    assert report["completed_sessions"] == 0  # NOT last week's 4
+    assert report["week_start"] == monday.isoformat()
+    # last week's counters are still visible in the trend history
+    trends = api_client.get(f"/v1/reports/trends?child_id={child_id}", headers=headers).json()
+    assert any(p["completed_sessions"] == 4 for p in trends["points"])

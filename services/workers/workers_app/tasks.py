@@ -482,10 +482,14 @@ def _update_speaking_report(db: Session, attempt: SpeakingAttemptModel) -> None:
     child = db.get(ChildProfileModel, attempt.child_id)
     if child is None:
         return
+    # Bucket by when the child actually spoke, not when scoring runs — an attempt
+    # uploaded Sunday but scored after the Monday boundary belongs to the earlier week.
+    occurred_on = attempt.created_at.date() if attempt.created_at else None
     report = get_or_create_current_week_report(
         db,
         attempt.child_id,
         recommended_actions=["保持每周至少完成一次口语跟读。"],
+        when=occurred_on,
     )
     report.speaking_attempts = (report.speaking_attempts or 0) + 1
     weak_words = [

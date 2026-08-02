@@ -259,6 +259,7 @@ class _AddChildSheetState extends State<_AddChildSheet> {
       await widget.ref.read(sessionControllerProvider.notifier).addChild(child);
       widget.ref.invalidate(activeChildProvider);
       widget.ref.invalidate(weeklyReportProvider);
+      widget.ref.invalidate(weeklyTrendsProvider);
       if (mounted) {
         Navigator.of(context).pop();
       }

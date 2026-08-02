@@ -37,14 +37,24 @@ class ReportsScreen extends ConsumerWidget {
       body: report.when(
         data: (value) {
           if (value.assetMastery.isEmpty && value.materialSummaries.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: StatePanel(
-                title: '还没有报告数据',
-                description: '上传并确认讲义后，报告会按词卡、句子、复习和口语练习自动汇总。',
-                assetPath: AppIllustrations.stateEmpty,
-              ),
-            );
+            // Materials may be archived while weekly counters still exist — only
+            // show the fully-empty panel when there's no trend history either,
+            // so the 多周趋势 card isn't gated behind active-material summaries.
+            final hasTrendHistory = ref.watch(weeklyTrendsProvider).maybeWhen(
+                  data: (trends) => trends.points.any(
+                      (p) => p.completedSessions > 0 || p.speakingAttempts > 0),
+                  orElse: () => false,
+                );
+            if (!hasTrendHistory) {
+              return const Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: StatePanel(
+                  title: '还没有报告数据',
+                  description: '上传并确认讲义后，报告会按词卡、句子、复习和口语练习自动汇总。',
+                  assetPath: AppIllustrations.stateEmpty,
+                ),
+              );
+            }
           }
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -98,7 +108,10 @@ class ReportsScreen extends ConsumerWidget {
                       describeApiError(error, fallback: '报告暂时不可用，请稍后重试。'),
                   assetPath: AppIllustrations.stateError,
                   action: FilledButton.icon(
-                    onPressed: () => ref.invalidate(weeklyReportProvider),
+                    onPressed: () {
+                      ref.invalidate(weeklyReportProvider);
+                      ref.invalidate(weeklyTrendsProvider);
+                    },
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('刷新报告'),
                   ),

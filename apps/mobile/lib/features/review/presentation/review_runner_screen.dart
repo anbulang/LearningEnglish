@@ -137,6 +137,7 @@ class _ReviewRunnerScreenState extends ConsumerState<ReviewRunnerScreen> {
               );
       ref.invalidate(reviewTasksProvider);
       ref.invalidate(weeklyReportProvider);
+      ref.invalidate(weeklyTrendsProvider);
       ref.read(appAnalyticsProvider).track('review_session_completed', {
         'materialId': widget.materialId,
         'taskCount': tasks.length,

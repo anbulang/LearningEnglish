@@ -29,15 +29,21 @@ def get_or_create_current_week_report(
     child_id: str,
     *,
     recommended_actions: list[str] | None = None,
+    when: date | None = None,
 ) -> WeeklyReportModel:
-    """Return the child's report for the current ISO week, creating it if absent.
+    """Return the child's report for an ISO week, creating it if absent.
+
+    ``when`` selects the week (defaults to the current UTC week). Async writers
+    should pass the event's *occurrence* date — e.g. ``attempt.created_at.date()``
+    for speaking scoring — so an attempt made on Sunday but processed after the
+    Monday boundary still counts toward the week it happened in.
 
     Concurrency-safe against the ``uq_weekly_reports_child_week`` constraint: two
     racing writers (e.g. a review POST and the speaking worker) can both try to
     create the week's row; the loser recovers via SAVEPOINT + re-select rather
     than 500-ing on the unique violation.
     """
-    week_start, week_end = current_week_bounds()
+    week_start, week_end = current_week_bounds(when)
 
     def _find() -> WeeklyReportModel | None:
         return db.scalar(
@@ -51,18 +57,19 @@ def get_or_create_current_week_report(
     if report is not None:
         return report
 
-    report = WeeklyReportModel(
-        child_id=child_id,
-        week_start=week_start,
-        week_end=week_end,
-        recommended_actions=recommended_actions or [],
-    )
-    db.add(report)
     try:
+        # Add + flush INSIDE the savepoint so a unique violation rolls back to the
+        # SAVEPOINT (not the outer transaction) and the loser can recover.
         with db.begin_nested():
+            report = WeeklyReportModel(
+                child_id=child_id,
+                week_start=week_start,
+                week_end=week_end,
+                recommended_actions=recommended_actions or [],
+            )
+            db.add(report)
             db.flush()
     except IntegrityError:
-        db.expunge(report)
         existing = _find()
         if existing is None:  # pragma: no cover - shouldn't happen after a unique violation
             raise

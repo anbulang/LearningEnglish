@@ -385,6 +385,7 @@ class _SpeakingPartnerScreenState extends ConsumerState<SpeakingPartnerScreen> {
           _pollTimer?.cancel();
           _pollTimer = null;
           ref.invalidate(weeklyReportProvider);
+          ref.invalidate(weeklyTrendsProvider);
         }
       } catch (error) {
         if (!_isPermanentAttemptFetchError(error)) {
