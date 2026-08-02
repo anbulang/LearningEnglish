@@ -20,6 +20,7 @@ from app.db.models import (
 )
 from app.models.contracts import JobStatus, MaterialStatus, SpeakingAttemptStatus
 from app.services.admin.scope import get_tenant_or_404
+from app.services.shared.weekly_report import current_week_bounds
 
 TENANT_DETAIL_LATEST_LIMIT = 5
 MODULE_KEYS = ("worksheet_import", "ai_review", "media_pipeline", "speaking_score", "weekly_reports")
@@ -618,6 +619,80 @@ def _weekly_report_payload(reports: list[WeeklyReportModel], aggregate: dict) ->
         "latest": _weekly_report_item_payload(latest) if latest else None,
         "history": [_weekly_report_item_payload(report) for report in reports],
     }
+
+
+LEARNING_OUTCOMES_MAX_WEEKS = 52
+LEARNING_OUTCOMES_DEFAULT_WEEKS = 8
+
+
+def build_admin_learning_outcomes(db: Session, tenant_scope: str, weeks: int = LEARNING_OUTCOMES_DEFAULT_WEEKS) -> dict[str, Any]:
+    """Tenant-scope-wide multi-week learning-outcome trend.
+
+    Aggregates weekly reports across every child in scope into one point per ISO
+    week (sums of completed_sessions/reviewed_words/speaking_attempts, distinct
+    weak-item count, and how many children were active that week). Uses the same
+    calendar-week window as the parent trend (`/v1/reports/trends`): a true N-week
+    window ending this week, zero-filling inactive weeks and trimming leading blanks.
+    """
+    tenants = db.scalars(select(ParentAccountModel)).all()
+    tenant_ids = {tenant.id for tenant in tenants}
+    if tenant_scope != "all" and tenant_scope not in tenant_ids:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant scope not found")
+    scoped_tenant_ids = tenant_ids if tenant_scope == "all" else {tenant_scope}
+
+    children = db.scalars(
+        select(ChildProfileModel).where(ChildProfileModel.parent_account_id.in_(scoped_tenant_ids or [""]))
+    ).all()
+    child_ids = [child.id for child in children]
+
+    limit = max(1, min(int(weeks or LEARNING_OUTCOMES_DEFAULT_WEEKS), LEARNING_OUTCOMES_MAX_WEEKS))
+    current_monday, _ = current_week_bounds()
+    window_start = current_monday - timedelta(days=7 * (limit - 1))
+
+    reports: list[WeeklyReportModel] = []
+    if child_ids:
+        reports = list(
+            db.scalars(
+                select(WeeklyReportModel).where(
+                    WeeklyReportModel.child_id.in_(child_ids),
+                    WeeklyReportModel.week_start >= window_start,
+                )
+            ).all()
+        )
+
+    by_week: dict[Any, list[WeeklyReportModel]] = {}
+    for report in reports:
+        by_week.setdefault(report.week_start, []).append(report)
+
+    start = min(by_week) if by_week else current_monday
+    points: list[dict[str, Any]] = []
+    week = start
+    while week <= current_monday:
+        week_reports = by_week.get(week, [])
+        weak_items = {item for report in week_reports for item in (report.weak_items or [])}
+        points.append(
+            {
+                "week_start": week.isoformat(),
+                "week_end": (week + timedelta(days=6)).isoformat(),
+                "completed_sessions": sum(r.completed_sessions for r in week_reports),
+                "reviewed_words": sum(r.reviewed_words for r in week_reports),
+                "speaking_attempts": sum(r.speaking_attempts for r in week_reports),
+                "weak_item_count": len(weak_items),
+                "active_children": len({r.child_id for r in week_reports}),
+            }
+        )
+        week += timedelta(days=7)
+
+    latest = points[-1] if points else None
+    summary = {
+        "children_in_scope": len(child_ids),
+        "active_children_latest": latest["active_children"] if latest else 0,
+        "completed_sessions": sum(p["completed_sessions"] for p in points),
+        "reviewed_words": sum(p["reviewed_words"] for p in points),
+        "speaking_attempts": sum(p["speaking_attempts"] for p in points),
+        "weak_items": _unique_strings(item for report in reports for item in (report.weak_items or [])),
+    }
+    return {"tenant_scope": tenant_scope, "weeks": limit, "points": points, "summary": summary}
 
 
 def _weekly_report_item_payload(report: WeeklyReportModel) -> dict:

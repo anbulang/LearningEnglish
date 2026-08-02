@@ -268,3 +268,29 @@ export interface EndAdminImpersonationSessionResult {
   actionResult: AdminActionResult;
   auditEvent: AdminAuditEvent;
 }
+
+export interface AdminLearningOutcomePoint {
+  weekStart: string;
+  weekEnd: string;
+  completedSessions: number;
+  reviewedWords: number;
+  speakingAttempts: number;
+  weakItemCount: number;
+  activeChildren: number;
+}
+
+export interface AdminLearningOutcomeSummary {
+  childrenInScope: number;
+  activeChildrenLatest: number;
+  completedSessions: number;
+  reviewedWords: number;
+  speakingAttempts: number;
+  weakItems: string[];
+}
+
+export interface AdminLearningOutcomesData {
+  tenantScope: string;
+  weeks: number;
+  points: AdminLearningOutcomePoint[];
+  summary: AdminLearningOutcomeSummary;
+}

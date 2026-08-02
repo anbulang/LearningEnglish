@@ -7,12 +7,14 @@ import {
   loadAdminDashboard,
   loadAdminImpersonationSessions,
   loadAdminLearningAssets,
+  loadAdminLearningOutcomes,
   loadAdminOperations,
   loadAdminTenantDetail,
   loadAdminUsers,
   normalizeAdminAccessPayload,
   normalizeAdminDashboardPayload,
   normalizeAdminLearningAssetsPayload,
+  normalizeAdminLearningOutcomesPayload,
   normalizeAdminUsersPayload,
   overrideAdminProviderPolicy,
   retryAdminMaterialJob,
@@ -863,6 +865,74 @@ describe("loadAdminLearningAssets", () => {
     expect(calledUrl).toContain("/v1/admin/learning-assets?");
     expect(calledUrl).toContain("tenant_scope=parent_1");
     expect(calledUrl).toContain("media_status=ready");
+  });
+});
+
+describe("loadAdminLearningOutcomes", () => {
+  it("normalizes the learning outcomes payload", () => {
+    const result = normalizeAdminLearningOutcomesPayload({
+      tenant_scope: "all",
+      weeks: 8,
+      points: [
+        {
+          week_start: "2026-07-20",
+          week_end: "2026-07-26",
+          completed_sessions: 1,
+          reviewed_words: 2,
+          speaking_attempts: 1,
+          weak_item_count: 1,
+          active_children: 1
+        }
+      ],
+      summary: {
+        children_in_scope: 2,
+        active_children_latest: 2,
+        completed_sessions: 6,
+        reviewed_words: 13,
+        speaking_attempts: 4,
+        weak_items: ["dog", "cat", "sun"]
+      }
+    });
+
+    expect(result.tenantScope).toBe("all");
+    expect(result.weeks).toBe(8);
+    expect(result.points[0]).toMatchObject({
+      weekStart: "2026-07-20",
+      weekEnd: "2026-07-26",
+      completedSessions: 1,
+      reviewedWords: 2,
+      speakingAttempts: 1,
+      weakItemCount: 1,
+      activeChildren: 1
+    });
+    expect(result.summary).toMatchObject({
+      childrenInScope: 2,
+      activeChildrenLatest: 2,
+      completedSessions: 6,
+      reviewedWords: 13,
+      speakingAttempts: 4,
+      weakItems: ["dog", "cat", "sun"]
+    });
+  });
+
+  it("requests the endpoint with tenant scope and weeks", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ tenant_scope: "parent_1", weeks: 8, points: [], summary: {} })
+    });
+
+    await loadAdminLearningOutcomes({
+      apiBaseUrl: "http://api.test/",
+      adminToken: "tok",
+      tenantScope: "parent_1",
+      weeks: 8,
+      fetchImpl: fetchImpl as unknown as typeof fetch
+    });
+
+    const calledUrl = fetchImpl.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/v1/admin/learning-outcomes?");
+    expect(calledUrl).toContain("tenant_scope=parent_1");
+    expect(calledUrl).toContain("weeks=8");
   });
 });
 

@@ -57,6 +57,7 @@ from app.services.admin.operations import build_admin_operations
 from app.services.admin.read_models import (
     build_admin_dashboard,
     build_admin_learning_assets,
+    build_admin_learning_outcomes,
     build_admin_tenant_detail,
     build_admin_users,
 )
@@ -146,6 +147,32 @@ def get_admin_dashboard(
         trace_id=_trace_id(request),
     )
     return dashboard
+
+
+@router.get("/learning-outcomes")
+def get_admin_learning_outcomes(
+    request: Request,
+    tenant_scope: str = Query(..., min_length=1),
+    weeks: int = Query(8, ge=1, le=52),
+    actor: AdminActor = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    require_permission(actor, ADMIN_DASHBOARD_READ)
+
+    _ensure_admin_user(db, actor)
+    outcomes = build_admin_learning_outcomes(db, tenant_scope, weeks)
+    _record_audit_event(
+        db,
+        actor=actor,
+        tenant_scope=tenant_scope,
+        action="admin.learning_outcomes.read",
+        resource_type="admin_learning_outcomes",
+        resource_id="learning_outcomes",
+        risk_level="low",
+        result="success",
+        trace_id=_trace_id(request),
+    )
+    return outcomes
 
 
 @router.get("/operations")

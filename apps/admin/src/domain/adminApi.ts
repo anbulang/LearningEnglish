@@ -6,6 +6,9 @@ import type {
   AdminImpersonationSession,
   AdminImpersonationSessionsData,
   AdminLearningAsset,
+  AdminLearningOutcomePoint,
+  AdminLearningOutcomesData,
+  AdminLearningOutcomeSummary,
   AdminMaterial,
   AdminUserAccount,
   AdminOperationsData,
@@ -871,6 +874,74 @@ function normalizeAdminLearningAssetPayload(asset: Record<string, unknown>): Adm
     ttsUkStatus: stringValue(asset.tts_uk_status),
     ttsUkUrl: stringValue(asset.tts_uk_url),
     updatedAt: stringValue(asset.updated_at)
+  };
+}
+
+interface AdminLearningOutcomesOptions extends AdminTenantScopedOptions {
+  weeks?: number;
+}
+
+type AdminLearningOutcomePointPayload = Record<string, unknown>;
+
+type AdminLearningOutcomesPayload = {
+  tenant_scope?: unknown;
+  weeks?: unknown;
+  points?: Array<Record<string, unknown>>;
+  summary?: Record<string, unknown>;
+};
+
+export async function loadAdminLearningOutcomes(
+  options: AdminLearningOutcomesOptions
+): Promise<AdminLearningOutcomesData> {
+  const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const params = new URLSearchParams();
+  params.set("tenant_scope", options.tenantScope);
+  params.set("weeks", String(options.weeks ?? 8));
+  const response = await fetchImpl(`${apiBaseUrl}/v1/admin/learning-outcomes?${params.toString()}`, {
+    headers: { "X-Admin-Token": options.adminToken }
+  });
+  if (!response.ok) {
+    throw new Error(`Admin learning outcomes request failed: ${response.status}`);
+  }
+  return normalizeAdminLearningOutcomesPayload((await response.json()) as AdminLearningOutcomesPayload);
+}
+
+export function normalizeAdminLearningOutcomesPayload(
+  payload: AdminLearningOutcomesPayload
+): AdminLearningOutcomesData {
+  return {
+    tenantScope: stringValue(payload.tenant_scope),
+    weeks: numberValue(payload.weeks),
+    points: (payload.points ?? []).map((point) => normalizeAdminLearningOutcomePointPayload(point)),
+    summary: normalizeAdminLearningOutcomeSummaryPayload(recordValue(payload.summary))
+  };
+}
+
+function normalizeAdminLearningOutcomePointPayload(
+  point: AdminLearningOutcomePointPayload
+): AdminLearningOutcomePoint {
+  return {
+    weekStart: stringValue(point.week_start),
+    weekEnd: stringValue(point.week_end),
+    completedSessions: numberValue(point.completed_sessions),
+    reviewedWords: numberValue(point.reviewed_words),
+    speakingAttempts: numberValue(point.speaking_attempts),
+    weakItemCount: numberValue(point.weak_item_count),
+    activeChildren: numberValue(point.active_children)
+  };
+}
+
+function normalizeAdminLearningOutcomeSummaryPayload(
+  summary: Record<string, unknown>
+): AdminLearningOutcomeSummary {
+  return {
+    childrenInScope: numberValue(summary.children_in_scope),
+    activeChildrenLatest: numberValue(summary.active_children_latest),
+    completedSessions: numberValue(summary.completed_sessions),
+    reviewedWords: numberValue(summary.reviewed_words),
+    speakingAttempts: numberValue(summary.speaking_attempts),
+    weakItems: stringArrayValue(summary.weak_items)
   };
 }
 

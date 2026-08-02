@@ -50,6 +50,7 @@ def test_public_api_paths_stay_stable_after_package_split() -> None:
     }
     admin_paths = {
         "/v1/admin/dashboard",
+        "/v1/admin/learning-outcomes",
         "/v1/admin/operations",
         "/v1/admin/access",
         "/v1/admin/audit-events",

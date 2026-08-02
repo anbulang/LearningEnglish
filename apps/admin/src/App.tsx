@@ -9,6 +9,7 @@ import {
   loadAdminDashboard,
   loadAdminImpersonationSessions,
   loadAdminLearningAssets,
+  loadAdminLearningOutcomes,
   loadAdminOperations,
   loadAdminTenantDetail,
   loadAdminUsers,
@@ -34,6 +35,7 @@ import type {
   AdminAuditEvent,
   AdminAuditEventsData,
   AdminImpersonationSessionsData,
+  AdminLearningOutcomesData,
   AdminOperationsData,
   AdminOperationsIssue,
   Language,
@@ -97,6 +99,7 @@ export function App() {
     items: mockUsers,
     total: mockUsers.length
   });
+  const [learningOutcomesData, setLearningOutcomesData] = useState<AdminLearningOutcomesData | null>(null);
 
   const live = dataMode === "live";
 
@@ -212,6 +215,33 @@ export function App() {
       } catch {
         if (!isCancelled) {
           setLearningAssetsData({ tenantScope, items: [], total: 0 });
+        }
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, tenantScope]);
+
+  // Learning outcomes trend, loaded when the outcomes screen is active.
+  useEffect(() => {
+    if (activePage !== "outcomes") {
+      return;
+    }
+    const config = apiConfig();
+    if (!config) {
+      return;
+    }
+    let isCancelled = false;
+    void (async () => {
+      try {
+        const outcomes = await loadAdminLearningOutcomes({ ...config, tenantScope, weeks: 8 });
+        if (!isCancelled) {
+          setLearningOutcomesData(outcomes);
+        }
+      } catch {
+        if (!isCancelled) {
+          setLearningOutcomesData(null);
         }
       }
     })();
@@ -499,7 +529,12 @@ export function App() {
               />
             )}
             {activePage === "outcomes" && (
-              <LearningOutcomes language={language} tenantScope={tenantScope} dataMode={dataMode} />
+              <LearningOutcomes
+                language={language}
+                tenantScope={tenantScope}
+                dataMode={dataMode}
+                data={live ? learningOutcomesData : null}
+              />
             )}
             {activePage === "users" && (
               <UsersChildren
