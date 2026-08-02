@@ -13,6 +13,7 @@ import type {
   AdminImpersonationSession,
   AdminImpersonationSessionsData,
   AdminLearningAsset,
+  AdminLearningOutcomesData,
   AdminMaterial,
   AdminOperationsData,
   AdminOperationsIssue,
@@ -61,7 +62,10 @@ export interface LearningAssetsProps extends BasePageProps {
   liveAssets: AdminLearningAsset[] | null;
 }
 
-export type LearningOutcomesProps = BasePageProps;
+export interface LearningOutcomesProps extends BasePageProps {
+  /** Live multi-week trend from GET /v1/admin/learning-outcomes (null in mock mode). */
+  data: AdminLearningOutcomesData | null;
+}
 
 export interface ImpersonationInput {
   tenantId: string;
